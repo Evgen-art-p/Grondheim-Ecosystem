@@ -771,6 +771,8 @@ def page_brat():
                 # ── ТУЛБАР: врата (прозрачная плашка, кнопки по центру) ──
                 with ui.element("div").classes("stage-toolbar").style(
                     "flex-shrink:0; grid-template-columns:1fr; justify-items:center; "
+                    "align-items:end !important; height:auto !important; "
+                    "padding:6px 12px 6px !important; "
                     "background:transparent !important; border-bottom:none !important; "
                     "backdrop-filter:none !important;"
                 ):
@@ -781,7 +783,8 @@ def page_brat():
                         ui.button("Торговый").props("flat").classes("brat-gate")
                         ui.button("Мастеров").props("flat").classes("brat-gate")
                         ui.button("Живая книга").props("flat").classes("brat-gate")
-                with ui.element("div").classes("stage-content").style("padding-bottom:90px;"):
+                with ui.element("div").classes("stage-content").style(
+                    "padding-top:0 !important; padding-bottom:90px;"):
                     with ui.element("div").classes("split-view"):
                         refs["chat"] = ui.element("div").classes("chat-log")
                         update_chat()
