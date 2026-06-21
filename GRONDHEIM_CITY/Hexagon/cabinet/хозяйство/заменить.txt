@@ -1,0 +1,121 @@
+Понял. Чёткий порядок:
+[ТЫ НЕ ОДИН] → Ухо-Агент стартует в фоне (промис)
+     ↓
+  15 сек тишины
+     ↓
+  release (1.5с кроссфейд) → release_loop (крутится)
+     ↓
+  Свиток поверх release_loop
+     ↓
+  кнопка «уйти» → EXIT (конец)
+Два файла: guardian.js — убираю showScroll, только стартую промис и передаю в RELEASE. main.js — RELEASE делает всё по порядку.Ran 3 commandsRan 3 commandsИнструменты недоступны. Даю оба файла текстом — полностью, готовы к замене.
+
+guardian.js — только _triggerRelease и _launchScrollPhase
+Найди эти два метода и замени:
+js  /** Запуск выпуска */
+  _triggerRelease() {
+    if (this.released) return;
+    this.released = true;
+    console.log(`[Храм] Хранитель ${this.guardianId}: выпуск`);
+
+    setTimeout(() => {
+      this._launchScrollPhase();
+    }, CONFIG.timing.releaseDelay);
+  }
+
+  /** ← ХРАМ SCROLL: стартуем синтез в фоне, передаём промис в RELEASE */
+  _launchScrollPhase() {
+    session.guardianId = this.guardianId;
+    session.pathType   = session.fireDialogue.length > 0 ? 'through_fire' : 'direct';
+
+    console.log('[Храм] Ухо-Агент: старт синтеза (фон)', session);
+
+    // Запускаем синтез — НЕ ждём здесь, передаём промис дальше
+    const scrollPromise = synthesizeScroll(session).catch(err => {
+      console.error('[Храм] Ухо-Агент: ошибка', err);
+      return null; // null = свиток не покажем, но путь продолжится
+    });
+
+    // Передаём промис в RELEASE — main.js сам покажет свиток в нужный момент
+    stateMachine.transition(CONFIG.states.RELEASE, {
+      guardianId:    this.guardianId,
+      scrollPromise: scrollPromise,
+    });
+  }
+Убери импорты showScroll, showScrollLoading, hideScrollLoading из guardian.js — они теперь не нужны там. Оставь только:
+jsimport { CONFIG } from './config.js';
+import { stateMachine } from './state.js';
+import { session } from './session.js';
+import { synthesizeScroll } from './ear-agent.js';
+
+main.js — замени кейс RELEASE целиком
+js    // ── Выпуск: 15с → release → release_loop → Свиток → уйти ──
+    case CONFIG.states.RELEASE: {
+      const rId          = data.guardianId;
+      const scrollPromise = data.scrollPromise;
+      const rData        = keywords.getGuardian(rId);
+      const rScene       = CONFIG.scenes[rData?.scene];
+
+      hideScreen('screen-guardian');
+      video.stopSequence();
+
+      // 15 секунд тишины — человек выдыхает
+      await delay(15000);
+
+      // release.mp4 → release_loop.mp4 (1.5с кроссфейд, loop крутится вечно)
+      if (rScene?.release) {
+        try {
+          await video.playSequence(
+            rScene.release,
+            rScene.releaseLoop,
+            { crossfadeMs: 1500 }
+          );
+        } catch {
+          console.log(`[Храм] ${rData?.name}: release видео не найдено`);
+        }
+      }
+
+      // release_loop крутится. Ждём готовности Свитка (синтез шёл параллельно с видео)
+      let scrollData = null;
+      try {
+        scrollData = await scrollPromise;
+      } catch {
+        scrollData = null;
+      }
+
+      // Показываем Свиток поверх release_loop
+      if (scrollData) {
+        showScroll(scrollData, () => {
+          // «уйти» нажата — экран выхода
+          stateMachine.transition(CONFIG.states.EXIT);
+        });
+      } else {
+        // Синтез упал — просто переходим дальше
+        stateMachine.transition(CONFIG.states.EXIT);
+      }
+      break;
+    }
+И в начале main.js убедись что импорт есть:
+jsimport { showScroll } from './scroll.js';
+```
+
+`showScrollLoading` и `hideScrollLoading` из `main.js` тоже убери — они больше не нужны.
+
+---
+
+## Итоговый порядок событий
+```
+guardian: [ТЫ НЕ ОДИН]
+  → synthesizeScroll(session) стартует как промис в фоне
+  → stateMachine.transition(RELEASE, { scrollPromise })
+
+RELEASE в main.js:
+  hideScreen('screen-guardian')
+  15 000мс тишины           ← синтез идёт параллельно
+  release.mp4 играет
+  → за 1.5с до конца: release_loop проявляется 0→100%
+  → release.mp4 исчезает
+  await scrollPromise        ← если синтез ещё не готов — ждём здесь
+  showScroll(data, onExit)   ← Свиток поверх release_loop
+    [скопировать] [забрать в мир] [уйти]
+  onExit → EXIT

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Храм</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/temple.css">
+</head>
+<body>
+
+<!-- Курсор -->
+<div class="cursor" id="cursor"></div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- СКРИН 1: ищи                                    -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="screen active" id="screen-seek">
+  <span class="seek-word" id="seek-word">ищи...</span>
+  <span class="seek-hint">нажми, чтобы начать</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- СКРИН 2: видео (храм → появление → луп)         -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="screen" id="screen-video">
+  <div class="video-container">
+    <div class="video-slot" id="slot-1">
+      <video id="video-temple" preload="auto" playsinline muted>
+        <source src="1_vhod/temple.mp4" type="video/mp4">
+      </video>
+    </div>
+    <!-- appear + loop слоты создаются динамически через playSequence -->
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- СКРИН 3: ввод Безликому (поверх лупа)           -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="screen" id="screen-input">
+  <!-- Сообщение Безликого (при повторном визите) -->
+  <div class="bezliky-message" id="bezliky-message"></div>
+
+  <div class="hud">
+    <div class="hud_capsule">
+      <input type="text" class="hud-input" id="answer" placeholder="..." autocomplete="off" spellcheck="false">
+    </div>
+    <span class="submit-hint">enter</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- СКРИН 4: Костёр                                 -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="screen" id="screen-fire">
+  <!-- Область диалога -->
+  <div class="fire-chat" id="fire-output"></div>
+  <!-- Ввод -->
+  <div class="fire-hud">
+    <div class="fire-capsule">
+      <input type="text" class="fire-input" id="fire-input" placeholder="..." autocomplete="off" spellcheck="false">
+    </div>
+    <span class="fire-submit-hint">enter</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- СКРИН 5: Хранитель (диалог)                     -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="screen" id="screen-guardian">
+  <!-- Имя и фраза (появляются первыми) -->
+  <span class="guardian-name" id="guardian-name"></span>
+  <span class="guardian-phrase" id="guardian-phrase"></span>
+
+  <!-- Область диалога с хранителем -->
+  <div class="guardian-chat-area">
+    <div class="guardian-chat" id="guardian-chat"></div>
+    <div class="guardian-hud">
+      <div class="guardian-capsule">
+        <input type="text" class="guardian-input" id="guardian-input" placeholder="..." autocomplete="off" spellcheck="false">
+      </div>
+      <span class="guardian-submit-hint">enter</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- СКРИН 6: Выход                                  -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="screen" id="screen-exit">
+  <span class="exit-text">ты здесь..ты не один</span>
+  <!-- Через время — тихое «ищи», как в начале -->
+  <span class="exit-seek" id="exit-seek">...ищи</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- Модули                                          -->
+<!-- ═══════════════════════════════════════════════ -->
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>

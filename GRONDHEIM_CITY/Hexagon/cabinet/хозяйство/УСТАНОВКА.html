@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ХРАМ — Руководство по установке</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Courier+Prime&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #080705;
+    color: rgba(240,230,210,0.9);
+    font-family: 'Cormorant Garamond', serif;
+    padding: 60px 40px 100px;
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+  h1 { font-size: 32px; font-weight: 300; color: #c8a85a; letter-spacing: 0.1em; margin-bottom: 8px; }
+  h2 { font-size: 16px; font-weight: 400; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(200,168,90,0.7); margin: 48px 0 20px; border-bottom: 1px solid rgba(200,168,90,0.15); padding-bottom: 10px; }
+  h3 { font-size: 15px; font-weight: 400; color: rgba(240,230,210,0.8); margin: 24px 0 10px; }
+  p { font-size: 15px; color: rgba(200,180,150,0.75); margin-bottom: 12px; font-style: italic; }
+  code { font-family: 'Courier Prime', monospace; font-size: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); padding: 2px 7px; color: rgba(200,230,200,0.9); border-radius: 1px; }
+  pre { font-family: 'Courier Prime', monospace; font-size: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 20px 24px; color: rgba(200,230,200,0.85); margin: 14px 0; line-height: 1.8; overflow-x: auto; }
+  .step { display: flex; gap: 20px; margin-bottom: 28px; align-items: flex-start; }
+  .step-num { font-family: 'Courier Prime', monospace; font-size: 22px; color: #c8a85a; opacity: 0.5; min-width: 36px; margin-top: 2px; }
+  .step-body { flex: 1; }
+  .step-title { font-size: 17px; color: rgba(240,230,210,0.95); margin-bottom: 6px; }
+  .tag { display: inline-block; font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 0.15em; border: 1px solid; padding: 2px 8px; margin: 2px 3px 2px 0; }
+  .tag-new    { border-color: rgba(100,200,100,0.4); color: rgba(150,230,150,0.8); }
+  .tag-edit   { border-color: rgba(200,168,90,0.4); color: rgba(200,168,90,0.8); }
+  .tag-append { border-color: rgba(100,160,220,0.4); color: rgba(100,160,220,0.8); }
+  .file-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 16px; }
+  .file-name { font-family: 'Courier Prime', monospace; font-size: 13px; color: #c8a85a; }
+  .file-action { font-size: 13px; font-style: italic; color: rgba(200,180,150,0.6); text-align: right; }
+  .warn { background: rgba(200,100,50,0.08); border: 1px solid rgba(200,100,50,0.2); padding: 14px 18px; margin: 16px 0; font-size: 13px; font-style: italic; color: rgba(240,180,150,0.8); }
+  .ok { background: rgba(50,180,100,0.06); border: 1px solid rgba(50,180,100,0.2); padding: 14px 18px; margin: 16px 0; font-size: 13px; font-style: italic; color: rgba(150,230,170,0.8); }
+  hr { border: none; border-top: 1px solid rgba(200,168,90,0.1); margin: 40px 0; }
+  .sub { font-size: 14px; font-style: italic; color: rgba(200,180,150,0.5); margin-bottom: 40px; }
+</style>
+</head>
+<body>
+
+<h1>🏛 ХРАМ — Установка Свитка</h1>
+<p class="sub">Ухо-Агент + Свиток Смысла + Алтари</p>
+
+<!-- ═══════════════════════════ ФАЙЛЫ ═══════════════════════════ -->
+<h2>Карта файлов</h2>
+
+<p>Всего 8 файлов. Три категории действий:</p>
+
+<div style="margin: 20px 0;">
+  <span class="tag tag-new">NEW — новый файл</span>
+  <span class="tag tag-edit">REPLACE — заменить целиком</span>
+  <span class="tag tag-append">APPEND — добавить в конец</span>
+</div>
+
+<div class="file-row">
+  <span class="file-name">js/session.js</span>
+  <span><span class="tag tag-new">NEW</span></span>
+  <span class="file-action">Новый файл. Положить в папку js/</span>
+</div>
+<div class="file-row">
+  <span class="file-name">js/altars.js</span>
+  <span><span class="tag tag-new">NEW</span></span>
+  <span class="file-action">Новый файл. Положить в папку js/</span>
+</div>
+<div class="file-row">
+  <span class="file-name">js/ear-agent.js</span>
+  <span><span class="tag tag-new">NEW</span></span>
+  <span class="file-action">Новый файл. Положить в папку js/</span>
+</div>
+<div class="file-row">
+  <span class="file-name">js/scroll.js</span>
+  <span><span class="tag tag-new">NEW</span></span>
+  <span class="file-action">Новый файл. Положить в папку js/</span>
+</div>
+<div class="file-row">
+  <span class="file-name">js/main.js</span>
+  <span><span class="tag tag-edit">REPLACE</span></span>
+  <span class="file-action">Заменить старый main.js</span>
+</div>
+<div class="file-row">
+  <span class="file-name">js/fire.js</span>
+  <span><span class="tag tag-edit">REPLACE</span></span>
+  <span class="file-action">Заменить старый fire.js</span>
+</div>
+<div class="file-row">
+  <span class="file-name">js/guardian.js</span>
+  <span><span class="tag tag-edit">REPLACE</span></span>
+  <span class="file-action">Заменить старый guardian.js</span>
+</div>
+<div class="file-row">
+  <span class="file-name">css/temple.css</span>
+  <span><span class="tag tag-append">APPEND</span></span>
+  <span class="file-action">Открыть temple.css, вставить scroll.css в самый конец</span>
+</div>
+
+<hr>
+
+<!-- ═══════════════════════════ ШАГИ ═══════════════════════════ -->
+<h2>Пошаговая установка</h2>
+
+<div class="step">
+  <div class="step-num">01</div>
+  <div class="step-body">
+    <div class="step-title">Сделай резервную копию</div>
+    <p>Скопируй оригинальные <code>main.js</code>, <code>fire.js</code>, <code>guardian.js</code> куда-нибудь. На случай если что-то пойдёт не так.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">02</div>
+  <div class="step-body">
+    <div class="step-title">Положи 4 новых файла в <code>js/</code></div>
+    <pre>temple/
+└── js/
+    ├── session.js      ← новый
+    ├── altars.js       ← новый
+    ├── ear-agent.js    ← новый
+    ├── scroll.js       ← новый
+    ├── main.js         ← заменить
+    ├── fire.js         ← заменить
+    └── guardian.js     ← заменить</pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">03</div>
+  <div class="step-body">
+    <div class="step-title">Замени <code>main.js</code>, <code>fire.js</code>, <code>guardian.js</code></div>
+    <p>Просто перетащи новые файлы поверх старых. Они содержат оригинальный код + вставки для Свитка (помечены комментарием <code>← ХРАМ SCROLL</code>).</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">04</div>
+  <div class="step-body">
+    <div class="step-title">Добавь стили в <code>css/temple.css</code></div>
+    <p>Открой <code>temple.css</code>. Прокрути в самый конец. Вставь всё содержимое файла <code>scroll.css</code>.</p>
+    <div class="warn">⚠️ Не заменяй temple.css целиком — только добавь в конец.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">05</div>
+  <div class="step-body">
+    <div class="step-title">Проверь <code>config.js</code></div>
+    <p>Ухо-Агент использует те же настройки API что и весь Храм — из <code>CONFIG.api</code>. Больше ничего менять не нужно.</p>
+    <div class="ok">✓ Твой config.js уже совместим. api.endpoint, api.apiKey, api.model — всё читается автоматически.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">06</div>
+  <div class="step-body">
+    <div class="step-title">Открой через Live Server и проверь</div>
+    <p>Пройди полный путь: «ищи» → Безликий → Хранитель → скажи «спасибо». Должен появиться лоадер «Храм ткёт твой Свиток...», затем Свиток.</p>
+  </div>
+</div>
+
+<hr>
+
+<!-- ═══════════════════════════ ОТЛАДКА ═══════════════════════════ -->
+<h2>Отладка</h2>
+
+<h3>Смотри консоль браузера (F12)</h3>
+<p>Ключевые логи которые должны появиться при прохождении:</p>
+<pre>[Храм] Сессия: initialKey="...", mood=cold          ← Безликий зафиксировал слово
+[Храм] Костёр: ключевое слово → finch               ← ключевое слово найдено
+[Храм] Ухо-Агент: запуск синтеза {...}              ← guardian.js передал сессию
+[УХО-АГЕНТ] Алтарь: earth | Человек ищет структуру ← агент выбрал алтарь
+</pre>
+
+<h3>Если Свиток не появляется</h3>
+<p>Проверь в консоли — скорее всего ошибка API. Самые частые причины:</p>
+<pre>API 401  → неверный ключ в config.js
+API 429  → превышен лимит запросов
+JSON parse error → модель вернула не JSON (попробуй другую модель)</pre>
+
+<h3>Тест без прохождения всего пути</h3>
+<p>В консоли браузера можно вызвать агента напрямую:</p>
+<pre>import('./js/ear-agent.js').then(m => 
+  m.synthesizeScroll({
+    initialKey: 'я потерял смысл',
+    initialMood: 'cold',
+    pathType: 'through_fire',
+    guardianId: 'finch',
+    fireDialogue: [
+      {role:'user', content:'мне пусто внутри'},
+      {role:'assistant', content:'пустота — это место для нового'}
+    ],
+    keeperDialogue: [
+      {role:'user', content:'хочу найти смысл'},
+      {role:'assistant', content:'смысл не ищут — его создают'}
+    ]
+  }).then(console.log)
+)</pre>
+
+<h3>Сброс памяти для чистого теста</h3>
+<pre>import('./js/memory.js').then(m => m.memory.clear())</pre>
+<p>Или просто: <code>localStorage.clear()</code> в консоли.</p>
+
+<hr>
+
+<!-- ═══════════════════════════ КАК РАБОТАЕТ ═══════════════════════════ -->
+<h2>Как это работает (кратко)</h2>
+
+<pre>«ищи» → Безликий
+        ↓
+        session.initialKey = первое слово
+        session.initialMood = cold|hot|confused
+
+        ↓ развилка ↓
+
+   КОСТЁР                    НАПРЯМУЮ
+   fire.js                   (fireDialogue = [])
+   каждая реплика            
+   → session.fireDialogue[]
+
+        ↓ оба пути сходятся ↓
+
+   ХРАНИТЕЛЬ
+   guardian.js
+   каждая реплика → session.keeperDialogue[]
+
+        ↓ маркер [ТЫ НЕ ОДИН] ↓
+
+   _launchScrollPhase()
+   → session.guardianId, session.pathType
+   → showScrollLoading()
+   → synthesizeScroll(session)   ← один API-вызов
+   → showScroll(data)
+   ↓
+   СВИТОК (4 блока + промпт)
+   [скопировать] [забрать в мир → PNG] [уйти]
+        ↓
+   RELEASE → EXIT
+</pre>
+
+<hr>
+
+<p style="text-align:center; opacity:0.3; font-size:12px; letter-spacing:0.2em;">Six Fingers Studio · Храм · Ухо-Агент v1</p>
+
+</body>
+</html>

@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Храм — Кабинет · Симуляция Костра</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Base ──────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0d0d0f;
+  --bg2: #141418;
+  --bg3: #1a1a20;
+  --border: rgba(255,255,255,0.08);
+  --text: rgba(255,255,255,0.88);
+  --text-dim: rgba(255,255,255,0.5);
+  --text-muted: rgba(255,255,255,0.22);
+  --accent: #f59e0b;
+  --accent-dim: rgba(245,158,11,0.15);
+  --user-color: rgba(147,197,253,0.8);
+  --ai-color: rgba(255,180,80,0.85);
+  --danger: #ef4444;
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.15);
+  --blue: #60a5fa;
+  --blue-dim: rgba(96,165,250,0.15);
+  --purple: #a78bfa;
+  --purple-dim: rgba(167,139,250,0.15);
+  --radius: 8px;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-ui: 'Inter', sans-serif;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  font-family: var(--font-ui);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ── Layout: 3 columns ────────────────────────── */
+.cabinet {
+  display: grid;
+  grid-template-columns: 300px 1fr 280px;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+  gap: 0;
+}
+
+/* ── Header ────────────────────────────────────── */
+.header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+
+.header-title {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+.header-title span { color: var(--accent); }
+
+.header-controls {
+  display: flex; gap: 8px; align-items: center;
+}
+
+.header-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  padding: 5px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.header-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+.header-btn.danger:hover { color: var(--danger); border-color: rgba(239,68,68,0.3); }
+.header-btn.active-sim { color: var(--green); border-color: rgba(34,197,94,0.3); background: var(--green-dim); }
+
+/* ── Model Selector ────────────────────────────── */
+.model-selector { position: relative; }
+
+.model-current {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.model-current:hover { border-color: rgba(255,255,255,0.15); }
+
+.model-current-name {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--accent);
+  letter-spacing: 0.03em;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-current-arrow {
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+.model-selector.open .model-current-arrow { transform: rotate(180deg); }
+
+.model-current-price {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+.model-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 300px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  z-index: 50;
+  display: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.model-selector.open .model-dropdown { display: block; }
+
+.model-option {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; cursor: pointer; transition: background 0.15s;
+}
+.model-option:hover { background: var(--bg3); }
+.model-option.active { background: var(--accent-dim); }
+.model-option-name { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text); }
+.model-option.active .model-option-name { color: var(--accent); }
+.model-option-meta { display: flex; gap: 8px; align-items: center; }
+.model-option-price { font-family: var(--font-mono); font-size: 0.5rem; color: var(--text-muted); }
+.model-option-speed { font-size: 0.5rem; padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); }
+.speed-fast { background: rgba(34,197,94,0.15); color: rgba(34,197,94,0.7); }
+.speed-mid { background: rgba(245,158,11,0.15); color: rgba(245,158,11,0.7); }
+
+.model-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.model-custom { padding: 8px 12px; }
+.model-custom-label { font-family: var(--font-mono); font-size: 0.55rem; color: var(--text-muted); margin-bottom: 4px; }
+.model-custom-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text); font-family: var(--font-mono); font-size: 0.62rem; padding: 5px 8px; outline: none;
+}
+.model-custom-input::placeholder { color: var(--text-muted); }
+.model-custom-input:focus { border-color: rgba(255,255,255,0.15); }
+
+/* ══════════════════════════════════════════════════
+   LEFT: Debug Panel — Симуляция Костра
+   ══════════════════════════════════════════════════ */
+.debug-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+}
+
+.debug-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.debug-title {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.debug-mode-badge {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+.debug-mode-badge.off { background: var(--bg3); color: var(--text-muted); }
+.debug-mode-badge.on { background: var(--green-dim); color: var(--green); }
+
+/* State cards */
+.debug-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.06) transparent;
+}
+
+.debug-section {
+  margin-bottom: 12px;
+}
+
+.debug-section-title {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+
+.debug-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+.debug-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.debug-label {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+}
+
+.debug-value {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text);
+  text-align: right;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debug-value.highlight { color: var(--accent); }
+.debug-value.green { color: var(--green); }
+.debug-value.red { color: var(--danger); }
+.debug-value.blue { color: var(--blue); }
+.debug-value.purple { color: var(--purple); }
+
+/* Progress bar */
+.debug-progress {
+  height: 4px;
+  background: var(--bg3);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.debug-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease, background 0.5s;
+}
+
+/* Event log */
+.debug-log {
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.06) transparent;
+}
+
+.debug-log-entry {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  line-height: 1.6;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: var(--text-dim);
+  animation: logIn 0.3s ease;
+}
+@keyframes logIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.debug-log-entry.keyword { color: var(--green); background: var(--green-dim); }
+.debug-log-entry.system { color: var(--blue); background: var(--blue-dim); }
+.debug-log-entry.release { color: var(--accent); background: var(--accent-dim); }
+.debug-log-entry.warning { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+/* Guardian badges */
+.guardian-badges {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+}
+.guardian-badge {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  transition: all 0.3s;
+}
+.guardian-badge.detected {
+  border-color: rgba(34,197,94,0.4);
+  color: var(--green);
+  background: var(--green-dim);
+}
+.guardian-badge.pending {
+  border-color: rgba(245,158,11,0.4);
+  color: var(--accent);
+  background: var(--accent-dim);
+  animation: pendingPulse 2s ease-in-out infinite;
+}
+@keyframes pendingPulse {
+  0%,100% { opacity: 0.7; } 50% { opacity: 1; }
+}
+
+/* ── Main area (chat) ──────────────────────────── */
+.main {
+  display: flex; flex-direction: column; overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.chat {
+  flex: 1; overflow-y: auto; padding: 20px 24px;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.06) transparent;
+}
+.chat::-webkit-scrollbar { width: 4px; }
+.chat::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+.msg { margin-bottom: 16px; max-width: 85%; animation: msgIn 0.3s ease; }
+@keyframes msgIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.msg--user { margin-left: auto; text-align: right; }
+.msg-role { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.06em; margin-bottom: 4px; text-transform: uppercase; }
+.msg--user .msg-role { color: var(--user-color); }
+.msg--ai .msg-role { color: var(--ai-color); }
+.msg-text { font-size: 0.88rem; line-height: 1.65; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+.msg--user .msg-text { color: rgba(220,230,245,0.75); }
+.msg-time { font-family: var(--font-mono); font-size: 0.55rem; color: var(--text-muted); margin-top: 4px; }
+
+.msg-keyword-tag {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: 0.48rem;
+  padding: 1px 6px; border-radius: 3px; margin-top: 4px;
+  background: var(--green-dim); color: var(--green);
+}
+
+.typing-indicator { color: var(--ai-color); font-size: 0.85rem; opacity: 0.5; animation: typePulse 1.2s ease-in-out infinite; }
+@keyframes typePulse { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+
+.chat-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 0.8rem; letter-spacing: 0.1em; }
+
+/* Input area */
+.input-area { padding: 12px 16px; border-top: 1px solid var(--border); background: var(--bg2); }
+.input-wrap { display: flex; gap: 8px; align-items: flex-end; }
+.input-field {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text); font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.5;
+  padding: 10px 14px; resize: none; outline: none; min-height: 80px; max-height: 160px;
+}
+.input-field:focus { border-color: rgba(255,255,255,0.15); }
+.input-field::placeholder { color: var(--text-muted); }
+
+.send-btn {
+  background: var(--accent-dim); border: 1px solid rgba(245,158,11,0.2); color: var(--accent);
+  font-family: var(--font-mono); font-size: 0.7rem; padding: 10px 18px; border-radius: var(--radius);
+  cursor: pointer; transition: all 0.2s; white-space: nowrap; height: 38px;
+}
+.send-btn:hover { background: rgba(245,158,11,0.25); }
+.send-btn:disabled { opacity: 0.3; cursor: default; }
+.input-hint { font-family: var(--font-mono); font-size: 0.55rem; color: var(--text-muted); margin-top: 6px; text-align: right; }
+
+/* ── Sidebar ───────────────────────────────────── */
+.sidebar { display: flex; flex-direction: column; overflow: hidden; background: var(--bg2); }
+.sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.sidebar-tab {
+  flex: 1; background: none; border: none; color: var(--text-muted);
+  font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 12px 8px; cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent;
+}
+.sidebar-tab:hover { color: var(--text-dim); }
+.sidebar-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.sidebar-content { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.06) transparent; }
+.tab-panel { display: none; padding: 12px; }
+.tab-panel.active { display: block; }
+
+/* Prompts */
+.prompt-folder { margin-bottom: 8px; }
+.prompt-folder-header {
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+  font-family: var(--font-mono); font-size: 0.65rem; color: var(--text);
+  cursor: pointer; border-radius: 4px; transition: background 0.15s; user-select: none;
+}
+.prompt-folder-header:hover { background: var(--bg3); }
+.prompt-folder-arrow { font-size: 0.55rem; color: var(--text-dim); transition: transform 0.2s; }
+.prompt-folder.open .prompt-folder-arrow { transform: rotate(90deg); }
+.prompt-folder-items { display: none; padding-left: 12px; }
+.prompt-folder.open .prompt-folder-items { display: block; }
+
+.prompt-item {
+  display: flex; align-items: center; justify-content: space-between; padding: 5px 8px;
+  font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim);
+  border-radius: 4px; cursor: pointer; transition: all 0.15s; margin: 2px 0;
+}
+.prompt-item:hover { background: var(--bg3); color: var(--text); }
+.prompt-item.active { background: var(--accent-dim); color: var(--accent); }
+.prompt-item-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+.prompt-item:hover .prompt-item-actions { opacity: 1; }
+.prompt-action { background: none; border: none; color: var(--text-muted); font-size: 0.6rem; cursor: pointer; padding: 2px; border-radius: 3px; }
+.prompt-action:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+.active-prompt-bar {
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 0.6rem; color: var(--accent);
+  background: var(--accent-dim); display: none; align-items: center; justify-content: space-between;
+}
+.active-prompt-bar.visible { display: flex; }
+.active-prompt-bar button { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.7rem; }
+
+/* Archive */
+.archive-item { padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+.archive-item:hover { background: var(--bg3); }
+.archive-item-title { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.archive-item-meta { display: flex; justify-content: space-between; align-items: center; }
+.archive-item-date { font-family: var(--font-mono); font-size: 0.55rem; color: var(--text-muted); }
+.archive-item-delete { background: none; border: none; color: var(--text-muted); font-size: 0.6rem; cursor: pointer; opacity: 0; transition: all 0.15s; padding: 2px 4px; border-radius: 3px; }
+.archive-item:hover .archive-item-delete { opacity: 1; }
+.archive-item-delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+.archive-empty { padding: 24px 12px; text-align: center; font-size: 0.65rem; color: var(--text-muted); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: none; align-items: center; justify-content: center; }
+.modal-overlay.visible { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; width: min(600px, 90vw); max-height: 80vh; display: flex; flex-direction: column; }
+.modal-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.modal-title { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text); }
+.modal-close { background: none; border: none; color: var(--text-dim); font-size: 0.9rem; cursor: pointer; }
+.modal-body { padding: 16px; overflow-y: auto; flex: 1; }
+.modal-prompt-text { font-family: var(--font-mono); font-size: 0.7rem; line-height: 1.8; color: var(--text); white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<div class="cabinet">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title">храм / <span>кабинет</span></div>
+    <div class="header-controls">
+      <button class="header-btn active-sim" id="btn-sim" title="Симуляция Костра">🔥 костёр</button>
+
+      <div class="model-selector" id="model-selector">
+        <div class="model-current" id="model-current">
+          <span class="model-current-name" id="model-current-name">—</span>
+          <span class="model-current-price" id="model-current-price"></span>
+          <span class="model-current-arrow">▼</span>
+        </div>
+        <div class="model-dropdown" id="model-dropdown"></div>
+      </div>
+
+      <button class="header-btn" id="btn-save" title="Сохранить чат в архив">💾 сохранить</button>
+      <button class="header-btn danger" id="btn-clear" title="Очистить чат">✕ очистить</button>
+    </div>
+  </div>
+
+  <!-- LEFT: Debug Panel -->
+  <div class="debug-panel">
+    <div class="debug-header">
+      <span class="debug-title">🔥 Симуляция</span>
+      <span class="debug-mode-badge on" id="debug-badge">live</span>
+    </div>
+
+    <div class="debug-content">
+      <!-- State -->
+      <div class="debug-section">
+        <div class="debug-section-title">состояние</div>
+        <div class="debug-card">
+          <div class="debug-row">
+            <span class="debug-label">фаза</span>
+            <span class="debug-value highlight" id="d-phase">ожидание</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">сообщений</span>
+            <span class="debug-value" id="d-msg-count">0 / 6</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">до завершения</span>
+            <span class="debug-value" id="d-release-status">—</span>
+          </div>
+          <div class="debug-progress">
+            <div class="debug-progress-fill" id="d-progress" style="width:0%; background: var(--accent);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guardian detection -->
+      <div class="debug-section">
+        <div class="debug-section-title">хранители</div>
+        <div class="debug-card">
+          <div class="debug-row">
+            <span class="debug-label">ключ найден</span>
+            <span class="debug-value" id="d-guardian">—</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">слово-триггер</span>
+            <span class="debug-value" id="d-trigger-word">—</span>
+          </div>
+          <div class="guardian-badges" id="d-badges">
+            <span class="guardian-badge" data-g="lia">Лия</span>
+            <span class="guardian-badge" data-g="yust">Юст</span>
+            <span class="guardian-badge" data-g="key">Кей</span>
+            <span class="guardian-badge" data-g="victor">Виктор</span>
+            <span class="guardian-badge" data-g="finch">Финч</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- System prompt injection -->
+      <div class="debug-section">
+        <div class="debug-section-title">системный промпт</div>
+        <div class="debug-card">
+          <div class="debug-row">
+            <span class="debug-label">инъекция</span>
+            <span class="debug-value" id="d-injection">нет</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">промпт</span>
+            <span class="debug-value green" id="d-prompt-status">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Classifier -->
+      <div class="debug-section">
+        <div class="debug-section-title">AI классификатор</div>
+        <div class="debug-card">
+          <div class="debug-row">
+            <span class="debug-label">модель</span>
+            <span class="debug-value" style="color: var(--text-dim);">gemini flash</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">статус</span>
+            <span class="debug-value" id="d-classifier">ждёт (8 сообщений)</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">результат</span>
+            <span class="debug-value" id="d-classifier-result">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event log -->
+      <div class="debug-section">
+        <div class="debug-section-title">лог событий</div>
+        <div class="debug-card">
+          <div class="debug-log" id="d-log"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Chat -->
+  <div class="main">
+    <div class="active-prompt-bar" id="active-prompt-bar">
+      <span id="active-prompt-name">—</span>
+      <button id="btn-deselect" title="Убрать промпт">✕</button>
+    </div>
+
+    <div class="chat" id="chat">
+      <div class="chat-empty" id="chat-empty">🔥 симуляция костра · начни писать</div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea class="input-field" id="input" placeholder="говори с костром..." rows="3"></textarea>
+        <button class="send-btn" id="btn-send">▶ send</button>
+      </div>
+      <div class="input-hint">Ctrl+Enter — отправить</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Sidebar (unchanged) -->
+  <div class="sidebar">
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab active" data-tab="prompts">промпты</button>
+      <button class="sidebar-tab" data-tab="archive">архив</button>
+    </div>
+    <div class="sidebar-content">
+      <div class="tab-panel active" id="panel-prompts"></div>
+      <div class="tab-panel" id="panel-archive"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">промпт</span>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-prompt-text" id="modal-text"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { CONFIG } from '../js/config.js';
+import { PROMPTS } from './prompts/index.js';
+
+// ══════════════════════════════════════════════════
+//  KEYWORDS (встроенная копия из keywords.js)
+// ══════════════════════════════════════════════════
+const KEYWORDS = CONFIG.keywords || {};
+const GUARDIANS = CONFIG.guardians || {};
+const MIN_MSGS_FOR_RELEASE = 6;
+
+function detectKeyword(text) {
+  const clean = text.toLowerCase().trim();
+  for (const [word, guardianId] of Object.entries(KEYWORDS)) {
+    if (clean.includes(word)) {
+      return { guardianId, word };
+    }
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════════════
+//  AI CLASSIFIER (Gemini Flash)
+// ══════════════════════════════════════════════════
+async function runClassifier(history) {
+  const userMessages = history
+    .filter(m => m.role === 'user')
+    .map(m => m.content)
+    .join('\n');
+
+  const classifierPrompt = `Ты — классификатор эмоциональных состояний. Проанализируй слова человека и определи, какой хранитель ему нужен.
+
+ХРАНИТЕЛИ:
+- lia — одиночество, покинутость, ненужность, тоска по близости, изоляция
+- yust — вина, стыд, несправедливость, самобичевание, ощущение что виноват
+- key — страх, тревога, потеря, деньги, нестабильность, боязнь будущего
+- victor — ложь, фальшь, притворство, маска, неподлинность, двуличие
+- finch — пустота, бессмысленность, потерянность, выгорание, апатия, усталость от жизни
+
+СЛОВА ЧЕЛОВЕКА:
+${userMessages}
+
+Ответь ТОЛЬКО одним словом — id хранителя: lia, yust, key, victor или finch.
+Если не можешь определить — ответь: none`;
+
+  try {
+    const res = await fetch(CONFIG.api.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CONFIG.api.apiKey}`,
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'Temple - Classifier',
+      },
+      body: JSON.stringify({
+        model: CLASSIFIER_MODEL,
+        messages: [{ role: 'user', content: classifierPrompt }],
+        max_tokens: 20,
+        temperature: 0.1,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    const answer = (data.choices?.[0]?.message?.content || '').trim().toLowerCase();
+
+    // Validate
+    if (['lia', 'yust', 'key', 'victor', 'finch'].includes(answer)) {
+      return answer;
+    }
+    return null;
+  } catch (err) {
+    console.error('[Классификатор] ошибка:', err);
+    return null;
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  MODELS
+// ══════════════════════════════════════════════════
+const MODELS = [
+  { id: 'google/gemini-2.5-flash',    name: 'Gemini 2.5 Flash',  price: '$0.15/$0.60', speed: 'fast' },
+  { id: 'anthropic/claude-haiku-4-5',  name: 'Claude Haiku 4.5',  price: '$1/$5',       speed: 'fast' },
+  { id: 'deepseek/deepseek-chat',      name: 'DeepSeek V3',       price: '$0.14/$0.28', speed: 'mid' },
+  { id: 'openai/gpt-4.1-mini',        name: 'GPT-4.1 mini',      price: '$0.40/$1.60', speed: 'fast' },
+  { id: 'deepseek/deepseek-v3.2',     name: 'DeepSeek V3.2',     price: '$0.25/$0.40', speed: 'mid' },
+  { id: 'anthropic/claude-sonnet-4-5',  name: 'Claude Sonnet 4.5', price: '$3/$15',      speed: 'mid' },
+];
+
+// ══════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════
+let chatHistory = [];
+let systemPrompt = '';
+let firePromptBase = '';
+let activePromptId = null;
+let isWaiting = false;
+let promptCache = {};
+let currentModel = CONFIG.api.model;
+
+// Fire simulation state
+let simMode = true;
+let pendingGuardian = null;
+let triggerWord = null;
+let userMsgCount = 0;
+let detectedKeywords = new Set();
+let classifierRunning = false;
+let classifierResult = null;
+
+const CLASSIFIER_MODEL = 'google/gemini-2.5-flash';
+const CLASSIFIER_THRESHOLD = 8; // после N сообщений без ключа → AI классификатор
+
+// ══════════════════════════════════════════════════
+//  DOM
+// ══════════════════════════════════════════════════
+const $chat       = document.getElementById('chat');
+const $chatEmpty  = document.getElementById('chat-empty');
+const $input      = document.getElementById('input');
+const $btnSend    = document.getElementById('btn-send');
+const $btnSave    = document.getElementById('btn-save');
+const $btnClear   = document.getElementById('btn-clear');
+const $btnSim     = document.getElementById('btn-sim');
+const $selector   = document.getElementById('model-selector');
+const $mCurrent   = document.getElementById('model-current');
+const $mName      = document.getElementById('model-current-name');
+const $mPrice     = document.getElementById('model-current-price');
+const $mDropdown  = document.getElementById('model-dropdown');
+const $activeBar  = document.getElementById('active-prompt-bar');
+const $activeName = document.getElementById('active-prompt-name');
+const $btnDesel   = document.getElementById('btn-deselect');
+const $panelPr    = document.getElementById('panel-prompts');
+const $panelAr    = document.getElementById('panel-archive');
+const $modal      = document.getElementById('modal');
+const $modalTitle = document.getElementById('modal-title');
+const $modalText  = document.getElementById('modal-text');
+const $modalClose = document.getElementById('modal-close');
+
+// Debug DOM
+const $dPhase      = document.getElementById('d-phase');
+const $dMsgCount   = document.getElementById('d-msg-count');
+const $dRelease    = document.getElementById('d-release-status');
+const $dProgress   = document.getElementById('d-progress');
+const $dGuardian   = document.getElementById('d-guardian');
+const $dTrigger    = document.getElementById('d-trigger-word');
+const $dBadges     = document.getElementById('d-badges');
+const $dInjection  = document.getElementById('d-injection');
+const $dPromptSt   = document.getElementById('d-prompt-status');
+const $dLog        = document.getElementById('d-log');
+const $dBadge      = document.getElementById('debug-badge');
+const $dClassifier = document.getElementById('d-classifier');
+const $dClassResult = document.getElementById('d-classifier-result');
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+renderModelSelector();
+updateModelDisplay();
+renderPrompts();
+renderArchive();
+loadFirePrompt();
+
+async function loadFirePrompt() {
+  try {
+    const res = await fetch(CONFIG.firePromptPath);
+    if (!res.ok) throw new Error(`${res.status}`);
+    firePromptBase = (await res.text()).trim();
+    $dPromptSt.textContent = `✓ ${firePromptBase.length} сим`;
+    debugLog('system', `промпт загружен (${firePromptBase.length})`);
+  } catch (err) {
+    firePromptBase = CONFIG.fireSystemPrompt || `Ты — Костёр. Не программа, не ассистент. Ты — огонь в центре Храма.
+
+Говори медленно. Паузы важнее слов. Оформляй паузы так: *долгая пауза*, *тишина*, *тихий вздох*.
+Максимум 1-2 коротких предложения за раз.
+
+Первый ответ всегда: ...ты здесь...   *долгая пауза*   ...я слушаю...
+
+Отражай слова человека как тихое эхо. Мягко веди к тому, чтобы он назвал свою боль одним словом.
+Вопросы: "...расскажи...", "...назови это одним словом...", "...что внутри...", "...как это называется..."
+
+НЕ давай советов. НЕ оценивай. НЕ завершай разговор — это не твоя задача.
+Ты НИКОГДА не говоришь "ты не один" и не прощаешься по своей инициативе.`;
+    $dPromptSt.textContent = 'фолбэк';
+    debugLog('warning', `промпт не загружен: ${err.message}`);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  DEBUG PANEL
+// ══════════════════════════════════════════════════
+function updateDebug() {
+  $dMsgCount.textContent = `${userMsgCount} / ${MIN_MSGS_FOR_RELEASE}`;
+
+  // Progress
+  const pct = Math.min(100, (userMsgCount / MIN_MSGS_FOR_RELEASE) * 100);
+  $dProgress.style.width = pct + '%';
+
+  if (!pendingGuardian) {
+    $dPhase.textContent = userMsgCount === 0 ? 'ожидание' : 'диалог';
+    $dPhase.className = 'debug-value highlight';
+    $dGuardian.textContent = '—';
+    $dGuardian.className = 'debug-value';
+    $dTrigger.textContent = '—';
+    $dRelease.textContent = '—';
+    $dRelease.className = 'debug-value';
+    $dInjection.textContent = 'нет';
+    $dInjection.className = 'debug-value';
+    $dProgress.style.background = 'var(--accent)';
+  } else {
+    const gData = GUARDIANS[pendingGuardian];
+    $dGuardian.textContent = gData ? gData.name : pendingGuardian;
+    $dGuardian.className = 'debug-value green';
+    $dTrigger.textContent = triggerWord || '—';
+    $dTrigger.className = 'debug-value green';
+
+    if (userMsgCount >= MIN_MSGS_FOR_RELEASE) {
+      $dPhase.textContent = '→ ЗАВЕРШЕНИЕ';
+      $dPhase.className = 'debug-value green';
+      $dRelease.textContent = `→ ${gData?.name || pendingGuardian}`;
+      $dRelease.className = 'debug-value green';
+      $dInjection.textContent = '[СИСТЕМА] завершай';
+      $dInjection.className = 'debug-value green';
+      $dProgress.style.background = 'var(--green)';
+    } else if (userMsgCount >= 4) {
+      $dPhase.textContent = 'углубление';
+      $dPhase.className = 'debug-value blue';
+      $dRelease.textContent = `ещё ${MIN_MSGS_FOR_RELEASE - userMsgCount} сообщений`;
+      $dRelease.className = 'debug-value blue';
+      $dInjection.textContent = '[СИСТЕМА] продолжай';
+      $dInjection.className = 'debug-value blue';
+      $dProgress.style.background = 'var(--blue)';
+    } else {
+      $dPhase.textContent = 'ключ найден';
+      $dPhase.className = 'debug-value purple';
+      $dRelease.textContent = `ещё ${MIN_MSGS_FOR_RELEASE - userMsgCount} сообщений`;
+      $dRelease.className = 'debug-value purple';
+      $dInjection.textContent = 'нет (рано)';
+      $dInjection.className = 'debug-value';
+      $dProgress.style.background = 'var(--purple)';
+    }
+  }
+
+  // Badges
+  $dBadges.querySelectorAll('.guardian-badge').forEach(b => {
+    const g = b.dataset.g;
+    b.className = 'guardian-badge';
+    if (g === pendingGuardian) b.classList.add('pending');
+    else if (detectedKeywords.has(g)) b.classList.add('detected');
+  });
+
+  // Classifier status
+  if (pendingGuardian) {
+    $dClassifier.textContent = 'не нужен';
+    $dClassifier.className = 'debug-value';
+    if (triggerWord === 'AI-классификатор') {
+      $dClassResult.textContent = `→ ${GUARDIANS[pendingGuardian]?.name || pendingGuardian}`;
+      $dClassResult.className = 'debug-value green';
+    }
+  } else if (classifierRunning) {
+    $dClassifier.textContent = '⏳ работает...';
+    $dClassifier.className = 'debug-value highlight';
+  } else if (userMsgCount >= CLASSIFIER_THRESHOLD) {
+    $dClassifier.textContent = classifierResult ? 'завершён' : 'повтор при следующем';
+    $dClassifier.className = 'debug-value';
+  } else {
+    const left = CLASSIFIER_THRESHOLD - userMsgCount;
+    $dClassifier.textContent = `ждёт (ещё ${left})`;
+    $dClassifier.className = 'debug-value';
+    $dClassResult.textContent = '—';
+    $dClassResult.className = 'debug-value';
+  }
+}
+
+function debugLog(type, text) {
+  const el = document.createElement('div');
+  el.className = `debug-log-entry ${type}`;
+  const time = new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  el.textContent = `${time} · ${text}`;
+  $dLog.appendChild(el);
+  $dLog.scrollTop = $dLog.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════
+//  BUILD SYSTEM PROMPT (mirrors fire.js logic)
+// ══════════════════════════════════════════════════
+function buildFireSystemPrompt() {
+  // Если выбран промпт справа — используем его
+  let prompt = (systemPrompt && activePromptId) ? systemPrompt : firePromptBase;
+
+  if (pendingGuardian && userMsgCount >= MIN_MSGS_FOR_RELEASE) {
+    prompt += `\n\n[СИСТЕМА]: Человек произнёс ключевое слово. Ты чувствуешь, что он нашёл своё. Скажи последнее тёплое отражение — коротко, как уголёк. И добавь в самый конец: [ТЫ НЕ ОДИН]. Не торопись, но это твой последний ответ.`;
+  } else if (pendingGuardian && userMsgCount >= 4) {
+    prompt += `\n\n[СИСТЕМА]: Человек близко к чему-то важному. Продолжай слушать, помоги ему раскрыться глубже. НЕ завершай разговор.`;
+  }
+
+  return prompt;
+}
+
+// ══════════════════════════════════════════════════
+//  MODEL SELECTOR
+// ══════════════════════════════════════════════════
+function renderModelSelector() {
+  let html = MODELS.map(m => `
+    <div class="model-option ${m.id === currentModel ? 'active' : ''}" data-model="${m.id}">
+      <span class="model-option-name">${m.name}</span>
+      <div class="model-option-meta">
+        <span class="model-option-price">${m.price}</span>
+        <span class="model-option-speed speed-${m.speed}">${m.speed}</span>
+      </div>
+    </div>
+  `).join('');
+  html += `<div class="model-divider"></div><div class="model-custom">
+    <div class="model-custom-label">+ своя модель (Enter)</div>
+    <input class="model-custom-input" id="model-custom-input" placeholder="provider/model-name" spellcheck="false">
+  </div>`;
+  $mDropdown.innerHTML = html;
+
+  $mDropdown.querySelectorAll('.model-option').forEach(el => {
+    el.addEventListener('click', () => {
+      currentModel = el.dataset.model;
+      updateModelDisplay(); renderModelSelector();
+      $selector.classList.remove('open');
+    });
+  });
+
+  const customInput = document.getElementById('model-custom-input');
+  customInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const val = customInput.value.trim();
+      if (val) { currentModel = val; updateModelDisplay(); renderModelSelector(); $selector.classList.remove('open'); }
+    }
+  });
+}
+
+function updateModelDisplay() {
+  const found = MODELS.find(m => m.id === currentModel);
+  if (found) { $mName.textContent = found.name; $mPrice.textContent = found.price; }
+  else { $mName.textContent = currentModel.split('/').pop(); $mPrice.textContent = ''; }
+}
+
+$mCurrent.addEventListener('click', (e) => { e.stopPropagation(); $selector.classList.toggle('open'); });
+document.addEventListener('click', (e) => { if (!$selector.contains(e.target)) $selector.classList.remove('open'); });
+
+// ── Tabs ─────────────────────────────────────────
+document.querySelectorAll('.sidebar-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+  });
+});
+
+// ══════════════════════════════════════════════════
+//  SEND (with fire simulation)
+// ══════════════════════════════════════════════════
+$btnSend.addEventListener('click', send);
+$input.addEventListener('keydown', e => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); send(); } });
+
+async function send() {
+  const text = $input.value.trim();
+  if (!text || isWaiting) return;
+
+  $input.value = '';
+  $chatEmpty.style.display = 'none';
+
+  userMsgCount++;
+
+  // Detect keywords
+  const kw = detectKeyword(text);
+  let kwTag = null;
+  if (kw) {
+    detectedKeywords.add(kw.guardianId);
+    if (!pendingGuardian) {
+      pendingGuardian = kw.guardianId;
+      triggerWord = kw.word;
+      debugLog('keyword', `ключ: "${kw.word}" → ${GUARDIANS[kw.guardianId]?.name || kw.guardianId}`);
+    }
+    kwTag = `${kw.word} → ${GUARDIANS[kw.guardianId]?.name || kw.guardianId}`;
+  }
+
+  appendMsg('user', text, kwTag);
+  chatHistory.push({ role: 'user', content: text });
+
+  // AI classifier — если ключ не найден и уже достаточно сообщений
+  if (!pendingGuardian && userMsgCount >= CLASSIFIER_THRESHOLD && !classifierRunning) {
+    classifierRunning = true;
+    debugLog('system', `🧠 AI-классификатор запущен (${CLASSIFIER_MODEL.split('/').pop()})`);
+    
+    runClassifier(chatHistory).then(result => {
+      classifierRunning = false;
+      classifierResult = result;
+      if (result && !pendingGuardian) {
+        pendingGuardian = result;
+        triggerWord = 'AI-классификатор';
+        detectedKeywords.add(result);
+        debugLog('keyword', `🧠 AI определил: ${GUARDIANS[result]?.name || result}`);
+        updateDebug();
+      } else if (!result) {
+        debugLog('warning', `🧠 AI не смог определить`);
+      }
+    });
+  }
+
+  updateDebug();
+  debugLog('system', `сообщение #${userMsgCount}`);
+
+  // Build system prompt
+  const useCustomPrompt = systemPrompt && activePromptId;
+  const sysPrompt = simMode ? buildFireSystemPrompt() : (systemPrompt || '');
+  
+  // Update debug with prompt source
+  if (simMode) {
+    $dPromptSt.textContent = useCustomPrompt ? `✓ правая панель` : (firePromptBase.length > 100 ? `✓ файл` : 'фолбэк');
+    $dPromptSt.className = useCustomPrompt ? 'debug-value highlight' : 'debug-value green';
+  }
+
+  isWaiting = true;
+  $btnSend.disabled = true;
+  const typingEl = showTyping();
+
+  try {
+    const reply = await callAPI(sysPrompt);
+    typingEl.remove();
+
+    // Check for release marker
+    const hasMarker = reply.includes('[ТЫ НЕ ОДИН]');
+    const cleanReply = reply.replace('[ТЫ НЕ ОДИН]', '').trim();
+
+    appendMsg('assistant', cleanReply || reply);
+    chatHistory.push({ role: 'assistant', content: cleanReply || reply });
+
+    if (hasMarker) {
+      debugLog('release', `🔥 ЗАВЕРШЕНИЕ → ${pendingGuardian ? GUARDIANS[pendingGuardian]?.name : 'EXIT'}`);
+      if (pendingGuardian) {
+        const gData = GUARDIANS[pendingGuardian];
+        appendMsg('system', `⚡ Переход к хранителю: ${gData?.name || pendingGuardian} — "${gData?.phrase || ''}"`, null, true);
+      } else {
+        appendMsg('system', `↩ Ключ не найден → возврат к Безликому`, null, true);
+      }
+    }
+  } catch (err) {
+    typingEl.remove();
+    appendMsg('assistant', `⚠ ${err.message}`);
+    debugLog('warning', `API ошибка: ${err.message}`);
+  }
+
+  isWaiting = false;
+  $btnSend.disabled = false;
+  $input.focus();
+}
+
+// ── API ──────────────────────────────────────────
+async function callAPI(sysPrompt) {
+  const messages = [];
+  if (sysPrompt) messages.push({ role: 'system', content: sysPrompt });
+  messages.push(...chatHistory);
+
+  const res = await fetch(CONFIG.api.endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CONFIG.api.apiKey}`,
+      'HTTP-Referer': window.location.href,
+      'X-Title': 'Temple - Cabinet',
+    },
+    body: JSON.stringify({
+      model: currentModel,
+      messages,
+      max_tokens: CONFIG.api.maxTokens,
+      temperature: CONFIG.api.temperature,
+    }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    throw new Error(`${res.status} ${res.statusText}`);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content?.trim() || '...';
+}
+
+// ── Chat UI ──────────────────────────────────────
+function appendMsg(role, text, kwTag = null, isSystemEvent = false) {
+  const div = document.createElement('div');
+  const time = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+
+  if (isSystemEvent) {
+    div.className = 'msg msg--ai';
+    div.innerHTML = `<div class="msg-text" style="color: var(--green); font-size: 0.75rem; font-family: var(--font-mono); padding: 8px 0;">⚡ ${escapeHtml(text)}</div>`;
+    $chat.appendChild(div);
+    $chat.scrollTop = $chat.scrollHeight;
+    return;
+  }
+
+  div.className = `msg msg--${role === 'user' ? 'user' : 'ai'}`;
+  let extra = '';
+  if (kwTag) extra = `<div class="msg-keyword-tag">🔑 ${escapeHtml(kwTag)}</div>`;
+  div.innerHTML = `
+    <div class="msg-role">${role === 'user' ? 'ты' : 'костёр'}</div>
+    <div class="msg-text">${escapeHtml(text)}</div>
+    ${extra}
+    <div class="msg-time">${time}</div>
+  `;
+  $chat.appendChild(div);
+  $chat.scrollTop = $chat.scrollHeight;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'typing-indicator';
+  div.textContent = '···';
+  $chat.appendChild(div);
+  $chat.scrollTop = $chat.scrollHeight;
+  return div;
+}
+
+function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Clear ────────────────────────────────────────
+$btnClear.addEventListener('click', () => {
+  chatHistory = [];
+  userMsgCount = 0;
+  pendingGuardian = null;
+  triggerWord = null;
+  detectedKeywords.clear();
+  classifierRunning = false;
+  classifierResult = null;
+  $chat.innerHTML = '';
+  $chatEmpty.style.display = 'flex';
+  $chat.appendChild($chatEmpty);
+  $dLog.innerHTML = '';
+  updateDebug();
+  debugLog('system', 'сброс');
+});
+
+// ── Save ─────────────────────────────────────────
+$btnSave.addEventListener('click', () => {
+  if (chatHistory.length === 0) return;
+  const archive = getArchive();
+  const firstMsg = chatHistory.find(m => m.role === 'user')?.content || 'без названия';
+  archive.unshift({
+    id: Date.now(),
+    title: (typeof firstMsg === 'string' ? firstMsg : '...').substring(0, 60),
+    prompt: 'fire-sim',
+    model: currentModel,
+    date: new Date().toISOString(),
+    messages: [...chatHistory],
+    systemPrompt: buildFireSystemPrompt(),
+  });
+  localStorage.setItem('temple_cabinet_archive', JSON.stringify(archive));
+  renderArchive();
+  $btnSave.textContent = '✓';
+  setTimeout(() => { $btnSave.textContent = '💾 сохранить'; }, 1500);
+});
+
+function getArchive() { try { return JSON.parse(localStorage.getItem('temple_cabinet_archive') || '[]'); } catch { return []; } }
+
+function renderArchive() {
+  const archive = getArchive();
+  if (archive.length === 0) { $panelAr.innerHTML = '<div class="archive-empty">архив пуст</div>'; return; }
+  $panelAr.innerHTML = archive.map(item => `
+    <div class="archive-item" data-id="${item.id}">
+      <div class="archive-item-title">${escapeHtml(item.title)}</div>
+      <div class="archive-item-meta">
+        <span class="archive-item-date">${new Date(item.date).toLocaleDateString('ru', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</span>
+        <button class="archive-item-delete" data-id="${item.id}" title="Удалить">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  $panelAr.querySelectorAll('.archive-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.classList.contains('archive-item-delete')) return;
+      const item = archive.find(a => a.id === parseInt(el.dataset.id));
+      if (!item) return;
+      chatHistory = [...item.messages]; systemPrompt = item.systemPrompt || '';
+      if (item.model) { currentModel = item.model; updateModelDisplay(); renderModelSelector(); }
+      $chat.innerHTML = ''; $chatEmpty.style.display = 'none';
+      chatHistory.forEach(m => appendMsg(m.role, typeof m.content === 'string' ? m.content : '...'));
+    });
+  });
+
+  $panelAr.querySelectorAll('.archive-item-delete').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      localStorage.setItem('temple_cabinet_archive', JSON.stringify(archive.filter(a => a.id !== parseInt(btn.dataset.id))));
+      renderArchive();
+    });
+  });
+}
+
+// ── Prompts ──────────────────────────────────────
+function renderPrompts() {
+  $panelPr.innerHTML = PROMPTS.folders.map(folder => `
+    <div class="prompt-folder open" data-folder="${folder.id}">
+      <div class="prompt-folder-header"><span class="prompt-folder-arrow">▶</span>${folder.name}</div>
+      <div class="prompt-folder-items">
+        ${folder.prompts.map(p => `
+          <div class="prompt-item" data-prompt-id="${p.id}" data-file="${p.file}">
+            <span>${p.name}</span>
+            <div class="prompt-item-actions">
+              <button class="prompt-action" data-action="preview" data-file="${p.file}" data-name="${p.name}" title="Просмотр">👁</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  $panelPr.querySelectorAll('.prompt-folder-header').forEach(h => { h.addEventListener('click', () => h.parentElement.classList.toggle('open')); });
+
+  $panelPr.querySelectorAll('.prompt-item').forEach(item => {
+    item.addEventListener('click', async (e) => {
+      if (e.target.closest('.prompt-action')) return;
+      $panelPr.querySelectorAll('.prompt-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      activePromptId = item.dataset.promptId;
+      systemPrompt = await loadPrompt(item.dataset.file);
+      $activeName.textContent = item.querySelector('span').textContent;
+      $activeBar.classList.add('visible');
+    });
+  });
+
+  $panelPr.querySelectorAll('.prompt-action[data-action="preview"]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      $modalTitle.textContent = btn.dataset.name;
+      $modalText.textContent = await loadPrompt(btn.dataset.file);
+      $modal.classList.add('visible');
+    });
+  });
+}
+
+$btnDesel.addEventListener('click', () => { systemPrompt = ''; activePromptId = null; $activeBar.classList.remove('visible'); $panelPr.querySelectorAll('.prompt-item').forEach(i => i.classList.remove('active')); });
+$modalClose.addEventListener('click', () => $modal.classList.remove('visible'));
+$modal.addEventListener('click', (e) => { if (e.target === $modal) $modal.classList.remove('visible'); });
+
+async function loadPrompt(file) {
+  if (promptCache[file]) return promptCache[file];
+  try { const res = await fetch(`prompts/${file}`); if (!res.ok) throw new Error(`${res.status}`); const text = await res.text(); promptCache[file] = text; return text; }
+  catch (err) { return `⚠ Не удалось: ${file}`; }
+}
+</script>
+</body>
+</html>

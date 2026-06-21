@@ -1,0 +1,22 @@
+[
+  {
+    "ID_Object": "TREASURY",
+    "Object_Type_Class": "SYSTEM_CORE",
+    "Official_Name": "Казна Грондхейма (The Treasury)",
+    "Balance_GND": 0.0,
+    "Ambassador_Rank": "Солнце",
+    "Referrer_ID": null,
+    "Backing_Status": "Обеспечено резервом",
+    "allow_GND": true
+  },
+  {
+    "ID_Object": "GLOBAL_POOL",
+    "Object_Type_Class": "SYSTEM_CORE",
+    "Official_Name": "Глобальный Пул (1%)",
+    "Balance_GND": 144.16,
+    "Ambassador_Rank": "Искра",
+    "Referrer_ID": null,
+    "Backing_Status": "Обеспечено резервом",
+    "allow_GND": true
+  }
+]
