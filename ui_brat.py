@@ -494,20 +494,15 @@ body{
                  border:1px solid rgba(255,255,255,0.12)!important; border-radius:10px!important; }
 .chat-msg-brat{ background:rgba(201,168,76,0.08); border-left:3px solid rgba(201,168,76,0.6);
                 padding:8px 12px; margin:8px 0; border-radius:0 8px 8px 0; }
-/* Врата — одинаковые кнопки фикс-ширины (перебиваем Quasar) */
-.brat-gate{ width:148px !important; min-width:148px !important; max-width:148px !important;
-            height:42px !important; padding:0 !important; border-radius:8px !important;
-            background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.06)) !important;
+/* Врата — одинаковые кнопки: фикс-ширина, тонкий шрифт, белый текст */
+.brat-gate{ width:130px !important; min-width:130px !important; max-width:130px !important;
+            min-height:34px !important; padding:6px 0 !important; border-radius:8px !important;
+            background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.08)) !important;
             border: 1px solid rgba(201,168,76,0.35) !important;
-            color: rgba(255,255,255,0.9) !important; font-weight:700 !important;
-            font-size:0.82rem !important; letter-spacing:0.02em; }
-.brat-gate .q-btn__content{ width:100%; justify-content:center; }
-.brat-gate:hover{ background: linear-gradient(135deg, rgba(201,168,76,0.25), rgba(201,168,76,0.12)) !important;
-                  border-color: rgba(201,168,76,0.6) !important; }
-.brat-grond{ padding:0 44px !important; height:48px !important; border-radius:10px !important;
-             font-size:1.15rem !important; font-weight:900 !important; letter-spacing:0.18em !important;
-             background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.08)) !important;
-             border: 1px solid rgba(201,168,76,0.55) !important; color:#c9a84c !important; }
+            color: #ffffff !important; font-weight:400 !important; font-size:0.78rem !important;
+            text-transform:none !important; }
+.brat-gate .q-btn__content{ width:100% !important; justify-content:center !important; }
+.brat-gate:hover{ background: linear-gradient(135deg, rgba(201,168,76,0.24), rgba(201,168,76,0.14)) !important; }
 """
 
 
@@ -743,6 +738,13 @@ def page_brat():
                         'letter-spacing:0.14em; text-transform:uppercase;">'
                         'врата · различение смысла и пластика</div>')
                 ui.element("div").style("flex:1")
+                # ГРОНДХЕЙМ — по центру хедера (перенесена из тулбара, стиль не тронут)
+                ui.button("ГРОНДХЕЙМ").props("flat no-caps").style(
+                    'padding:10px 40px; border-radius:10px; font-size:1.1rem; '
+                    'font-weight:900; letter-spacing:0.16em; '
+                    'background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.08)) !important; '
+                    'border: 1px solid rgba(201,168,76,0.55); color:#c9a84c;')
+                ui.element("div").style("flex:1")
                 with ui.element("div").classes("brat-model-sel"):
                     opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
                     ui.select(opts, value=state["model"], on_change=on_model_change) \
@@ -766,21 +768,19 @@ def page_brat():
         # STAGE: тулбар + чат + отчёт + ввод
         with ui.element("div").classes("area-stage"):
             with ui.element("div").classes("glass stage-monitor"):
-                # ── ТУЛБАР: ГРОНДХЕЙМ сверху, под ней ряд из 4 равных врат ──
-                with ui.element("div").style(
-                    "flex-shrink:0; display:flex; flex-direction:column; align-items:center; "
-                    "gap:10px; padding:12px 12px 14px; "
-                    "border-bottom:1px solid rgba(255,255,255,0.08); "
-                    "background:rgba(13,17,23,0.95);"
+                # ── ТУЛБАР: врата (прозрачная плашка, кнопки по центру) ──
+                with ui.element("div").classes("stage-toolbar").style(
+                    "flex-shrink:0; grid-template-columns:1fr; justify-items:center; "
+                    "background:transparent !important; border-bottom:none !important; "
+                    "backdrop-filter:none !important;"
                 ):
-                    # ГРОНДХЕЙМ — крупная, по центру, наверху
-                    ui.button("ГРОНДХЕЙМ").props("flat no-caps").classes("brat-grond")
-                    # 4 равные кнопки-врата (класс задаёт фикс-ширину → одинаковые)
-                    with ui.element("div").style("display:flex; gap:8px; align-items:center;"):
-                        ui.button("Храм").props("flat no-caps").classes("brat-gate")
-                        ui.button("Торговый").props("flat no-caps").classes("brat-gate")
-                        ui.button("Мастеров").props("flat no-caps").classes("brat-gate")
-                        ui.button("Живая книга").props("flat no-caps").classes("brat-gate")
+                    with ui.element("div").style(
+                        "display:flex; gap:8px; align-items:center; justify-content:center;"
+                    ):
+                        ui.button("Храм").props("flat").classes("brat-gate")
+                        ui.button("Торговый").props("flat").classes("brat-gate")
+                        ui.button("Мастеров").props("flat").classes("brat-gate")
+                        ui.button("Живая книга").props("flat").classes("brat-gate")
                 with ui.element("div").classes("stage-content").style("padding-bottom:90px;"):
                     with ui.element("div").classes("split-view"):
                         refs["chat"] = ui.element("div").classes("chat-log")
