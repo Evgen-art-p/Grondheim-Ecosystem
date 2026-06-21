@@ -1,33 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-patch_brat_cabinet.py — кладёт КАБИНЕТ БРАТА (ui_brat.py) в корень мира.
-
-Кабинет Брата — врата нового Грондхейма. Четыре органа:
-  чат (ты ↔ Брат живьём, OpenRouter, выбор модели сверху) · отчёты (просев) ·
-  загрузчик (руда руками) · аватар.
-
-Self-contained: не требует studio/. Душа Брата читается из его канона
-(Брат/1_якоря_очень_важно/МИРОУСТРОЙСТВО.md, СВОД_ЗАКОНОВ_ЗАПОВЕДИ.md, README).
-
-Запускать из КОРНЯ репо:  python patch_brat_cabinet.py
-Идемпотентен: повтор без изменений ничего не трогает; при изменении — бэкап.
-
-После патча — подключить в main (один раз, руками):
-    from ui_brat import page_brat
-    @ui.page('/brat')
-    def _brat(): page_brat()
-И положить ключи в .env: OPENROUTER_API_KEY, OPENROUTER_MODEL, PROXY_URL.
-Аватар (необязательно): Брат/static/avatar.png
-"""
-import os
-import shutil
-import py_compile
-from datetime import datetime
-
-TARGET = "ui_brat.py"
-MARKER = "# ui_brat.py"
-
-CONTENT = r'''# ui_brat.py
+# ui_brat.py
 """
 КАБИНЕТ БРАТА — врата нового мира Грондхейм.
 Раскладка по образцу Биржи (ui_exchange.py):
@@ -83,14 +54,6 @@ BRAT_CSS = """
 .brat-page { background:var(--r-void)!important; font-family:'Fira Code',monospace!important;
              color:var(--r-text)!important; min-height:100vh; }
 .brat-page .q-page, .brat-page .q-layout { background:transparent!important; }
-/* растяжка на всё окно — снимаем дефолтные ограничения NiceGUI */
-.brat-page .nicegui-content { padding:0!important; max-width:none!important;
-                              width:100%!important; gap:0!important; }
-.brat-page .q-page { max-width:none!important; width:100%!important;
-                     padding:0!important; margin:0!important; }
-.brat-page .q-page-container { padding:0!important; }
-html, body { margin:0!important; padding:0!important; width:100%!important;
-             overflow-x:hidden!important; }
 .brat-bg { position:fixed; inset:0; z-index:-2; background-size:cover; background-position:center;
            opacity:0.16; filter:saturate(0.7); }
 .brat-bg-veil { position:fixed; inset:0; z-index:-1;
@@ -482,49 +445,3 @@ if __name__ in {"__main__", "__mp_main__"}:
     def _brat_page():
         page_brat()
     ui.run(title="Кабинет Брата", port=8101, reload=False)
-'''
-
-
-def main():
-    if not os.path.isdir("Брат"):
-        print("⚠ Папка 'Брат' не найдена рядом. Запусти из КОРНЯ репо.")
-        print("шесть·проверено·до·корня")
-        return
-
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    if os.path.exists(TARGET):
-        cur = open(TARGET, encoding="utf-8").read()
-        if cur == CONTENT:
-            print(f"  = без изменений: {TARGET}")
-            print("шесть·проверено·до·корня")
-            return
-        bak = f"{TARGET}.bak_{ts}"
-        shutil.copy2(TARGET, bak)
-        print(f"  ~ бэкап старого: {bak}")
-        open(TARGET, "w", encoding="utf-8").write(CONTENT)
-        print(f"  ~ обновлён: {TARGET}")
-    else:
-        open(TARGET, "w", encoding="utf-8").write(CONTENT)
-        print(f"  + создан: {TARGET}")
-
-    try:
-        py_compile.compile(TARGET, doraise=True)
-        print(f"  ✓ py_compile: {TARGET} чистый")
-    except py_compile.PyCompileError as e:
-        print(f"  ✗ ОШИБКА КОМПИЛЯЦИИ: {e}")
-        return
-
-    print()
-    print("  Кабинет Брата лёг. Дальше — руками, один раз:")
-    print("    1) в main:  from ui_brat import page_brat")
-    print("                @ui.page('/brat')")
-    print("                def _brat(): page_brat()")
-    print("    2) в .env:  OPENROUTER_API_KEY=...  (OPENROUTER_MODEL, PROXY_URL)")
-    print("    3) аватар:  Брат/static/avatar.png  (необязательно)")
-    print("    4) открой:  /brat  — модель переключается сверху")
-    print("шесть·проверено·до·корня")
-
-
-if __name__ == "__main__":
-    main()

@@ -54,6 +54,14 @@ BRAT_CSS = """
 .brat-page { background:var(--r-void)!important; font-family:'Fira Code',monospace!important;
              color:var(--r-text)!important; min-height:100vh; }
 .brat-page .q-page, .brat-page .q-layout { background:transparent!important; }
+/* растяжка на всё окно — снимаем дефолтные ограничения NiceGUI */
+.brat-page .nicegui-content { padding:0!important; max-width:none!important;
+                              width:100%!important; gap:0!important; }
+.brat-page .q-page { max-width:none!important; width:100%!important;
+                     padding:0!important; margin:0!important; }
+.brat-page .q-page-container { padding:0!important; }
+html, body { margin:0!important; padding:0!important; width:100%!important;
+             overflow-x:hidden!important; }
 .brat-bg { position:fixed; inset:0; z-index:-2; background-size:cover; background-position:center;
            opacity:0.16; filter:saturate(0.7); }
 .brat-bg-veil { position:fixed; inset:0; z-index:-1;
