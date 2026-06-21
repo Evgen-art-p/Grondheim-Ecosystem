@@ -494,6 +494,20 @@ body{
                  border:1px solid rgba(255,255,255,0.12)!important; border-radius:10px!important; }
 .chat-msg-brat{ background:rgba(201,168,76,0.08); border-left:3px solid rgba(201,168,76,0.6);
                 padding:8px 12px; margin:8px 0; border-radius:0 8px 8px 0; }
+/* Врата — одинаковые кнопки фикс-ширины (перебиваем Quasar) */
+.brat-gate{ width:148px !important; min-width:148px !important; max-width:148px !important;
+            height:42px !important; padding:0 !important; border-radius:8px !important;
+            background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.06)) !important;
+            border: 1px solid rgba(201,168,76,0.35) !important;
+            color: rgba(255,255,255,0.9) !important; font-weight:700 !important;
+            font-size:0.82rem !important; letter-spacing:0.02em; }
+.brat-gate .q-btn__content{ width:100%; justify-content:center; }
+.brat-gate:hover{ background: linear-gradient(135deg, rgba(201,168,76,0.25), rgba(201,168,76,0.12)) !important;
+                  border-color: rgba(201,168,76,0.6) !important; }
+.brat-grond{ padding:0 44px !important; height:48px !important; border-radius:10px !important;
+             font-size:1.15rem !important; font-weight:900 !important; letter-spacing:0.18em !important;
+             background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.08)) !important;
+             border: 1px solid rgba(201,168,76,0.55) !important; color:#c9a84c !important; }
 """
 
 
@@ -752,27 +766,21 @@ def page_brat():
         # STAGE: тулбар + чат + отчёт + ввод
         with ui.element("div").classes("area-stage"):
             with ui.element("div").classes("glass stage-monitor"):
-                # ── ТУЛБАР: врата слева, ГРОНДХЕЙМ по центру ──
-                with ui.element("div").classes("stage-toolbar").style(
-                    "flex-shrink:0; grid-template-columns:auto 1fr auto;"
+                # ── ТУЛБАР: ГРОНДХЕЙМ сверху, под ней ряд из 4 равных врат ──
+                with ui.element("div").style(
+                    "flex-shrink:0; display:flex; flex-direction:column; align-items:center; "
+                    "gap:10px; padding:12px 12px 14px; "
+                    "border-bottom:1px solid rgba(255,255,255,0.08); "
+                    "background:rgba(13,17,23,0.95);"
                 ):
-                    _btn_style = ('padding:8px 18px; border-radius:8px; '
-                                  'background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.06)) !important; '
-                                  'border: 1px solid rgba(201,168,76,0.35); '
-                                  'color: rgba(255,255,255,0.9); font-weight: 700;')
-                    with ui.element("div").style("display:flex; gap:6px; align-items:center;"):
-                        ui.button("Храм").props("flat").style(_btn_style)
-                        ui.button("Торговый").props("flat").style(_btn_style)
-                        ui.button("Мастеров").props("flat").style(_btn_style)
-                        ui.button("Живая книга").props("flat").style(_btn_style)
-                    with ui.element("div").style("display:flex; justify-content:center; align-items:center;"):
-                        ui.button("ГРОНДХЕЙМ").props("flat no-caps").style(
-                            'padding:10px 32px; border-radius:10px; font-size:1.05rem; '
-                            'font-weight:900; letter-spacing:0.14em; '
-                            'background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.10)) !important; '
-                            'border: 1px solid rgba(201,168,76,0.55); '
-                            'color: #c9a84c;')
-                    ui.element("div")  # правая пустая зона грида
+                    # ГРОНДХЕЙМ — крупная, по центру, наверху
+                    ui.button("ГРОНДХЕЙМ").props("flat no-caps").classes("brat-grond")
+                    # 4 равные кнопки-врата (класс задаёт фикс-ширину → одинаковые)
+                    with ui.element("div").style("display:flex; gap:8px; align-items:center;"):
+                        ui.button("Храм").props("flat no-caps").classes("brat-gate")
+                        ui.button("Торговый").props("flat no-caps").classes("brat-gate")
+                        ui.button("Мастеров").props("flat no-caps").classes("brat-gate")
+                        ui.button("Живая книга").props("flat no-caps").classes("brat-gate")
                 with ui.element("div").classes("stage-content").style("padding-bottom:90px;"):
                     with ui.element("div").classes("split-view"):
                         refs["chat"] = ui.element("div").classes("chat-log")
