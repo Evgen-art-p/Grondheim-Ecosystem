@@ -1,0 +1,25 @@
+# Секретные ключи и настройки
+.env
+*.env
+
+# Временные файлы Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Логи и отчеты
+*.log
+runs/
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Тяжелые медиафайлы (если они в папке кода)
+*.mp4
+*.png
+*.jpg
+
+# Игнорируем базу данных Chroma
+studio/harbor_db/
+*.sqlite3
