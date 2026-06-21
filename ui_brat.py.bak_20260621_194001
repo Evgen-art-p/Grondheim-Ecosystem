@@ -34,8 +34,8 @@ MARKS_DIR   = BRAT_ROOT / "2_метки_важно"
 BEACON_DIR  = BRAT_ROOT / "3_маяки_не_очень"
 FORGE_PROMPT = BRAT_ROOT / "forge" / "prompt.md"   # необязателен
 
-# Аватар: Брат/static/avatar.png (живёт в доме Брата)
-AVATAR_DIR  = BRAT_ROOT / "static"
+# Аватар: static/avatars/brat.png (любое из расширений)
+AVATAR_DIR  = Path("static/avatars")
 
 # ── OPENROUTER (из .env / окружения) ─────────────────────────────
 OPENROUTER_KEY   = os.getenv("OPENROUTER_API_KEY", "")
@@ -287,9 +287,9 @@ def scan_sift() -> dict:
 # ═══════════════════════════════════════════════════════════════
 def avatar_url() -> str:
     for ext in (".png", ".jpg", ".jpeg", ".webp"):
-        p = AVATAR_DIR / ("avatar" + ext)
+        p = AVATAR_DIR / ("brat" + ext)
         if p.exists():
-            return "/brat-static/avatar" + ext
+            return "/avatars/brat" + ext
     return ""
 
 
@@ -306,7 +306,7 @@ def page_brat():
     try:
         if AVATAR_DIR.exists():
             from nicegui import app
-            app.add_static_files("/brat-static", str(AVATAR_DIR))
+            app.add_static_files("/avatars", str(AVATAR_DIR))
     except Exception:
         pass
 
