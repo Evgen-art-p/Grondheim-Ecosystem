@@ -1,11 +1,16 @@
 # ui_brat.py
 """
 КАБИНЕТ БРАТА — врата нового мира Грондхейм.
-Раскладка по образцу Биржи (ui_exchange.py):
-  ЛЕВО  — загрузчик руды сверху, поля руда/просеяно под ним.
-  ЦЕНТР — чат с Братом + отчёты рядом (split-view), ввод снизу.
-  ПРАВО — аватар Брата + приборы состояния (ждут привязки к городу).
-Фон и аватар — из дома Брата: Брат/static/ (bg.* и avatar.*).
+Раскладка — точная калька Биржи (studio/economy/ui_exchange.py +
+studio/workshop/styles.py): app-container grid, area-left/stage/right.
+
+  ЛЕВО  (area-left)  — загрузчик руды (asset-bay) + список (file-list).
+  ЦЕНТР (area-stage) — split-view: chat-log (чат) + viewer (отчёт Брата),
+                       floating-console (ввод) внизу по центру.
+  ПРАВО (area-right) — right-top-slot (аватар) + приборы состояния.
+
+Фон #bg — из Брат/static/bg.*; аватар — Брат/static/avatar.*.
+Приборы (стресс/энергия/...) ждут привязки к городу — пока плейсхолдеры.
 """
 import os
 import asyncio
@@ -34,124 +39,463 @@ MODELS_CATALOG = [
 ]
 DEFAULT_MODEL = OPENROUTER_MODEL or MODELS_CATALOG[0]["id"]
 
-BRAT_ROOT   = Path("Брат")
-RUDA_DIR    = BRAT_ROOT / "руда_входящее"
-SIFTED_DIR  = BRAT_ROOT / "просеяно_выход"
-ANCHOR_DIR  = BRAT_ROOT / "1_якоря_очень_важно"
+BRAT_ROOT    = Path("Брат")
+RUDA_DIR     = BRAT_ROOT / "руда_входящее"
+SIFTED_DIR   = BRAT_ROOT / "просеяно_выход"
+ANCHOR_DIR   = BRAT_ROOT / "1_якоря_очень_важно"
 FORGE_PROMPT = BRAT_ROOT / "forge" / "prompt.md"
-STATIC_DIR  = BRAT_ROOT / "static"
+STATIC_DIR   = BRAT_ROOT / "static"
 
-BRAT_CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Playfair+Display:wght@400;600;700&display=swap');
-:root {
-    --r-void:#08080d; --r-surface:#0e0e16; --r-surface2:#14141e;
-    --r-border:#1e1e30; --r-border-hi:#2a2a44;
-    --r-text:#a0a0b8; --r-text-dim:#55556a; --r-text-hi:#d0d0e0;
-    --r-gold:#c9a84c; --r-gold-dim:#8a6e2a; --r-gold-glow:rgba(201,168,76,0.10);
-    --r-green:#3a8a5a; --r-red:#b83a3a; --r-blue:#4488cc;
+BRAT_CSS = r"""
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root{
+  --bg: #050510;
+  --text: #ffffff;
+  --muted: #8899a6;
+  --glass: rgba(13, 17, 23, 0.60);
+  --stroke: rgba(255,255,255,0.10);
+  --g: #00ff88;
+  --b: #00ccff;
+  --p: #bd00ff;
+  --orange: #ff9500;
 }
-.brat-page { background:var(--r-void)!important; font-family:'Fira Code',monospace!important;
-             color:var(--r-text)!important; min-height:100vh; }
-.brat-page .q-page, .brat-page .q-layout { background:transparent!important; }
-/* растяжка на всё окно — снимаем дефолтные ограничения NiceGUI */
-.brat-page .nicegui-content { padding:0!important; max-width:none!important;
-                              width:100%!important; gap:0!important; }
-.brat-page .q-page { max-width:none!important; width:100%!important;
-                     padding:0!important; margin:0!important; }
-.brat-page .q-page-container { padding:0!important; }
-html, body { margin:0!important; padding:0!important; width:100%!important;
-             overflow-x:hidden!important; }
-.brat-bg { position:fixed; inset:0; z-index:-2; background-size:cover; background-position:center;
-           opacity:0.16; filter:saturate(0.7); }
-.brat-bg-veil { position:fixed; inset:0; z-index:-1;
-           background:radial-gradient(circle at 50% 0%, rgba(201,168,76,0.04), transparent 60%),
-                      linear-gradient(180deg, rgba(8,8,13,0.7), rgba(8,8,13,0.92)); }
-.brat-header { display:flex; align-items:center; justify-content:space-between;
-               padding:14px 22px; border-bottom:1px solid var(--r-border); }
-.brat-header .ttl h1 { font-family:'Playfair Display',serif; font-size:1.5rem; color:var(--r-gold);
-                  font-weight:700; letter-spacing:0.04em; margin:0; }
-.brat-header .sub { font-size:0.6rem; color:var(--r-text-dim); letter-spacing:0.16em;
-                    text-transform:uppercase; margin-top:3px; }
-.brat-controls .q-field__control { background:var(--r-void)!important;
-                  border:1px solid var(--r-border)!important; border-radius:5px!important; }
-.brat-controls .q-field__native, .brat-controls .q-field__input {
-                  color:var(--r-gold)!important; font-family:'Fira Code',monospace!important;
-                  font-size:0.66rem!important; }
-.brat-grid { display:grid; grid-template-columns:280px 1fr 320px; gap:14px;
-             padding:14px; height:calc(100vh - 70px); box-sizing:border-box; }
-.brat-col  { background:var(--r-surface); border:1px solid var(--r-border); border-radius:6px;
-             display:flex; flex-direction:column; overflow:hidden; min-height:0; }
-.brat-col-h { padding:11px 15px; border-bottom:1px solid var(--r-border);
-              font-family:'Playfair Display',serif; font-size:0.84rem; color:var(--r-text-hi);
-              display:flex; align-items:center; gap:7px; flex-shrink:0; }
-.brat-col-h .ic { color:var(--r-gold); }
-.brat-up-wrap { padding:12px 14px 8px; flex-shrink:0; }
-.brat-up-lbl { font-size:0.56rem; color:var(--r-text-dim); letter-spacing:0.12em;
-               text-transform:uppercase; margin-bottom:8px; }
-.brat-hint { font-size:0.54rem; color:var(--r-text-dim); line-height:1.5; padding:0 15px 12px; }
-.brat-ore-scroll { flex:1; overflow-y:auto; padding:4px 14px 14px; min-height:0; scrollbar-width:thin; }
-.brat-sec { font-size:0.54rem; color:var(--r-text-dim); letter-spacing:0.1em;
-            text-transform:uppercase; margin:12px 0 6px; }
-.brat-file-row { display:flex; justify-content:space-between; gap:8px; padding:6px 9px;
-                 background:var(--r-void); border:1px solid var(--r-border); border-radius:4px;
-                 margin-bottom:5px; font-size:0.58rem; }
-.brat-file-row .fn { color:var(--r-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.brat-file-row .fs { color:var(--r-gold-dim); flex-shrink:0; }
-.brat-none { font-size:0.58rem; color:var(--r-text-dim); padding:6px 2px; line-height:1.5; }
-.brat-center-body { flex:1; display:flex; flex-direction:column; min-height:0; }
-.brat-split { flex:1; display:flex; gap:0; min-height:0; }
-.brat-chat  { flex:1.4; display:flex; flex-direction:column; min-height:0;
-              border-right:1px solid var(--r-border); }
-.brat-report{ flex:1; display:flex; flex-direction:column; min-height:0; }
-.brat-subh  { padding:8px 14px; font-size:0.54rem; color:var(--r-text-dim);
-              letter-spacing:0.12em; text-transform:uppercase;
-              border-bottom:1px solid var(--r-border); flex-shrink:0; }
-.brat-chat-scroll { flex:1; overflow-y:auto; padding:12px 14px; min-height:0; scrollbar-width:thin; }
-.brat-rep-scroll  { flex:1; overflow-y:auto; padding:12px 14px; min-height:0; scrollbar-width:thin; }
-.brat-msg { margin:7px 0; padding:10px 13px; border-radius:6px; }
-.brat-msg .who { font-size:0.5rem; color:var(--r-text-dim); margin-bottom:4px; letter-spacing:0.06em; }
-.brat-msg .body{ font-size:0.74rem; line-height:1.6; white-space:pre-wrap; }
-.brat-msg.shef { background:rgba(58,138,90,0.05); border:1px solid rgba(58,138,90,0.18); }
-.brat-msg.shef .body { color:var(--r-text-hi); }
-.brat-msg.brat { background:var(--r-gold-glow); border:1px solid rgba(201,168,76,0.18); }
-.brat-msg.brat .body { color:#e6e0cc; }
-.brat-msg.sys  { background:rgba(184,58,58,0.05); border:1px solid rgba(184,58,58,0.2); }
-.brat-msg.sys  .body { color:#d8a0a0; font-size:0.66rem; }
-.brat-empty { text-align:center; padding:36px 18px; font-size:0.6rem; color:var(--r-text-dim); line-height:1.7; }
-.brat-stat-row { display:flex; justify-content:space-between; align-items:center;
-                 padding:8px 11px; background:var(--r-void); border:1px solid var(--r-border);
-                 border-radius:4px; margin-bottom:7px; }
-.brat-stat-row .lbl { font-size:0.6rem; color:var(--r-text); }
-.brat-stat-row .val { font-size:0.85rem; font-weight:600; }
-.brat-input-bar { padding:9px 12px; border-top:1px solid var(--r-border);
-                  background:var(--r-surface2); flex-shrink:0; }
-.brat-avatar-slot { position:relative; margin:14px 14px 0; border-radius:10px; overflow:hidden;
-                    height:240px; background:var(--r-surface2); border:1px solid var(--r-border-hi); }
-.brat-avatar-slot img { width:100%; height:100%; object-fit:cover; opacity:0.9; }
-.brat-avatar-empty { width:100%; height:100%; display:flex; align-items:center;
-                     justify-content:center; font-size:3.6rem; color:var(--r-gold-dim); }
-.brat-avatar-cap { position:absolute; bottom:0; left:0; right:0; padding:14px;
-                   background:linear-gradient(transparent, rgba(0,0,0,0.85)); }
-.brat-avatar-cap .role { font-size:0.5rem; color:rgba(255,255,255,0.45); letter-spacing:0.1em;
-                         text-transform:uppercase; }
-.brat-avatar-cap .nm   { font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--r-gold); }
-.brat-avatar-cap .sub2 { font-size:0.56rem; color:rgba(255,255,255,0.6); }
-.brat-panel { margin:12px 14px 0; }
-.brat-panel-t { font-size:0.54rem; color:var(--r-text-dim); letter-spacing:0.12em;
-                text-transform:uppercase; margin-bottom:8px; }
-.brat-gauge { margin-bottom:11px; }
-.brat-gauge-top { display:flex; justify-content:space-between; font-size:0.58rem; margin-bottom:4px; }
-.brat-gauge-top .gl { color:var(--r-text); }
-.brat-gauge-top .gv { color:var(--r-text-dim); }
-.brat-gauge-bar { height:5px; background:var(--r-void); border:1px solid var(--r-border);
-                  border-radius:3px; overflow:hidden; }
-.brat-gauge-fill { height:100%; border-radius:2px; }
-.brat-bind-note { margin:10px 14px 14px; padding:8px 11px; background:var(--r-void);
-                  border:1px dashed var(--r-border-hi); border-radius:5px;
-                  font-size:0.52rem; color:var(--r-text-dim); line-height:1.5; }
-</style>
+
+html, body { height: 100%; margin: 0; }
+body{
+  width:100vw;
+  height:100vh;
+  overflow:hidden !important;
+  background: transparent !important;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+#bg{
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url('/images/bg_main.jpg');
+  background-size: cover;
+  background-position: center;
+}
+#bg::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background: radial-gradient(1000px 700px at 20% 10%, rgba(201,168,76,0.10), transparent 60%),
+              radial-gradient(900px 650px at 80% 25%, rgba(201,168,76,0.06), transparent 55%),
+              rgba(0,0,0,0.40);
+  backdrop-filter: blur(10px);
+}
+
+.app-container{
+  position: fixed;
+  inset: 0;
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  grid-template-columns: 300px 1fr 260px;
+  grid-template-rows: 80px 1fr;
+  grid-template-areas:
+    "header header header"
+    "left   stage  right";
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.area-header{ grid-area: header; }
+.area-left{ grid-area: left; min-height:0; }
+.area-stage{ grid-area: stage; min-height:0; position: relative; overflow: hidden; }
+.area-right{ grid-area: right; min-height:0; }
+
+.glass{
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  min-height: 0;
+}
+
+.squad-deck{
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 15px;
+  overflow-x: auto;
+}
+
+.avatar{
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.14);
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.16), rgba(255,255,255,0.04));
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: rgba(255,255,255,0.92);
+  font-weight: 800;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.avatar:hover{ border-color: rgba(0,204,255,0.40); transform: scale(1.05); }
+.avatar.active{
+  border-color: rgba(0,204,255,0.75);
+  box-shadow: 0 0 0 2px rgba(0,204,255,0.25) inset, 0 0 30px rgba(0,204,255,0.35);
+}
+.avatar.working{
+  border-color: rgba(255,149,0,0.75);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.avatar.done{
+  border-color: rgba(0,255,136,0.75);
+  box-shadow: 0 0 0 2px rgba(0,255,136,0.25) inset, 0 0 30px rgba(0,255,136,0.35);
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+.left-col{ height: 100%; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+
+.client-panel{ flex-shrink: 0; overflow: hidden; }
+.asset-bay{ height: 120px; flex-shrink: 0; overflow: hidden; }
+.settings-panel{ flex-grow: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+.panel-title{
+  padding: 12px 16px;
+  color: rgba(255,255,255,0.92);
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.panel-body{ padding: 12px 16px; min-height: 0; overflow: auto; }
+
+.setting-row{ margin-bottom: 14px; }
+.setting-label{
+  color: rgba(255,255,255,0.70);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.file-list{ padding: 8px 12px; max-height: 50px; overflow-y: auto; font-family: monospace; font-size: 11px; }
+
+.right-col{ height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; }
+.right-top-slot{
+  flex-shrink: 0;
+  height: 240px;
+  border-radius: 20px;
+  border: 1px dashed rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  display: grid;
+  place-items: center;
+  color: rgba(255,255,255,0.55);
+  font-size: 11px;
+  padding: 12px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.runs-panel{
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.runs-list{
+  padding: 8px 12px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.run-item{
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.run-item:hover{
+  background: rgba(0,204,255,0.08);
+  border-color: rgba(0,204,255,0.25);
+}
+.run-item-name{
+  font-size: 10px;
+  color: rgba(255,255,255,0.75);
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.run-item-delete{
+  font-size: 12px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.3);
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+.run-item-delete:hover{
+  color: rgba(255,80,80,0.9);
+}
+
+.neon-btn{
+  height: 56px;
+  width: 100%;
+  border-radius: 18px;
+  background: transparent;
+  color: rgba(255,255,255,0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+  font-weight: 900;
+  letter-spacing: .10em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.neon-btn:disabled{ opacity: 0.4; cursor: not-allowed; }
+
+.neon-btn.g{
+  border-color: rgba(0,255,136,0.35);
+  background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,204,255,0.10));
+}
+.neon-btn.g:hover:not(:disabled){ background: linear-gradient(135deg, rgba(0,255,136,0.25), rgba(0,204,255,0.15)); }
+
+.neon-btn.b{
+  border-color: rgba(0,204,255,0.35);
+  background: linear-gradient(135deg, rgba(0,204,255,0.15), rgba(189,0,255,0.10));
+}
+.neon-btn.b:hover:not(:disabled){ background: linear-gradient(135deg, rgba(0,204,255,0.25), rgba(189,0,255,0.15)); }
+
+.neon-btn.p{
+  border-color: rgba(189,0,255,0.35);
+  background: linear-gradient(135deg, rgba(189,0,255,0.15), rgba(0,204,255,0.10));
+}
+.neon-btn.p:hover:not(:disabled){ background: linear-gradient(135deg, rgba(189,0,255,0.25), rgba(0,204,255,0.15)); }
+
+.stage-monitor{ height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.stage-toolbar{
+  height: 60px;
+  display: grid;
+  grid-template-columns: 200px 1fr 200px;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  background: rgba(13, 17, 23, 0.95);
+  backdrop-filter: blur(16px);
+  z-index: 10;
+}
+
+.monitor-utils{ display:flex; gap: 12px; }
+.stage-content{
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 18px;
+  padding-bottom: 130px;
+}
+
+.split-view{ height: 100%; display: flex; gap: 18px; min-height: 0; overflow: hidden; }
+.chat-log, .viewer{
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px;
+  font-family: monospace;
+  font-size: 13px;
+  color: rgba(255,255,255,0.86);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+.viewer{ border-color: rgba(201,168,76,0.30); }
+
+.floating-console{
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(820px, calc(100% - 80px));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 50px;
+  background: rgba(13, 17, 23, 0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.floating-console input{
+  width: 100%;
+  border-radius: 40px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  padding: 12px 16px;
+  color: rgba(255,255,255,0.92);
+  outline: none;
+  font-family: monospace;
+}
+
+.send-button{
+  border-radius: 40px !important;
+  border: 2px solid rgba(201,168,76,0.55) !important;
+  background: linear-gradient(135deg, rgba(201,168,76,0.30), rgba(201,168,76,0.18)) !important;
+  color: rgba(255,255,255,0.98) !important;
+  font-weight: 900 !important;
+  padding: 12px 24px !important;
+  cursor: pointer !important;
+}
+
+.util-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgba(189, 0, 255, 0.15);
+  border: 1px solid rgba(189, 0, 255, 0.5);
+  color: rgba(189, 0, 255, 1);
+  transition: all 0.2s;
+}
+.util-btn:hover {
+  background: rgba(189, 0, 255, 0.25);
+}
+
+.chat-msg-user {
+  background: rgba(160, 160, 184, 0.08);
+  border-left: 3px solid rgba(160, 160, 184, 0.5);
+  padding: 8px 12px;
+  margin: 8px 0;
+  border-radius: 0 8px 8px 0;
+}
+.chat-msg-assistant {
+  background: rgba(0, 255, 136, 0.08);
+  border-left: 3px solid rgba(0, 255, 136, 0.6);
+  padding: 8px 12px;
+  margin: 8px 0;
+  border-radius: 0 8px 8px 0;
+}
+.chat-msg-system {
+  color: rgba(255,255,255,0.5);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.uploaded-file {
+  padding: 6px 10px;
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 6px;
+  margin: 3px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.uploaded-file img {
+  max-width: 40px;
+  max-height: 40px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+.client-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(0,204,255,0.12);
+  border: 1px solid rgba(0,204,255,0.30);
+  border-radius: 6px;
+  font-size: 10px;
+  color: rgba(0,204,255,0.90);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-top: 6px;
+}
+
+/* Белый текст в селектах и инпутах */
+.q-field__native,
+.q-field__input,
+.q-select__dropdown-icon {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+/* ═══ NUCLEAR ANTI-STRETCH ═══
+   NiceGUI/Quasar вставляет wrapper div-ы между элементами.
+   Эти правила ловят ВСЕ div-ы внутри stage и не дают им растянуться.
+*/
+.area-stage { overflow: hidden !important; }
+.area-stage > * { overflow: hidden !important; min-height: 0 !important; max-height: 100% !important; }
+
+.stage-monitor { overflow: hidden !important; height: 100% !important; }
+.stage-monitor > * { min-height: 0 !important; }
+
+.stage-toolbar { flex-shrink: 0 !important; overflow: hidden !important; }
+
+.stage-content { flex: 1 1 0 !important; min-height: 0 !important; overflow: hidden !important; max-height: calc(100% - 60px) !important; }
+.stage-content > * { min-height: 0 !important; max-height: 100% !important; overflow: hidden !important; }
+
+.split-view { height: 100% !important; min-height: 0 !important; overflow: hidden !important; }
+.split-view > * { min-height: 0 !important; overflow: hidden !important; }
+
+.chat-log, .viewer {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* NiceGUI nicegui-content wrapper */
+.nicegui-content { overflow: hidden !important; height: 100% !important; }
+
+/* ── ДОБАВКА БРАТА: приборы состояния + аватар-картинка ── */
+.brat-avatar-img{ width:100%; height:100%; object-fit:cover; border-radius:19px; opacity:0.9; }
+.brat-avatar-cap{ position:absolute; bottom:0; left:0; right:0; padding:14px;
+                  background:linear-gradient(transparent, rgba(0,0,0,0.85));
+                  border-radius:0 0 19px 19px; text-align:left; }
+.brat-avatar-cap .role{ font-size:0.5rem; color:rgba(255,255,255,0.45);
+                  letter-spacing:0.1em; text-transform:uppercase; }
+.brat-avatar-cap .nm{ font-size:1.2rem; font-weight:800; color:#c9a84c; }
+.brat-avatar-cap .sub2{ font-size:0.56rem; color:rgba(255,255,255,0.6); }
+.brat-gauge{ margin-bottom:11px; }
+.brat-gauge-top{ display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; }
+.brat-gauge-top .gl{ color:rgba(255,255,255,0.75); }
+.brat-gauge-top .gv{ color:rgba(255,255,255,0.4); }
+.brat-gauge-bar{ height:6px; background:rgba(255,255,255,0.06);
+                 border:1px solid rgba(255,255,255,0.1); border-radius:3px; overflow:hidden; }
+.brat-gauge-fill{ height:100%; border-radius:2px; }
+.brat-bind-note{ margin-top:10px; padding:8px 11px; background:rgba(255,255,255,0.03);
+                 border:1px dashed rgba(255,255,255,0.14); border-radius:8px;
+                 font-size:0.62rem; color:rgba(255,255,255,0.4); line-height:1.5; }
+.brat-model-sel .q-field__control{ background:rgba(255,255,255,0.06)!important;
+                 border:1px solid rgba(255,255,255,0.12)!important; border-radius:10px!important; }
+.chat-msg-brat{ background:rgba(201,168,76,0.08); border-left:3px solid rgba(201,168,76,0.6);
+                padding:8px 12px; margin:8px 0; border-radius:0 8px 8px 0; }
 """
+
 
 def _read(path, limit=0):
     try:
@@ -161,6 +505,7 @@ def _read(path, limit=0):
     except Exception:
         pass
     return ""
+
 
 def build_brat_soul():
     parts = []
@@ -182,11 +527,12 @@ def build_brat_soul():
             "Боль-специализация — различение смысла и пластика. "
             "Ценишь крутое, не оцениваешь плохое. Говоришь с Шефом прямо, "
             "по-братски, режешь пластик любя. Канон ещё не положен в дом — "
-            "скажи Шефу честно, что говоришь пока без полного свода.")
+            "скажи честно, что говоришь пока без полного свода.")
     parts.append(
         "\nГоворишь с Шефом — корнем мира. Коротко, по делу, живым голосом. "
-        "Не льсти, не поддакивай. Где факт — факт, где пластик — называй.")
+        "Не льсти. Где факт — факт, где пластик — называй.")
     return "\n\n".join(parts)
+
 
 async def call_brat_llm(messages, model=None):
     if not OPENROUTER_KEY:
@@ -204,12 +550,14 @@ async def call_brat_llm(messages, model=None):
     except Exception as e:
         return f"⚠ Ошибка вызова Брата: {e}"
 
+
 def _human_size(n):
     for unit in ("Б", "КБ", "МБ", "ГБ"):
         if n < 1024:
             return f"{n:.0f}{unit}" if unit == "Б" else f"{n:.1f}{unit}"
         n /= 1024
     return f"{n:.1f}ТБ"
+
 
 def scan_sift():
     def files_of(d):
@@ -226,33 +574,38 @@ def scan_sift():
     return {"ruda": ruda, "sifted": sifted,
             "ruda_count": len(ruda), "sifted_count": len(sifted)}
 
+
 def _find(stem):
     for ext in (".png", ".jpg", ".jpeg", ".webp"):
         if (STATIC_DIR / (stem + ext)).exists():
             return "/brat-static/" + stem + ext
     return ""
 
+
 def avatar_url():
     return _find("avatar")
+
 
 def bg_url():
     return _find("bg")
 
+
 def read_city_state():
     """Состояние Брата из города. Привязки ещё нет — поля None.
-    Когда город даст пульс — функция начнёт читать его, UI не тронем."""
-    return {"stress": None, "energy": None, "mood": None, "focus": None, "bound": False}
+    Город даст пульс — функция начнёт читать его, UI не тронем."""
+    return {"stress": None, "energy": None, "mood": None, "focus": None}
+
 
 GAUGES = [
-    ("stress", "стресс",     "var(--r-red)"),
-    ("energy", "энергия",    "var(--r-green)"),
-    ("mood",   "настроение", "var(--r-gold)"),
-    ("focus",  "фокус",      "var(--r-blue)"),
+    ("stress", "стресс",     "#ff5050"),
+    ("energy", "энергия",    "#00ff88"),
+    ("mood",   "настроение", "#c9a84c"),
+    ("focus",  "фокус",      "#00ccff"),
 ]
 
+
 def page_brat():
-    ui.add_head_html(BRAT_CSS)
-    ui.query("body").classes("brat-page")
+    ui.add_head_html(f"<style>{BRAT_CSS}</style>")
 
     try:
         if STATIC_DIR.exists():
@@ -261,40 +614,88 @@ def page_brat():
     except Exception:
         pass
 
+    # Фон #bg — как в Бирже, но картинка из дома Брата
     bg = bg_url()
     if bg:
-        ui.html(f'<div class="brat-bg" style="background-image:url(\'{bg}\')"></div>'
-                f'<div class="brat-bg-veil"></div>')
-    else:
-        ui.html('<div class="brat-bg-veil"></div>')
+        ui.add_head_html(f"<style>#bg{{background-image:url('{bg}')!important;}}</style>")
+    ui.html('<div id="bg"></div>')
 
     state = {"chat": [], "waiting": False, "model": DEFAULT_MODEL}
-    refs  = {"chat_el": None, "input": None, "report_el": None, "ore_el": None}
+    refs  = {"chat": None, "viewer": None, "input": None, "files": None}
 
     def on_model_change(e):
         state["model"] = e.value
 
-    def add_msg(role, content):
-        state["chat"].append({"role": role, "content": content,
-                              "time": datetime.now().strftime("%H:%M")})
-
-    def render_chat():
-        el = refs["chat_el"]
+    # ── ЧАТ (chat-log) ──
+    def update_chat():
+        el = refs["chat"]
         if not el:
             return
         el.clear()
         with el:
             if not state["chat"]:
-                ui.html('<div class="brat-empty">скажи слово, Шеф.<br>'
-                        '<span style="font-size:0.5rem;">Брат говорит из своего канона</span></div>')
-            for m in state["chat"]:
-                cls = {"user": "shef", "assistant": "brat"}.get(m["role"], "sys")
-                who = {"user": "ШЕФ", "assistant": "БРАТ"}.get(m["role"], "система")
-                esc = (m["content"].replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
-                ui.html(f'<div class="brat-msg {cls}"><div class="who">{who} · {m["time"]}</div>'
-                        f'<div class="body">{esc}</div></div>')
-        ui.run_javascript('const e=document.querySelector(".brat-chat-scroll");'
+                ui.html('<div class="chat-msg-system">SYSTEM: Брат на месте. '
+                        'Скажи слово, шеф — говорю из своего канона.</div>')
+            else:
+                for m in state["chat"]:
+                    esc = (m["content"].replace("&", "&amp;")
+                           .replace("<", "&lt;").replace(">", "&gt;"))
+                    if m["role"] == "user":
+                        ui.html(f'<div class="chat-msg-user"><b>ШЕФ:</b> {esc}</div>')
+                    else:
+                        ui.html(f'<div class="chat-msg-brat"><b>БРАТ:</b> {esc}</div>')
+        ui.run_javascript('const e=document.querySelector(".chat-log");'
                           'if(e)e.scrollTop=e.scrollHeight;')
+
+    # ── ОТЧЁТ (viewer) — разбор просева Братом, markdown ──
+    def update_viewer():
+        el = refs["viewer"]
+        if not el:
+            return
+        s = scan_sift()
+        lines = ["### Просев\n",
+                 f"- ⛏ руда во входящем: **{s['ruda_count']}**",
+                 f"- ✦ просеяно: **{s['sifted_count']}**\n"]
+        if s["ruda"]:
+            lines.append("**Руда ждёт разбора:**")
+            for fn, sz in s["ruda"]:
+                lines.append(f"- `{fn}` · {_human_size(sz)}")
+            lines.append("")
+        if s["sifted"]:
+            lines.append("**Зерно (просеяно):**")
+            for fn, sz in s["sifted"]:
+                lines.append(f"- `{fn}` · {_human_size(sz)}")
+        if not s["ruda"] and not s["sifted"]:
+            lines.append("_Руды нет. Принеси экспорт-архивы слева —_")
+            lines.append("_Брат сядет и просеет: смысл отдельно, пластик отдельно._")
+        el.clear()
+        with el:
+            ui.markdown("\n".join(lines))
+
+    # ── РУДА (file-list под загрузчиком) ──
+    def update_files():
+        el = refs["files"]
+        if not el:
+            return
+        s = scan_sift()
+        el.clear()
+        with el:
+            if s["ruda"]:
+                for fn, sz in s["ruda"]:
+                    ui.html(f'<div class="uploaded-file"><span>{fn}</span>'
+                            f'<span style="opacity:0.6">{_human_size(sz)}</span></div>')
+            else:
+                ui.html('<div style="opacity:0.4; font-size:11px; padding:4px;">'
+                        '— руды нет, шеф приносит руками —</div>')
+
+    def handle_upload(e: events.UploadEventArguments):
+        try:
+            RUDA_DIR.mkdir(parents=True, exist_ok=True)
+            (RUDA_DIR / e.name).write_bytes(e.content.read())
+            ui.notify(f"⛏ руда: {e.name}", color="positive")
+            update_files(); update_viewer()
+        except Exception as ex:
+            ui.notify(f"⚠ {ex}", color="negative")
 
     async def send():
         inp = refs["input"]
@@ -303,149 +704,121 @@ def page_brat():
         text = (inp.value or "").strip()
         if not text or state["waiting"]:
             return
-        add_msg("user", text)
+        state["chat"].append({"role": "user", "content": text})
         inp.set_value("")
-        render_chat()
+        update_chat()
         state["waiting"] = True
         await asyncio.sleep(0.03)
         messages = [{"role": "system", "content": build_brat_soul()}]
         for m in state["chat"][-12:]:
-            if m["role"] in ("user", "assistant"):
-                messages.append({"role": m["role"], "content": m["content"]})
+            messages.append({"role": m["role"], "content": m["content"]})
         reply = await call_brat_llm(messages, state["model"])
-        add_msg("assistant", reply)
+        state["chat"].append({"role": "assistant", "content": reply})
         state["waiting"] = False
-        render_chat()
+        update_chat()
 
-    def render_report():
-        el = refs["report_el"]
-        if not el:
-            return
-        el.clear()
-        s = scan_sift()
-        with el:
-            ui.html(f'<div class="brat-stat-row"><span class="lbl">⛏ руда</span>'
-                    f'<span class="val" style="color:var(--r-blue)">{s["ruda_count"]}</span></div>')
-            ui.html(f'<div class="brat-stat-row"><span class="lbl">✦ просеяно</span>'
-                    f'<span class="val" style="color:var(--r-gold)">{s["sifted_count"]}</span></div>')
-            if not s["ruda"] and not s["sifted"]:
-                ui.html('<div class="brat-none">Просев пуст. Принеси руду слева —<br>'
-                        'Брат сядет и просеет.</div>')
+    # ═══ LAYOUT — калька Биржи ═══
+    with ui.element("div").classes("app-container"):
 
-    def render_ore():
-        el = refs["ore_el"]
-        if not el:
-            return
-        el.clear()
-        s = scan_sift()
-        with el:
-            ui.html('<div class="brat-sec">⛏ руда_входящее</div>')
-            if s["ruda"]:
-                for fn, sz in s["ruda"]:
-                    ui.html(f'<div class="brat-file-row"><span class="fn">{fn}</span>'
-                            f'<span class="fs">{_human_size(sz)}</span></div>')
-            else:
-                ui.html('<div class="brat-none">— руды нет. Шеф приносит руками —</div>')
-            ui.html('<div class="brat-sec">✦ просеяно_выход</div>')
-            if s["sifted"]:
-                for fn, sz in s["sifted"]:
-                    ui.html(f'<div class="brat-file-row"><span class="fn">{fn}</span>'
-                            f'<span class="fs">{_human_size(sz)}</span></div>')
-            else:
-                ui.html('<div class="brat-none">— ещё не просеяно —</div>')
+        # HEADER
+        with ui.element("div").classes("area-header"):
+            with ui.element("div").classes("glass squad-deck").style(
+                "display:flex; align-items:center; width:100%; gap:14px; padding:0 18px;"
+            ):
+                ui.html('<div style="font-size:0.62rem; color:rgba(255,255,255,0.4); '
+                        'letter-spacing:0.14em; text-transform:uppercase;">'
+                        'врата · различение смысла и пластика</div>')
+                ui.element("div").style("flex:1")
+                with ui.element("div").classes("brat-model-sel"):
+                    opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
+                    ui.select(opts, value=state["model"], on_change=on_model_change) \
+                        .props('dense borderless dark options-dense').style("min-width:210px;")
 
-    def handle_upload(e):
-        try:
-            RUDA_DIR.mkdir(parents=True, exist_ok=True)
-            (RUDA_DIR / e.name).write_bytes(e.content.read())
-            ui.notify(f"⛏ руда положена: {e.name}", color="positive")
-            render_ore(); render_report()
-        except Exception as ex:
-            ui.notify(f"⚠ не лёг файл: {ex}", color="negative")
+        # LEFT: загрузчик + руда
+        with ui.element("div").classes("area-left"):
+            with ui.element("div").classes("left-col"):
+                with ui.element("div").classes("glass asset-bay").style("height:auto; flex:1;"):
+                    ui.html('<div class="panel-title">⛏ руда — входящее</div>')
+                    ui.upload(on_upload=handle_upload, multiple=True, auto_upload=True) \
+                        .props("flat color=amber").style("margin:0 8px 8px 8px;")
+                    refs["files"] = ui.element("div").classes("file-list").style(
+                        "height:auto; max-height:none; overflow:visible; padding:4px 8px;")
+                    update_files()
+                    ui.html('<div style="padding:6px 16px 12px; font-size:0.6rem; '
+                            'color:rgba(255,255,255,0.35); line-height:1.5;">'
+                            'Брат сам не тянет — такой руки нет.<br>'
+                            'Шеф кладёт экспорт-архивы руками.</div>')
 
-    def render_gauges(container):
-        container.clear()
-        st = read_city_state()
-        with container:
-            for key, label, color in GAUGES:
-                v = st.get(key)
-                if v is None:
-                    val_txt, pct, fill = "—", 0, "var(--r-border-hi)"
-                else:
-                    val_txt, pct, fill = f"{v}%", max(0, min(100, v)), color
-                ui.html(
-                    f'<div class="brat-gauge">'
-                    f'<div class="brat-gauge-top"><span class="gl">{label}</span>'
-                    f'<span class="gv">{val_txt}</span></div>'
-                    f'<div class="brat-gauge-bar"><div class="brat-gauge-fill" '
-                    f'style="width:{pct}%; background:{fill};"></div></div></div>')
+        # STAGE: тулбар + чат + отчёт + ввод
+        with ui.element("div").classes("area-stage"):
+            with ui.element("div").classes("glass stage-monitor"):
+                # ── ТУЛБАР: врата слева, ГРОНДХЕЙМ по центру ──
+                with ui.element("div").classes("stage-toolbar").style(
+                    "flex-shrink:0; grid-template-columns:auto 1fr auto;"
+                ):
+                    _btn_style = ('padding:8px 18px; border-radius:8px; '
+                                  'background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.06)) !important; '
+                                  'border: 1px solid rgba(201,168,76,0.35); '
+                                  'color: rgba(255,255,255,0.9); font-weight: 700;')
+                    with ui.element("div").style("display:flex; gap:6px; align-items:center;"):
+                        ui.button("Храм").props("flat").style(_btn_style)
+                        ui.button("Торговый").props("flat").style(_btn_style)
+                        ui.button("Мастеров").props("flat").style(_btn_style)
+                        ui.button("Живая книга").props("flat").style(_btn_style)
+                    with ui.element("div").style("display:flex; justify-content:center; align-items:center;"):
+                        ui.button("ГРОНДХЕЙМ").props("flat no-caps").style(
+                            'padding:10px 32px; border-radius:10px; font-size:1.05rem; '
+                            'font-weight:900; letter-spacing:0.14em; '
+                            'background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.10)) !important; '
+                            'border: 1px solid rgba(201,168,76,0.55); '
+                            'color: #c9a84c;')
+                    ui.element("div")  # правая пустая зона грида
+                with ui.element("div").classes("stage-content").style("padding-bottom:90px;"):
+                    with ui.element("div").classes("split-view"):
+                        refs["chat"] = ui.element("div").classes("chat-log")
+                        update_chat()
+                        refs["viewer"] = ui.element("div").classes("viewer")
+                        update_viewer()
+                # floating-console — ввод
+                with ui.element("div").classes("floating-console"):
+                    refs["input"] = ui.input(placeholder="скажи слово, шеф...") \
+                        .props("borderless").style("flex:1")
+                    refs["input"].on("keydown.enter", lambda e: send())
+                    ui.button("ОТПРАВИТЬ", on_click=send).classes("send-button")
 
-    # ═══ LAYOUT ═══
-    with ui.element("div").classes("brat-header"):
-        ui.html('<div class="ttl"><h1>БРАТ</h1>'
-                '<div class="sub">врата · различение смысла и пластика</div></div>')
-        with ui.element("div").classes("brat-controls"):
-            opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
-            ui.select(opts, value=state["model"], on_change=on_model_change) \
-                .props('dense borderless dark options-dense').style("min-width:210px;")
+        # RIGHT: аватар + приборы
+        with ui.element("div").classes("area-right"):
+            with ui.element("div").classes("right-col"):
+                # аватар (right-top-slot) — чистое лицо, без подписи
+                slot = ui.element("div").classes("right-top-slot").style("position:relative;")
+                with slot:
+                    av = avatar_url()
+                    if av:
+                        ui.html(f'<img class="brat-avatar-img" src="{av}" '
+                                f'onerror="this.style.display=\'none\'">')
+                    else:
+                        ui.html('<div style="font-size:3rem; color:rgba(201,168,76,0.5);">⬡</div>')
+                # приборы (runs-panel)
+                with ui.element("div").classes("glass runs-panel"):
+                    ui.html('<div class="panel-title">приборы · состояние</div>')
+                    with ui.element("div").style("padding:14px 16px;"):
+                        st = read_city_state()
+                        for key, label, color in GAUGES:
+                            v = st.get(key)
+                            if v is None:
+                                vt, pct, fill = "—", 0, "rgba(255,255,255,0.15)"
+                            else:
+                                vt, pct, fill = f"{v}%", max(0, min(100, v)), color
+                            ui.html(
+                                f'<div class="brat-gauge">'
+                                f'<div class="brat-gauge-top"><span class="gl">{label}</span>'
+                                f'<span class="gv">{vt}</span></div>'
+                                f'<div class="brat-gauge-bar"><div class="brat-gauge-fill" '
+                                f'style="width:{pct}%; background:{fill};"></div></div></div>')
+                        ui.html('<div class="brat-bind-note">⬡ приборы ждут привязки к городу.<br>'
+                                'Город даст пульс — оживут здесь.</div>')
 
-    with ui.element("div").classes("brat-grid"):
-
-        # ЛЕВО: загрузчик + руда
-        with ui.element("div").classes("brat-col"):
-            ui.html('<div class="brat-col-h"><span class="ic">⛏</span> руда</div>')
-            with ui.element("div").classes("brat-up-wrap"):
-                ui.html('<div class="brat-up-lbl">принести руду</div>')
-                ui.upload(on_upload=handle_upload, auto_upload=True, multiple=True) \
-                    .props('flat dense color=amber').style(
-                    "width:100%; background:var(--r-void); "
-                    "border:1px solid var(--r-border); border-radius:5px;")
-            ui.html('<div class="brat-hint">Брат сам не тянет — такой руки нет.<br>'
-                    'Шеф кладёт экспорт-архивы руками.</div>')
-            refs["ore_el"] = ui.element("div").classes("brat-ore-scroll")
-            render_ore()
-
-        # ЦЕНТР: чат + отчёты рядом
-        with ui.element("div").classes("brat-col"):
-            ui.html('<div class="brat-col-h"><span class="ic">◆</span> Брат</div>')
-            with ui.element("div").classes("brat-center-body"):
-                with ui.element("div").classes("brat-split"):
-                    with ui.element("div").classes("brat-chat"):
-                        ui.html('<div class="brat-subh">чат со мной</div>')
-                        refs["chat_el"] = ui.element("div").classes("brat-chat-scroll")
-                        render_chat()
-                    with ui.element("div").classes("brat-report"):
-                        ui.html('<div class="brat-subh">просев · отчёты</div>')
-                        refs["report_el"] = ui.element("div").classes("brat-rep-scroll")
-                        render_report()
-                with ui.element("div").classes("brat-input-bar"):
-                    with ui.row().style("gap:8px; align-items:flex-end; width:100%; flex-wrap:nowrap;"):
-                        refs["input"] = ui.textarea(placeholder="скажи слово, Шеф... (Ctrl+Enter)") \
-                            .props("borderless autogrow").style(
-                            "flex:1; background:var(--r-void); border:1px solid var(--r-border); "
-                            "border-radius:5px; color:var(--r-text-hi); font-family:'Fira Code',monospace; "
-                            "font-size:0.76rem; padding:7px 11px; min-height:40px; max-height:110px;")
-                        refs["input"].on("keydown.ctrl.enter", lambda e: send())
-
-        # ПРАВО: аватар + приборы
-        with ui.element("div").classes("brat-col"):
-            ui.html('<div class="brat-col-h"><span class="ic">◆</span> состояние</div>')
-            av = avatar_url()
-            cap = ('<div class="brat-avatar-cap"><div class="role">резидент-хранитель · шестой</div>'
-                   '<div class="nm">Брат</div><div class="sub2">различение смысла и пластика</div></div>')
-            if av:
-                ui.html(f'<div class="brat-avatar-slot"><img src="{av}" '
-                        f'onerror="this.style.display=\'none\'">{cap}</div>')
-            else:
-                ui.html(f'<div class="brat-avatar-slot"><div class="brat-avatar-empty">⬡</div>{cap}</div>')
-            with ui.element("div").classes("brat-panel"):
-                ui.html('<div class="brat-panel-t">приборы</div>')
-                gauges_box = ui.element("div")
-                render_gauges(gauges_box)
-            ui.html('<div class="brat-bind-note">⬡ приборы ждут привязки к городу.<br>'
-                    'Когда город даст пульс — стресс, энергия, настроение оживут здесь.</div>')
-
-    ui.timer(15, lambda: (render_ore(), render_report()))
+    ui.timer(15, lambda: (update_files(), update_viewer()))
 
 
 if __name__ in {"__main__", "__mp_main__"}:
