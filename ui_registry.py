@@ -10,6 +10,8 @@
 """
 
 import json
+# PATCH_HRANITEL_V_HRAM_APPLIED
+# PATCH_4_SLOYA_APPLIED
 # PATCH_NO_STUDIO_APPLIED
 import shutil
 import uuid
@@ -60,6 +62,24 @@ def save_catalog(catalog: list[dict]):
 # Путь = принадлежность (Закон Пары). Этажи растут сами из предназначений.
 ZHITELI_DIR = Path("GRONDHEIM_CITY/жители")
 
+# ── PATCH_HRANITEL_V_HRAM: карта особых мест ──
+# Предназначение → особый этаж города. Кого здесь нет — в жители/{предназначение}/.
+# Растёт само: добавь строку — новое предназначение поедет в своё место.
+ETAZH_MAP = {
+    "хранитель": Path("GRONDHEIM_CITY/Hexagon/3_guardians"),
+    "хранительница": Path("GRONDHEIM_CITY/Hexagon/3_guardians"),
+    "guardian": Path("GRONDHEIM_CITY/Hexagon/3_guardians"),
+}
+
+
+def _etazh_dlya(naznach_raw: str) -> Path:
+    """Возвращает корневой этаж по предназначению (нормализуем регистр)."""
+    key = (naznach_raw or "").strip().lower()
+    if key in ETAZH_MAP:
+        return ETAZH_MAP[key]
+    # обычный житель — на общий этаж жители/{предназначение}/
+    return ZHITELI_DIR / _safe_name(naznach_raw or "без_предназначения")
+
 
 def _safe_name(s: str) -> str:
     """Чистим имя/предназначение для имени файла/папки."""
@@ -81,14 +101,59 @@ def rodit_pasport_kusochek(obj: dict) -> str:
     name = _safe_name(obj.get("Official_Name", ""))
     if name == "без_имени":
         return ""
-    naznach = _safe_name(obj.get("Profession", "") or "без_предназначения")
+    naznach_raw = obj.get("Profession", "") or "без_предназначения"
 
-    etazh = ZHITELI_DIR / naznach
+    etazh = _etazh_dlya(naznach_raw)  # PATCH_HRANITEL: особый этаж или жители/
     etazh.mkdir(parents=True, exist_ok=True)
 
     out = etazh / f"{name}.json"
     out.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
     return str(out)
+
+
+# ── PATCH_4_SLOYA: заводим 4 слоя памяти на этаже жителя ──
+# core/resonance/sensory/archive. Память ПУСТАЯ — слои только заводятся.
+# Кусочек {имя}.json становится папкой {имя}/ с паспортом и слоями.
+def zavesti_sloi(obj: dict) -> str:
+    """
+    Заводит 4 слоя-папки жителя на его этаже (по предназначению).
+    Превращает плоский кусочек в папку:
+        жители/{предназначение}/{имя}/
+            passport.json   ← ядро (= core, якорь)
+            core/  resonance/  sensory/  archive/
+    Память пустая (наполнение — ступень 5). Возвращает путь папки.
+    """
+    name = _safe_name(obj.get("Official_Name", ""))
+    if name == "без_имени":
+        return ""
+    naznach_raw = obj.get("Profession", "") or "без_предназначения"
+
+    dom = _etazh_dlya(naznach_raw) / name     # PATCH_HRANITEL: папка жителя на его этаже
+    dom.mkdir(parents=True, exist_ok=True)
+
+    # 4 слоя — наш закон
+    for sloy in ("core", "resonance", "sensory", "archive"):
+        (dom / sloy).mkdir(parents=True, exist_ok=True)
+
+    # passport.json (ядро) — рядом и копией в core/ (паспорт = якорь = core)
+    pasport_json = json.dumps(obj, ensure_ascii=False, indent=2)
+    (dom / "passport.json").write_text(pasport_json, encoding="utf-8")
+    (dom / "core" / "anchor.json").write_text(pasport_json, encoding="utf-8")
+
+    # пустые заготовки слоёв (память придёт на ступени 5)
+    (dom / "resonance" / "emotional_weights.json").write_text("{}", encoding="utf-8")
+    (dom / "resonance" / "event_log.jsonl").write_text("", encoding="utf-8")
+    (dom / "sensory" / "sensory_memory.json").write_text(
+        json.dumps({"entries": [], "_note": "оперативка · пусто при рождении"},
+                   ensure_ascii=False, indent=2), encoding="utf-8")
+    (dom / "archive" / "archive.jsonl").write_text("", encoding="utf-8")
+
+    # маркер: слои заведены
+    mark = dom / "_слои_заведены.txt"
+    mark.write_text("core · resonance · sensory · archive\nпамять пустая (ступень 5)",
+                    encoding="utf-8")
+
+    return str(dom)
 
 
 def save_image(file_content: bytes, filename: str) -> str:
@@ -1907,6 +1972,13 @@ def page_registry():
                     # ── PATCH_DVA_FILA: второй файл — паспорт-кусочек на свой этаж ──
                     try:
                         _kus = rodit_pasport_kusochek(obj)
+                        # PATCH_4_SLOYA: заводим 4 слоя на этаже жителя
+                        try:
+                            _dom = zavesti_sloi(obj)
+                            if _dom:
+                                ui.notify(f"4 слоя заведены: {_dom}", type="positive", timeout=4000)
+                        except Exception as _e2:
+                            ui.notify(f"⚠ слои не завелись: {_e2}", type="warning")
                         if _kus:
                             ui.notify(f"Паспорт-кусочек: {_kus}", type="positive", timeout=4000)
                     except Exception as _e:
