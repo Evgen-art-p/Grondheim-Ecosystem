@@ -5,10 +5,12 @@
 ║  Route: /registry                                           ║
 ║  Storage: 00_REGISTRY_NFT/catalog.json + images/            ║
 ║  Студия «Шесть Пальцев»                                    ║
+║  # PATCH_DVA_FILA_APPLIED · куча + кусочек на свой этаж              ║
 ╚══════════════════════════════════════════════════════════════╝
 """
 
 import json
+# PATCH_NO_STUDIO_APPLIED
 import shutil
 import uuid
 import hashlib
@@ -51,6 +53,42 @@ def save_catalog(catalog: list[dict]):
         json.dumps(catalog, ensure_ascii=False, indent=2),
         encoding="utf-8"
     )
+
+
+# ── PATCH_DVA_FILA: рождение паспорта-кусочка на свой этаж ──
+# Новый город. Кусочек ложится туда, где место жителя — по предназначению.
+# Путь = принадлежность (Закон Пары). Этажи растут сами из предназначений.
+ZHITELI_DIR = Path("GRONDHEIM_CITY/жители")
+
+
+def _safe_name(s: str) -> str:
+    """Чистим имя/предназначение для имени файла/папки."""
+    s = (s or "").strip()
+    for ch in '/\\:*?"<>|':
+        s = s.replace(ch, "_")
+    return s or "без_имени"
+
+
+def rodit_pasport_kusochek(obj: dict) -> str:
+    """
+    Рождает ОДИН паспорт-кусочек рядом с кучей.
+    Падает на этаж по предназначению (Profession):
+        Вася трейдер → GRONDHEIM_CITY/жители/трейдер/Вася.json
+    Если предназначения нет — этаж 'без_предназначения'.
+    Папки-слои НЕ создаёт (это следующий шаг). Только файл-паспорт.
+    Возвращает путь кусочка (str) или "" если нечего рожать.
+    """
+    name = _safe_name(obj.get("Official_Name", ""))
+    if name == "без_имени":
+        return ""
+    naznach = _safe_name(obj.get("Profession", "") or "без_предназначения")
+
+    etazh = ZHITELI_DIR / naznach
+    etazh.mkdir(parents=True, exist_ok=True)
+
+    out = etazh / f"{name}.json"
+    out.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+    return str(out)
 
 
 def save_image(file_content: bytes, filename: str) -> str:
@@ -158,9 +196,13 @@ ROLE_OPTIONS_MAP = {
 # новый цех появляется в Странице Жизни сам, без правок этого файла.
 
 def get_workshop_options() -> list[str]:
-    """Цеха для селекта рождения: residents + все картриджи (живой скан)."""
-    from studio.modules_registry import list_cartridges
-    return ["", "residents"] + [c["id"] for c in list_cartridges()]
+    """Цеха для селекта рождения. Новый город: studio/ нет — fallback."""
+    try:
+        from studio.modules_registry import list_cartridges
+        return ["", "residents"] + [c["id"] for c in list_cartridges()]
+    except Exception:
+        # Новый город — старого studio/ нет. Отдаём встроенный список.
+        return WORKSHOP_OPTIONS
 
 
 def get_role_options(workshop: str) -> list[str]:
@@ -171,11 +213,14 @@ def get_role_options(workshop: str) -> list[str]:
     """
     if workshop == "residents":
         return RESIDENT_ROLE_OPTIONS
-    from studio.modules_registry import get_cartridge
-    cart = get_cartridge(workshop)
-    if cart and cart.get("roles"):
-        return [""] + list(cart["roles"])
-    return PIPELINE_ROLE_OPTIONS
+    try:
+        from studio.modules_registry import get_cartridge
+        cart = get_cartridge(workshop)
+        if cart and cart.get("roles"):
+            return [""] + list(cart["roles"])
+    except Exception:
+        pass
+    return ROLE_OPTIONS_MAP.get(workshop, PIPELINE_ROLE_OPTIONS)
 
 
 def generate_agent_files(obj: dict, dna_static: dict,
@@ -1335,8 +1380,12 @@ def page_registry():
                                     new_options = {v: v if v else "— не задана —" for v in opts}
                                     # Автозаполнение квартала: манифест цеха → словарь → дефолт
                                     if agent_quarter_widget["w"] and ws:
-                                        from studio.modules_registry import get_cartridge
-                                        _cart = get_cartridge(ws)
+                                        _cart = None
+                                        try:
+                                            from studio.modules_registry import get_cartridge
+                                            _cart = get_cartridge(ws)
+                                        except Exception:
+                                            _cart = None
                                         auto_q = (_cart or {}).get("quarter") or _WORKSHOP_QUARTER.get(ws, "Квартал Мастеров")
                                         agent_quarter_widget["w"].value = auto_q
                                         agent_quarter_widget["w"].update()
@@ -1855,9 +1904,19 @@ def page_registry():
 
                     save_catalog(catalog)
 
+                    # ── PATCH_DVA_FILA: второй файл — паспорт-кусочек на свой этаж ──
+                    try:
+                        _kus = rodit_pasport_kusochek(obj)
+                        if _kus:
+                            ui.notify(f"Паспорт-кусочек: {_kus}", type="positive", timeout=4000)
+                    except Exception as _e:
+                        ui.notify(f"⚠ кусочек не родился: {_e}", type="warning")
+
                     # ── Генерация файлов студии для агентов ──
                     generated = []
-                    if obj.get("Object_Type_Class") == "agent":
+                    # PATCH_DVA_FILA: папки-слои отключены — это СЛЕДУЮЩИЙ шаг.
+                    # Сейчас рождаем только паспорт (куча + кусочек). Памяти нет.
+                    if False and obj.get("Object_Type_Class") == "agent":
                         try:
                             dna_static = obj.get("DNA_Static", {})
                             dna_dynamic = dict(DNA_DYNAMIC_DEFAULTS)

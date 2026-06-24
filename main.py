@@ -1,4 +1,4 @@
-# main.py  # PATCH_ROZHENITSA_GATE_APPLIED  # PATCH_KARTA_GATE_APPLIED — запуск мира Грондхейм
+# main.py  # PATCH_REAL_ZHIZN_APPLIED  # PATCH_ROZHENITSA_GATE_APPLIED  # PATCH_KARTA_GATE_APPLIED — запуск мира Грондхейм
 """
 Точка входа. Поднимает NiceGUI и регистрирует страницы.
 
@@ -23,11 +23,12 @@ from ui_brat import page_brat
 def _brat():
     page_brat()
 
-# ── СТРАНИЦА ЖИЗНИ — бланк паспорта (ступень 2) ──
-from ui_rozhenitsa import page_rozhenitsa
-@ui.page("/rozhenitsa")
-def _rozhenitsa():
-    page_rozhenitsa()
+# ── ЧЕРНОВИК ui_rozhenitsa ВЫКЛЮЧЕН (в топку, путь А) ──
+# Настоящая Страница Жизни — ui_registry ниже.
+# from ui_rozhenitsa import page_rozhenitsa
+# @ui.page("/rozhenitsa")
+# def _rozhenitsa():
+#     page_rozhenitsa()
 
 # ── КАРТА-ИЕРАРХИЯ — зрение Брата (ступень 1) ──
 from ui_karta import page_karta
@@ -40,11 +41,11 @@ def _karta():
 def _index():
     ui.navigate.to("/brat")
 
-# ── РЕЕСТР (если нужен) ──
-# from ui_registry import page_registry
-# @ui.page("/registry")
-# def _registry():
-#     page_registry()
+# ── НАСТОЯЩАЯ СТРАНИЦА ЖИЗНИ · Реестр (полная форма) ──
+from ui_registry import page_registry
+@ui.page("/registry")
+def _registry():
+    page_registry()
 
 
 if __name__ in {"__main__", "__mp_main__"}:

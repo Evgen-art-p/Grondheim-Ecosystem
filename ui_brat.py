@@ -885,7 +885,7 @@ def page_brat():
                     'border: 1px solid rgba(201,168,76,0.55); color:#c9a84c;')
                 ui.element("div").style("flex:1")
                 ui.button("Страница Жизни",
-                          on_click=lambda: ui.navigate.to("/rozhenitsa")  # PATCH_ROZH_BTN
+                          on_click=lambda: ui.navigate.to("/registry")  # PATCH_ROZH_BTN
                           ).props("flat no-caps").style(
                     "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
                     "background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08)); "
