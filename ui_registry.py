@@ -10,6 +10,8 @@
 """
 
 import json
+# PATCH_FOTO_V_DOM_NEW_APPLIED
+# PATCH_HRAM_V_CEHI_APPLIED
 # PATCH_HRANITEL_V_HRAM_APPLIED
 # PATCH_4_SLOYA_APPLIED
 # PATCH_NO_STUDIO_APPLIED
@@ -61,6 +63,7 @@ def save_catalog(catalog: list[dict]):
 # Новый город. Кусочек ложится туда, где место жителя — по предназначению.
 # Путь = принадлежность (Закон Пары). Этажи растут сами из предназначений.
 ZHITELI_DIR = Path("GRONDHEIM_CITY/жители")
+VHODYASHIE_FOTO = Path("GRONDHEIM_CITY/_входящие_фото")  # PATCH_FOTO_NEW: мост
 
 # ── PATCH_HRANITEL_V_HRAM: карта особых мест ──
 # Предназначение → особый этаж города. Кого здесь нет — в жители/{предназначение}/.
@@ -153,19 +156,39 @@ def zavesti_sloi(obj: dict) -> str:
     mark.write_text("core · resonance · sensory · archive\nпамять пустая (ступень 5)",
                     encoding="utf-8")
 
+    # ── PATCH_FOTO_NEW: фото из временной → в дом жителя (avatar) ──
+    try:
+        import shutil as _sh
+        _src = obj.get("_image_path", "") or ""
+        if _src and Path(_src).exists():
+            _ext = Path(_src).suffix or ".png"
+            _dst = dom / f"avatar{_ext}"
+            _sh.copyfile(_src, _dst)
+            obj["_image_path"] = str(_dst)   # паспорт теперь смотрит в дом
+            obj["avatar"] = f"avatar{_ext}"
+            # чистим временную (фото переехало в дом)
+            try:
+                Path(_src).unlink(missing_ok=True)
+            except Exception:
+                pass
+            # перепишем паспорт с путём аватара в доме
+            _pj = json.dumps(obj, ensure_ascii=False, indent=2)
+            (dom / "passport.json").write_text(_pj, encoding="utf-8")
+            (dom / "core" / "anchor.json").write_text(_pj, encoding="utf-8")
+    except Exception:
+        pass  # нет фото — дом всё равно полный (паспорт + слои)
+
     return str(dom)
 
 
 def save_image(file_content: bytes, filename: str) -> str:
-    """Сохраняет картинку под оригинальным именем для реестра NFT."""
-    # Оставляем только чистое имя файла (на случай, если прилетел путь)
-    img_name = Path(filename).name 
-    img_path = IMAGES_DIR / img_name
-    
-    # Записываем байты картинки на диск
+    """PATCH_FOTO_NEW: фото во ВРЕМЕННУЮ папку нового города.
+    При рождении (zavesti_sloi) переедет в дом жителя как avatar.
+    Старый 00_REGISTRY_NFT/images/ больше не кормим."""
+    img_name = Path(filename).name
+    VHODYASHIE_FOTO.mkdir(parents=True, exist_ok=True)
+    img_path = VHODYASHIE_FOTO / img_name
     img_path.write_bytes(file_content)
-    
-    # Возвращает путь, который сохранится в catalog.json 
     return str(img_path)
 
 
@@ -207,7 +230,7 @@ DNA_DYNAMIC_DEFAULTS = {
 }
 
 WORKSHOP_OPTIONS = [
-    "", "residents", "turbo",
+    "", "residents", "hram", "turbo",  # PATCH: Храм в цехах
     "video_long", "video_shorts", "social_mix", "web_story",
     "clipmakers", "advertising", "emo_card", "logo_design", "market_hit", "living_book",
     "trading",
@@ -238,7 +261,14 @@ LIVING_BOOK_ROLE_OPTIONS = [
     "A13", "A14", "A15", "A16",
 ]
  
+# ── PATCH: роли Храма — хранители (есть в Hexagon/3_guardians) ──
+HRAM_ROLE_OPTIONS = [
+    "", "хранитель", "хранительница",
+    "lia", "key", "finch", "victor", "yust",
+]
+
 ROLE_OPTIONS_MAP = {
+    "hram":         HRAM_ROLE_OPTIONS,  # PATCH: Храм → хранители
     "turbo":        TURBO_ROLE_OPTIONS,
     "residents":    RESIDENT_ROLE_OPTIONS,
     "video_long":   PIPELINE_ROLE_OPTIONS,
@@ -1437,7 +1467,7 @@ def page_registry():
                         # Цех и роль
                         with ui.grid(columns=2).classes("w-full gap-3 mb-3"):
                             with ui.column().classes("w-full gap-0"):
-                                _WORKSHOP_QUARTER = {"residents": "Высотка", "turbo": "Квартал Мастеров", "social_mix": "Квартал Мастеров", "video_long": "Квартал Мастеров", "video_shorts": "Квартал Мастеров", "web_story": "Квартал Мастеров", "clipmakers": "Квартал Мастеров", "advertising": "Квартал Мастеров", "emo_card": "Квартал Мастеров", "logo_design": "Квартал Мастеров", "market_hit": "Квартал Мастеров", "living_book": "Квартал Мастеров", "trading": "Торговый Квартал"}
+                                _WORKSHOP_QUARTER = {"residents": "Высотка", "turbo": "Квартал Мастеров", "social_mix": "Квартал Мастеров", "video_long": "Квартал Мастеров", "video_shorts": "Квартал Мастеров", "web_story": "Квартал Мастеров", "clipmakers": "Квартал Мастеров", "advertising": "Квартал Мастеров", "emo_card": "Квартал Мастеров", "logo_design": "Квартал Мастеров", "market_hit": "Квартал Мастеров", "living_book": "Квартал Мастеров", "trading": "Торговый Квартал", "hram": "Храм"}
                                 def on_workshop_change(e):
                                     ws = e.value or ""
                                     # ЗАКОН КАРТРИДЖА: роли — из phases манифеста цеха
@@ -1798,6 +1828,9 @@ def page_registry():
                     if t == "agent":
                         if agent_quarter_widget["w"]: obj["Quarter"] = agent_quarter_widget["w"].value or ""
                         if workshop_widget["w"]: obj["Workshop_ID"] = workshop_widget["w"].value or ""
+                        # PATCH: цех Храм → предназначение "хранитель" (летит в 3_guardians)
+                        if (obj.get("Workshop_ID") or "") == "hram" and not (obj.get("Profession") or "").strip():
+                            obj["Profession"] = "хранитель"
                         if role_widget["w"]: obj["Turbo_Role"] = role_widget["w"].value or ""
                         if core_phrase_widget["w"]: obj["Core_Phrase"] = core_phrase_widget["w"].value or ""
                         if anchor_points_widget["w"]: obj["Anchor_Points"] = anchor_points_widget["w"].value or ""
