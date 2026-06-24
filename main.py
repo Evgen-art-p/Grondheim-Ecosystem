@@ -1,4 +1,4 @@
-# main.py — запуск мира Грондхейм
+# main.py  # PATCH_ROZHENITSA_GATE_APPLIED  # PATCH_KARTA_GATE_APPLIED — запуск мира Грондхейм
 """
 Точка входа. Поднимает NiceGUI и регистрирует страницы.
 
@@ -22,6 +22,18 @@ from ui_brat import page_brat
 @ui.page("/brat")
 def _brat():
     page_brat()
+
+# ── СТРАНИЦА ЖИЗНИ — бланк паспорта (ступень 2) ──
+from ui_rozhenitsa import page_rozhenitsa
+@ui.page("/rozhenitsa")
+def _rozhenitsa():
+    page_rozhenitsa()
+
+# ── КАРТА-ИЕРАРХИЯ — зрение Брата (ступень 1) ──
+from ui_karta import page_karta
+@ui.page("/karta")
+def _karta():
+    page_karta()
 
 # Корень → редирект в кабинет Брата
 @ui.page("/")

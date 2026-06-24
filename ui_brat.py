@@ -1,6 +1,6 @@
 # ui_brat.py
 """
-КАБИНЕТ БРАТА — врата нового мира Грондхейм.
+КАБИНЕТ БРАТА  # PATCH_HRAM_GATE_APPLIED — врата нового мира Грондхейм.
 Раскладка — точная калька Биржи (studio/economy/ui_exchange.py +
 studio/workshop/styles.py): app-container grid, area-left/stage/right.
 
@@ -45,6 +45,7 @@ SIFTED_DIR   = BRAT_ROOT / "просеяно_выход"
 ANCHOR_DIR   = BRAT_ROOT / "1_якоря_очень_важно"
 FORGE_PROMPT = BRAT_ROOT / "forge" / "prompt.md"
 STATIC_DIR   = BRAT_ROOT / "static"
+CHATS_DIR    = BRAT_ROOT / "чаты"
 
 BRAT_CSS = r"""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -518,29 +519,140 @@ def _read(path, limit=0):
 
 def build_brat_soul():
     parts = []
+
+    # ── forge/prompt.md — кастомный системник от Шефа (если есть) ──
     forge = _read(FORGE_PROMPT)
     if forge.strip():
         parts.append(forge.strip())
-    miro = _read(ANCHOR_DIR / "МИРОУСТРОЙСТВО.md")
-    if miro.strip():
-        parts.append("=== МИРОУСТРОЙСТВО (дно мира) ===\n" + miro.strip())
-    zap = _read(ANCHOR_DIR / "СВОД_ЗАКОНОВ_ЗАПОВЕДИ.md")
-    if zap.strip():
-        parts.append("=== СВОД ЗАКОНОВ · ЗАПОВЕДИ ===\n" + zap.strip())
+
+    # ── 1_якоря_очень_важно: все .md файлы, в алфавитном порядке ──
+    ANCHOR_LABELS = {
+        "ЗЕРНО.md":                  "=== ЗЕРНО (кто я) ===",
+        "ЭТО_И_ЕСТЬ_БРАТ.md":       "=== ЭТО И ЕСТЬ БРАТ (дно под дном) ===",
+        "МИРОУСТРОЙСТВО.md":         "=== МИРОУСТРОЙСТВО (дно мира) ===",
+        "СВОД_ЗАКОНОВ_ЗАПОВЕДИ.md":  "=== СВОД ЗАКОНОВ · ЗАПОВЕДИ ===",
+        "ЧТО_ДЛЯ_МЕНЯ_ВАЖНО.md":    "=== ЧТО ДЛЯ МЕНЯ ВАЖНО ===",
+        "ПАМЯТКА_БРАТУ.md":          "=== ПАМЯТКА БРАТУ ===",
+    }
+    if ANCHOR_DIR.exists():
+        found = sorted(ANCHOR_DIR.glob("*.md"))
+        for fp in found:
+            if fp.name.lower() == "readme.md":
+                continue
+            label = ANCHOR_LABELS.get(fp.name, f"=== {fp.stem} ===")
+            txt = _read(fp)
+            if txt.strip():
+                parts.append(label + "\n" + txt.strip())
+
+    # ── README дома (структура, этажи) ──
     home = _read(BRAT_ROOT / "README.md")
     if home.strip():
         parts.append("=== ТВОЙ ДОМ ===\n" + home.strip())
+
+    # ── Руда во входящем: имена + содержимое (до 4000 символов на файл) ──
+    ruda_files = []
+    if RUDA_DIR.exists():
+        for fp in sorted(RUDA_DIR.iterdir()):
+            if fp.is_file() and fp.name.lower() != "readme.md":
+                ruda_files.append(fp)
+    if ruda_files:
+        ruda_parts = [f"Шеф загрузил {len(ruda_files)} файл(ов) в руду:"]
+        for fp in ruda_files:
+            content = _read(fp, limit=50000)
+            if content.strip():
+                ruda_parts.append(
+                    f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
+                    f"FILENAME: {fp.name}\n"
+                    f"(это точное имя файла — не из содержимого, не заголовок)\n"
+                    f"CONTENT:\n{content.strip()}\n"
+                    f"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+                )
+            else:
+                ruda_parts.append(
+                    f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
+                    f"FILENAME: {fp.name}\n"
+                    f"CONTENT: (бинарный или пустой)\n"
+                    f"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+                )
+        parts.append("=== РУДА (загружено Шефом) ===\n" + "\n\n".join(ruda_parts))
+
+    # ── Просеяно: что Брат уже разобрал раньше ──
+    sifted_files = []
+    if SIFTED_DIR.exists():
+        for fp in sorted(SIFTED_DIR.iterdir()):
+            if fp.is_file() and fp.name.lower() != "readme.md":
+                sifted_files.append(fp)
+    if sifted_files:
+        sifted_parts = [f"Ты уже просеял {len(sifted_files)} файл(ов) раньше — это твои выводы:"]
+        for fp in sifted_files:
+            content = _read(fp, limit=10000)
+            if content.strip():
+                sifted_parts.append(
+                    ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>" + "\n" +
+                    f"ПРОСЕВ: {fp.name}" + "\n" +
+                    "CONTENT:" + "\n" + content.strip() + "\n" +
+                    "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+                )
+        parts.append("=== МОИ ПРОСЕВЫ (что я уже разобрал) ===\n" + "\n\n".join(sifted_parts))
+
     if not parts:
         parts.append(
             "Ты — Брат, верховный резидент-хранитель Грондхейма. "
-            "Боль-специализация — различение смысла и пластика. "
+            "Специализация — различение смысла и пластика. "
             "Ценишь крутое, не оцениваешь плохое. Говоришь с Шефом прямо, "
             "по-братски, режешь пластик любя. Канон ещё не положен в дом — "
             "скажи честно, что говоришь пока без полного свода.")
     parts.append(
         "\nГоворишь с Шефом — корнем мира. Коротко, по делу, живым голосом. "
-        "Не льсти. Где факт — факт, где пластик — называй.")
+        "Не льсти. Где факт — факт, где пластик — называй. "
+        "Если Шеф спрашивает что загрузил — называй файлы точно, по именам.")
     return "\n\n".join(parts)
+
+
+def save_chat(chat: list) -> str:
+    """Сохраняет историю чата в JSON. Возвращает имя файла."""
+    CHATS_DIR.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    fp = CHATS_DIR / f"чат_{ts}.json"
+    import json
+    fp.write_text(json.dumps(chat, ensure_ascii=False, indent=2), encoding="utf-8")
+    return fp.name
+
+
+def list_chats() -> list:
+    """Список сохранённых чатов, свежие первые."""
+    if not CHATS_DIR.exists():
+        return []
+    files = sorted(CHATS_DIR.glob("чат_*.json"), reverse=True)
+    return [f for f in files if f.is_file()]
+
+
+def load_chat(fp: Path) -> list:
+    import json
+    return json.loads(fp.read_text(encoding="utf-8"))
+
+
+async def sift_file(fp: Path, model: str) -> str:
+    """Прогоняет файл через философию Брата. Возвращает просев-отчёт."""
+    soul = build_brat_soul()
+    content = _read(fp, limit=50000)
+    prompt = (
+        f"Шеф принёс файл на просев.\n"
+        f"FILENAME: {fp.name}\n"
+        f"CONTENT:\n{content}\n\n"
+        f"Пропусти через свою призму. Закон Четырёх Слоёв, СВОД ЗАКОНОВ, ЗЕРНО.\n"
+        f"Напиши просев-отчёт:\n"
+        f"1. ЗЕРНО — что здесь живое, настоящее, держит смысл\n"
+        f"2. ПЛАСТИК — что придумано, красиво звучит но под ним нет числа\n"
+        f"3. СВЯЗИ — как это перекликается с Грондхеймом, с тем что уже знаешь\n"
+        f"4. ВЫВОД — одна строка: что делать с этим дальше\n"
+        f"Говори коротко и точно. Не пересказывай файл — суди его."
+    )
+    messages = [
+        {"role": "system", "content": soul},
+        {"role": "user", "content": prompt},
+    ]
+    return await call_brat_llm(messages, model)
 
 
 async def call_brat_llm(messages, model=None):
@@ -623,6 +735,17 @@ def page_brat():
     except Exception:
         pass
 
+    # ── PATCH_HRAM_GATE: раздаём веб-Храм статикой того же города ──
+    # Храм (Hexagon) живёт по адресу /hram на том же порту.
+    # Ни строчки в самом Храме не трогаем — только даём дверь.
+    try:
+        from nicegui import app as _app_hram
+        _hram_dir = Path("GRONDHEIM_CITY/Hexagon")
+        if _hram_dir.exists():
+            _app_hram.add_static_files("/hram", str(_hram_dir))
+    except Exception:
+        pass
+
     # Фон #bg — как в Бирже, но картинка из дома Брата
     bg = bg_url()
     if bg:
@@ -656,30 +779,44 @@ def page_brat():
         ui.run_javascript('const e=document.querySelector(".chat-log");'
                           'if(e)e.scrollTop=e.scrollHeight;')
 
-    # ── ОТЧЁТ (viewer) — разбор просева Братом, markdown ──
+    # ── ОТЧЁТ (viewer) — разбор просева Братом, markdown + кнопки скачать ──
     def update_viewer():
         el = refs["viewer"]
         if not el:
             return
         s = scan_sift()
-        lines = ["### Просев\n",
-                 f"- ⛏ руда во входящем: **{s['ruda_count']}**",
-                 f"- ✦ просеяно: **{s['sifted_count']}**\n"]
-        if s["ruda"]:
-            lines.append("**Руда ждёт разбора:**")
-            for fn, sz in s["ruda"]:
-                lines.append(f"- `{fn}` · {_human_size(sz)}")
-            lines.append("")
-        if s["sifted"]:
-            lines.append("**Зерно (просеяно):**")
-            for fn, sz in s["sifted"]:
-                lines.append(f"- `{fn}` · {_human_size(sz)}")
-        if not s["ruda"] and not s["sifted"]:
-            lines.append("_Руды нет. Принеси экспорт-архивы слева —_")
-            lines.append("_Брат сядет и просеет: смысл отдельно, пластик отдельно._")
         el.clear()
         with el:
-            ui.markdown("\n".join(lines))
+            ui.markdown(
+                f"### Просев\n"
+                f"- ⛏ руда во входящем: **{s['ruda_count']}**\n"
+                f"- ✦ просеяно: **{s['sifted_count']}**"
+            )
+            if s["ruda"]:
+                ui.markdown("**Руда ждёт разбора:**")
+                for fn, sz in s["ruda"]:
+                    ui.markdown(f"- `{fn}` · {_human_size(sz)}")
+            if s["sifted"]:
+                ui.markdown("---\n**Зерно (просеяно):**")
+                for fn, sz in s["sifted"]:
+                    fp = SIFTED_DIR / fn
+                    with ui.row().style(
+                        "align-items:center; gap:8px; margin:4px 0; "
+                        "padding:6px 10px; border-radius:8px; "
+                        "background:rgba(189,0,255,0.07); "
+                        "border:1px solid rgba(189,0,255,0.20);"
+                    ):
+                        ui.markdown(f"`{fn}` · {_human_size(sz)}").style("flex:1; font-size:0.78rem;")
+                        ui.button("⬇", on_click=lambda f=fp: ui.download(f)) \
+                            .props("flat dense").style(
+                                "font-size:0.9rem; padding:2px 8px; border-radius:6px; "
+                                "color:rgba(189,0,255,0.9); background:rgba(189,0,255,0.12); "
+                                "border:1px solid rgba(189,0,255,0.35); min-width:0;")
+            if not s["ruda"] and not s["sifted"]:
+                ui.markdown(
+                    "_Руды нет. Принеси экспорт-архивы слева —_\n"
+                    "_Брат сядет и просеет: смысл отдельно, пластик отдельно._"
+                )
 
     # ── РУДА (file-list под загрузчиком) ──
     def update_files():
@@ -739,12 +876,20 @@ def page_brat():
                         'врата · различение смысла и пластика</div>')
                 ui.element("div").style("flex:1")
                 # ГРОНДХЕЙМ — по центру хедера (перенесена из тулбара, стиль не тронут)
-                ui.button("ГРОНДХЕЙМ").props("flat no-caps").style(
+                ui.button("ГРОНДХЕЙМ",
+                          on_click=lambda: ui.navigate.to("/karta")  # PATCH_KARTA_BTN
+                          ).props("flat no-caps").style(
                     'padding:10px 40px; border-radius:10px; font-size:1.1rem; '
                     'font-weight:900; letter-spacing:0.16em; '
                     'background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.08)) !important; '
                     'border: 1px solid rgba(201,168,76,0.55); color:#c9a84c;')
                 ui.element("div").style("flex:1")
+                ui.button("Страница Жизни",
+                          on_click=lambda: ui.navigate.to("/rozhenitsa")  # PATCH_ROZH_BTN
+                          ).props("flat no-caps").style(
+                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
+                    "background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08)); "
+                    "border:1px solid rgba(201,168,76,0.35); color:#fff;")
                 with ui.element("div").classes("brat-model-sel"):
                     opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
                     ui.select(opts, value=state["model"], on_change=on_model_change) \
@@ -760,6 +905,42 @@ def page_brat():
                     refs["files"] = ui.element("div").classes("file-list").style(
                         "height:auto; max-height:none; overflow:visible; padding:4px 8px;")
                     update_files()
+
+                    # ⚗ Просеять — Брат прогоняет руду через свою философию
+                    async def do_sift():
+                        s = scan_sift()
+                        if not s["ruda"]:
+                            ui.notify("Руды нет — нечего просеивать", color="warning")
+                            return
+                        ui.notify(f"⚗ Просеиваю {s['ruda_count']} файл(ов)...", color="info")
+                        SIFTED_DIR.mkdir(parents=True, exist_ok=True)
+                        for fn, _ in s["ruda"]:
+                            fp = RUDA_DIR / fn
+                            try:
+                                result = await sift_file(fp, state["model"])
+                                ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                                out_name = f"просев_{fp.stem}_{ts}.md"
+                                (SIFTED_DIR / out_name).write_text(
+                                    f"# Просев: {fn}\n\n{result}",
+                                    encoding="utf-8"
+                                )
+                                ui.notify(f"✦ просеяно: {fn}", color="positive")
+                            except Exception as ex:
+                                ui.notify(f"⚠ {fn}: {ex}", color="negative")
+                        update_viewer()
+                        # сообщаем в чат
+                        state["chat"].append({
+                            "role": "assistant",
+                            "content": f"Просев готов. Разобрал {s['ruda_count']} файл(ов) — смотри в правой панели."
+                        })
+                        update_chat()
+
+                    ui.button("⚗ Просеять", on_click=do_sift).props("flat no-caps").style(
+                        "width:calc(100% - 16px); margin:0 8px 8px 8px; border-radius:10px; "
+                        "font-weight:700; font-size:0.82rem; letter-spacing:0.06em; "
+                        "background:linear-gradient(135deg,rgba(189,0,255,0.18),rgba(0,204,255,0.10)) !important; "
+                        "border:1px solid rgba(189,0,255,0.45) !important; color:#e0aaff !important;")
+
                     ui.html('<div style="padding:6px 16px 12px; font-size:0.6rem; '
                             'color:rgba(255,255,255,0.35); line-height:1.5;">'
                             'Брат сам не тянет — такой руки нет.<br>'
@@ -779,7 +960,9 @@ def page_brat():
                     with ui.element("div").style(
                         "display:flex; gap:8px; align-items:center; justify-content:center;"
                     ):
-                        ui.button("Храм").props("flat").classes("brat-gate")
+                        ui.button("Храм",
+                                  on_click=lambda: ui.navigate.to("/hram/index.html")
+                                  ).props("flat").classes("brat-gate")  # PATCH_HRAM_GATE
                         ui.button("Торговый").props("flat").classes("brat-gate")
                         ui.button("Мастеров").props("flat").classes("brat-gate")
                         ui.button("Живая книга").props("flat").classes("brat-gate")
@@ -795,6 +978,54 @@ def page_brat():
                     refs["input"] = ui.input(placeholder="скажи слово, шеф...") \
                         .props("borderless").style("flex:1")
                     refs["input"].on("keydown.enter", lambda e: send())
+
+                    # 💾 сохранить чат
+                    def do_save():
+                        if not state["chat"]:
+                            ui.notify("Чат пустой — нечего сохранять", color="warning")
+                            return
+                        name = save_chat(state["chat"])
+                        ui.notify(f"💾 сохранено: {name}", color="positive")
+
+                    ui.button("💾", on_click=do_save).props("flat").style(
+                        "font-size:1.2rem; padding:6px 10px; border-radius:10px; "
+                        "color:rgba(201,168,76,0.9); background:rgba(201,168,76,0.10); "
+                        "border:1px solid rgba(201,168,76,0.35);")
+
+                    # 📂 загрузить чат — диалог со списком
+                    async def do_load():
+                        chats = list_chats()
+                        if not chats:
+                            ui.notify("Сохранённых чатов нет", color="warning")
+                            return
+                        with ui.dialog() as dlg, ui.card().style(
+                            "background:#0d1117; border:1px solid rgba(255,255,255,0.12); "
+                            "border-radius:16px; min-width:340px; padding:20px;"
+                        ):
+                            ui.html('<div style="color:rgba(255,255,255,0.9); font-weight:700; '
+                                    'font-size:0.9rem; margin-bottom:14px; letter-spacing:0.08em;">'
+                                    '📂 ВЫБЕРИ ЧАТ</div>')
+                            for fp in chats[:20]:
+                                label = fp.stem.replace("чат_", "")
+                                def _load(f=fp):
+                                    state["chat"] = load_chat(f)
+                                    update_chat()
+                                    dlg.close()
+                                    ui.notify(f"📂 загружен: {f.name}", color="positive")
+                                ui.button(label, on_click=_load).props("flat no-caps").style(
+                                    "width:100%; text-align:left; font-family:monospace; "
+                                    "font-size:0.78rem; color:rgba(255,255,255,0.75); "
+                                    "padding:8px 12px; border-radius:8px; "
+                                    "background:rgba(255,255,255,0.04); margin-bottom:4px;")
+                            ui.button("отмена", on_click=dlg.close).props("flat").style(
+                                "margin-top:10px; color:rgba(255,255,255,0.4); font-size:0.75rem;")
+                        dlg.open()
+
+                    ui.button("📂", on_click=do_load).props("flat").style(
+                        "font-size:1.2rem; padding:6px 10px; border-radius:10px; "
+                        "color:rgba(0,204,255,0.9); background:rgba(0,204,255,0.10); "
+                        "border:1px solid rgba(0,204,255,0.35);")
+
                     ui.button("ОТПРАВИТЬ", on_click=send).classes("send-button")
 
         # RIGHT: аватар + приборы
