@@ -117,7 +117,7 @@ def rodit_pasport_kusochek(obj: dict) -> str:
 # ── PATCH_4_SLOYA: заводим 4 слоя памяти на этаже жителя ──
 # core/resonance/sensory/archive. Память ПУСТАЯ — слои только заводятся.
 # Кусочек {имя}.json становится папкой {имя}/ с паспортом и слоями.
-def zavesti_sloi(obj: dict) -> str:  # DOM_ZADEL_MASKI_V1
+def zavesti_sloi(obj: dict) -> str:
     """
     Заводит 4 слоя-папки жителя на его этаже (по предназначению).
     Превращает плоский кусочек в папку:
@@ -137,20 +137,6 @@ def zavesti_sloi(obj: dict) -> str:  # DOM_ZADEL_MASKI_V1
     # 4 слоя — наш закон
     for sloy in ("core", "resonance", "sensory", "archive"):
         (dom / sloy).mkdir(parents=True, exist_ok=True)
-
-    # DOM_ZADEL_MASKI_V1: задел маски (дом обеспечивается, маска приедет позже).
-    # Пока пустой каркас — структура дома готова под расцепление якорь/маска.
-    import json as _json
-    maska_rabota = dom / "маски" / "работа"
-    maska_rabota.mkdir(parents=True, exist_ok=True)
-    _mask_file = maska_rabota / "mask.json"
-    if not _mask_file.exists():
-        _mask_file.write_text(_json.dumps({
-            "_note": "задел маски 'работа'. Соц-профиль приедет при расцеплении якорь/маска.",
-            "Workshop_ID": "", "Social_Rank": "", "Profession": "",
-            "Area_of_Responsibility": "", "Access_Level": None,
-            "Quarter": "", "Core_Phrase": "",
-        }, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # passport.json (ядро) — рядом и копией в core/ (паспорт = якорь = core)
     pasport_json = json.dumps(obj, ensure_ascii=False, indent=2)
