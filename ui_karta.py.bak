@@ -28,71 +28,6 @@ from nicegui import ui
 # структура ответа уже та, что нужна.
 # ═══════════════════════════════════════════════════════════
 
-
-# ═══════════════════════════════════════════════════════════
-# KARTA_ZHIVOY_SKAN_V1 · живой скан паспортов (Страница → Брат)
-# Брат СВЯЗЫВАЕТ, но НЕ ДЕРЖИТ: читаем паспорта/ заново каждый раз,
-# ничего не копим. Принадлежность — из `предназначение` (Закон Пары).
-# ═══════════════════════════════════════════════════════════
-from pathlib import Path as _Path
-import json as _json
-
-PASPORTA_DIR = _Path("GRONDHEIM_CITY/паспорта")
-
-# предназначение (свободное слово) → id ветки каркаса.
-# Не список жителей (его нет — живой скан), а куда роль принадлежит.
-_VETKA_BY_ROLE = {
-    "хранитель": "hram",
-    "трейдер":   "trading",
-}
-# роль не распознана → падает в квартал мастеров (общий дом)
-_VETKA_DEFAULT = "masters"
-
-
-def _scan_pasporta() -> list[dict]:
-    """Живой скан рождённых паспортов. Каждый вызов — заново с диска."""
-    if not PASPORTA_DIR.exists():
-        return []
-    out = []
-    for p in sorted(PASPORTA_DIR.glob("*.json")):
-        try:
-            out.append(_json.loads(p.read_text(encoding="utf-8")))
-        except Exception:
-            pass  # битый паспорт — сито, не щупальце: пропускаем, не падаем
-    return out
-
-
-def _zhitel_node(pasp: dict) -> dict:
-    """Паспорт → узел дерева (kind=ядро, без врат — житель не цех)."""
-    rare = (pasp.get("редкость") or "").strip()
-    note = pasp.get("предназначение", "") or "—"
-    if rare:
-        note = f"{note} · {rare}"
-    return {
-        "id":    pasp.get("id", ""),
-        "label": pasp.get("имя", "?"),
-        "icon":  "⬡",
-        "kind":  "ядро",
-        "note":  note,
-        "gate":  None,
-        "children": [],
-    }
-
-
-def _podvesit(tree: dict, zhiteli: list[dict]) -> dict:
-    """Подвешивает живых жителей на ветви каркаса по предназначению.
-    Каркас не меняем — только наполняем children существующих веток."""
-    by_id = {ch.get("id"): ch for ch in tree.get("children", [])}
-    for pasp in zhiteli:
-        role = (pasp.get("предназначение") or "").strip().lower()
-        vetka_id = _VETKA_BY_ROLE.get(role, _VETKA_DEFAULT)
-        vetka = by_id.get(vetka_id)
-        if vetka is None:
-            continue  # ветки нет в каркасе — пропускаем (не выдумываем)
-        vetka.setdefault("children", []).append(_zhitel_node(pasp))
-    return tree
-
-
 def scan_hierarchy() -> dict:
     """
     Возвращает дерево иерархии города.
@@ -105,7 +40,7 @@ def scan_hierarchy() -> dict:
       kind:  единица | этаж | квартал | цех | ядро | локация
       gate:  путь врат (если есть проход из кабинета) или None
     """
-    _karkas = {
+    return {
         "id": "brat",
         "label": "БРАТ",
         "icon": "⬡",
@@ -139,8 +74,6 @@ def scan_hierarchy() -> dict:
             },
         ],
     }
-    # KARTA_ZHIVOY_SKAN_V1: подвешиваем живых жителей на каркас
-    return _podvesit(_karkas, _scan_pasporta())
 
 
 # ═══════════════════════════════════════════════════════════
