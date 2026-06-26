@@ -1,4 +1,4 @@
-# main.py  # PATCH_REAL_ZHIZN_APPLIED  # PATCH_ROZHENITSA_GATE_APPLIED  # PATCH_KARTA_GATE_APPLIED — запуск мира Грондхейм
+# main.py  # PATCH_REAL_ZHIZN_APPLIED  # PATCH_ROZHENITSA_GATE_APPLIED  # PATCH_KARTA_GATE_APPLIED  # PATCH_ZHITEL_GATE_APPLIED — запуск мира Грондхейм
 """
 Точка входа. Поднимает NiceGUI и регистрирует страницы.
 
@@ -10,13 +10,21 @@
     cp .env.example .env   # и впиши OPENROUTER_API_KEY
 
 Откроется:  http://localhost:8080/brat
+
+Страницы (всё доступно через кабинет Брата):
+    /brat              — кабинет Брата (врата мира, единая дверь)
+    /karta             — карта города (зрение Брата; клик на жителя → его кабинет)
+    /registry          — Страница Жизни (рождение жителя)
+    /zhitel/{id}       — кабинет жителя (по ID_Object, напр. 0001_Liya_Heat)
+    /zhitel            — кабинет жителя без id → список выбора
+    /hram/index.html   — Храм (статика)
 """
 from dotenv import load_dotenv
 load_dotenv()  # читаем .env до импорта страниц
 
 from nicegui import ui
 
-# ── БРАТ — врата мира ──
+# ── БРАТ — врата мира (единая дверь: запустил Брата → попадаешь везде) ──
 from ui_brat import page_brat
 
 @ui.page("/brat")
@@ -46,6 +54,20 @@ from ui_registry import page_registry
 @ui.page("/registry")
 def _registry():
     page_registry()
+
+# ── КАБИНЕТ ЖИТЕЛЯ — единое окно в любого жителя ──
+# Путь: запустил Брата → ГРОНДХЕЙМ (карта) → клик «открыть →» на жителе → сюда.
+# /zhitel/{id} открывает конкретного жителя по ID_Object (напр. 0001_Liya_Heat).
+# /zhitel без id — покажет список выбора.
+from ui_zhitel import page_zhitel
+
+@ui.page("/zhitel/{zid}")
+def _zhitel(zid: str = ""):
+    page_zhitel(zid)
+
+@ui.page("/zhitel")
+def _zhitel0():
+    page_zhitel("")
 
 
 if __name__ in {"__main__", "__mp_main__"}:

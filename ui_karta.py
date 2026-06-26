@@ -272,7 +272,12 @@ def _render_node(node: dict, is_unit: bool = False):
                 if note:
                     ui.html(f'<div class="node-note">{note}</div>')
             ui.html(f'<span class="node-kind">{node.get("kind","")}</span>')
-            if gate:
+            if node.get("kind") == "ядро" and node.get("id"):
+                # ЖИТЕЛЬ — клик ведёт в его кабинет /zhitel/{id}
+                _zid = node.get("id")
+                ui.button("открыть →", on_click=lambda z=_zid: ui.navigate.to(f"/zhitel/{z}")) \
+                    .props("flat").classes("node-gate")
+            elif gate:
                 ui.button("войти →", on_click=lambda g=gate: ui.navigate.to(g)) \
                     .props("flat").classes("node-gate")
             else:
@@ -304,18 +309,16 @@ def page_karta():
         with ui.element("div").classes("tree"):
             _render_node(tree, is_unit=True)
 
-        # подвал — ВИДИМАЯ ДИАГНОСТИКА (временно): путь + что нашёл скан
+        # подвал — живой счётчик: сколько жителей видит Брат
         try:
-            _zh = _scan_zhiteli()
-            _names = ", ".join(_name_of(z) for z in _zh) or "— никого —"
-            _diag = (f"ДИАГНОСТИКА СКАНА:<br>"
-                     f"• путь жителей: {ZHITELI_DIR}<br>"
-                     f"• папка существует: {ZHITELI_DIR.exists()}<br>"
-                     f"• найдено жителей: {len(_zh)}<br>"
-                     f"• имена: {_names}")
-        except Exception as _e:
-            _diag = f"ДИАГНОСТИКА УПАЛА: {_e}"
-        ui.html(f'<div class="karta-foot">{_diag}</div>')
+            _n = len(_scan_zhiteli())
+            _foot = (f"⬡ Брат видит <b>{_n}</b> жит. — карта дочитывает их живьём из домов. "
+                     f"Клик «открыть →» ведёт в кабинет жителя.<br>"
+                     f"Кварталы и врата растут по мере рождения. "
+                     f"Брат связывает, но не держит — паспорта живут в домах, не в нём.")
+        except Exception:
+            _foot = "⬡ Карта — зрение Брата. Жители появляются ветвями по мере рождения."
+        ui.html(f'<div class="karta-foot">{_foot}</div>')
 
 
 if __name__ in {"__main__", "__mp_main__"}:

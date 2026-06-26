@@ -1,7 +1,12 @@
 # ui_zhitel.py
 """
-КАБИНЕТ ЖИТЕЛЯ — единое окно в любого жителя Грондхейма.
+КОВЧЕГ — кабинет жителя в состоянии прибытия (под Братом).
 Route: /zhitel/{zid}  (zid = ID_Object из паспорта, напр. 0001_Liya_Heat)
+
+Ковчег — не место, а СОСТОЯНИЕ: житель/гость приземлился, но ещё не
+прописан. Один кабинет на всех (окно-рамка), грузит САМУ ЛИЧНОСТЬ из
+якоря (passport = кишки жителя: кто он, история, натура), не «папку-дом».
+Фон — ковчега (Шеф закинет в GRONDHEIM_CITY/ковчег/bg.*).
 
 Раскладка — калька кабинета Брата (ui_brat.py): app-container grid,
 area-left / area-stage / area-right, золото #c9a84c, glass.
@@ -253,13 +258,34 @@ def page_zhitel(zid: str = ""):
                 ui.html(f'<div class="{cls}"><b>{who}:</b> {esc}</div>')
 
     def update_viewer():
+        # ЯКОРЬ — кишки жителя. Грузим САМУ личность, не папку.
         el = refs["viewer"]
         if not el: return
         el.clear()
         with el:
-            ui.markdown(f"### Отчёты\n\n_Состояние, движок, просев — появятся здесь._\n\n"
-                        f"- заряд: _(движок подключим глубже)_\n"
-                        f"- маска: _(дом/работа — следующий пласт)_")
+            parts = ["### Якорь — кто она\n"]
+            hist = p.get("Hidden_History", "")
+            if hist:
+                parts.append(f"**Скрытая история.** {hist}\n")
+            sens = p.get("Sensory_Response", "")
+            if sens:
+                parts.append(f"**Что чувствует.** {sens}\n")
+            anch = p.get("Anchor_Points", "")
+            if anch:
+                parts.append(f"**Якоря.** {anch}\n")
+            taste = p.get("Hidden_Taste", "")
+            if taste:
+                parts.append(f"**Скрытый вкус.** {taste}\n")
+            pull = p.get("Pull_Vector", "")
+            if pull:
+                parts.append(f"**Тянет к.** {pull}\n")
+            dna = p.get("DNA_Static", {})
+            if dna:
+                dna_str = " · ".join(f"{k.split('_')[0]} {v}" for k, v in dna.items())
+                parts.append(f"**Натура.** {dna_str}\n")
+            if len(parts) == 1:
+                parts.append("_якорь пуст — кишки ещё не вписаны_")
+            ui.markdown("\n".join(parts))
 
     def update_files():
         el = refs["files"]
@@ -284,8 +310,9 @@ def page_zhitel(zid: str = ""):
         # HEADER
         with ui.element("div").classes("area-header"):
             with ui.element("div").classes("glass zhead"):
+                _sost = "ковчег · прибытие" if not p.get("прописка") else (rank or "житель")
                 ui.html(f'<div><div class="zhead-name">{name}</div>'
-                        f'<div class="zhead-sub">{rank}</div></div>')
+                        f'<div class="zhead-sub">{_sost}</div></div>')
                 ui.element("div").style("flex:1")
                 ui.button("карта", on_click=lambda: ui.navigate.to("/karta")) \
                     .props("flat no-caps").classes("zback").style("margin-right:8px;")
@@ -331,11 +358,15 @@ def page_zhitel(zid: str = ""):
                     ui.html(f'<div class="zavatar-cap"><div class="nm">{name}</div>'
                             f'<div class="role">{rank}</div></div>')
                 with ui.element("div").classes("glass runs-panel"):
-                    ui.html('<div class="panel-title">приборы · состояние</div>')
+                    ui.html('<div class="panel-title">ковчег · прибытие</div>')
                     if core_phrase:
                         ui.html(f'<div class="zcore">«{core_phrase}»</div>')
-                    ui.html('<div class="zcore" style="opacity:0.5;">⬡ движок подключим глубже — '
-                            'тогда оживут заряд и маска.</div>')
+                    _propiska = p.get("прописка")
+                    if not _propiska:
+                        ui.html('<div class="zcore" style="opacity:0.7;">⬡ в ковчеге — '
+                                'приземлилась, ждёт прописки. Город ещё не принял.</div>')
+                    else:
+                        ui.html(f'<div class="zcore" style="opacity:0.7;">⬡ прописана: {_propiska}</div>')
 
 
 if __name__ in {"__main__", "__mp_main__"}:
