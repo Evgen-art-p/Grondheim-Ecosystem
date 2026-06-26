@@ -28,46 +28,31 @@ from nicegui import ui
 # структура ответа уже та, что нужна.
 # ═══════════════════════════════════════════════════════════
 
-
 # ═══════════════════════════════════════════════════════════
-# KARTA_ZHIVOY_SKAN_V2 · живой скан жителей (Страница → Брат)
-# Брат СВЯЗЫВАЕТ, не ДЕРЖИТ: читаем жителей/ заново каждый раз.
-# Принадлежность — из паспорта (Workshop_ID), Закон Пары.
-# Двуязычно: формат реестра (Official_Name/Workshop_ID) + рожаницы.
+# ЖИВОЙ СКАН ЖИТЕЛЕЙ (Страница → Брат). Брат СВЯЗЫВАЕТ, не ДЕРЖИТ.
+# Только паспорт-лицо в корне папки профессии. В дом не спускаемся.
+# Путь от __file__ (корень репы), не от рабочей папки.
 # ═══════════════════════════════════════════════════════════
 from pathlib import Path as _Path
 import json as _json
 
-ZHITELI_DIR = _Path("GRONDHEIM_CITY/жители")
-GUARDIANS_DIR = _Path("GRONDHEIM_CITY/Hexagon/3_guardians")  # хранители (летопись)
+_ROOT = _Path(__file__).resolve().parent
+ZHITELI_DIR = _ROOT / "GRONDHEIM_CITY" / "жители"
+GUARDIANS_DIR = _ROOT / "GRONDHEIM_CITY" / "Hexagon" / "3_guardians"
 
-# Workshop_ID / роль → id ветки каркаса. Не список жителей (живой скан),
-# а куда принадлежность ведёт. Неизвестное → masters (общий дом).
-_VETKA_BY_WORKSHOP = {
-    "hram":        "hram",
-    "trading":     "trading",
-    "living_book": "living_book",
-}
-_VETKA_BY_RANK = {       # фоллбэк по Social_Rank, если нет Workshop_ID
-    "хранитель": "hram",
-    "трейдер":   "trading",
-}
+_VETKA_BY_WORKSHOP = {"hram": "hram", "trading": "trading", "living_book": "living_book"}
+_VETKA_BY_RANK = {"хранитель": "hram", "трейдер": "trading"}
 _VETKA_DEFAULT = "masters"
 
-# имена внутренних файлов дома — НЕ паспорта-лица (чтоб не считать дважды)
-_DOM_FILES = {"passport.json"}
 
-
-def _vetka_for(pasp: dict) -> str:
-    """Куда житель принадлежит на карте. Workshop_ID → Social_Rank → дефолт."""
-    wid = (pasp.get("Workshop_ID") or "").strip().lower()
+def _vetka_for(p):
+    wid = (p.get("Workshop_ID") or "").strip().lower()
     if wid in _VETKA_BY_WORKSHOP:
         return _VETKA_BY_WORKSHOP[wid]
-    rank = (pasp.get("Social_Rank") or "").strip().lower()
+    rank = (p.get("Social_Rank") or "").strip().lower()
     if rank in _VETKA_BY_RANK:
         return _VETKA_BY_RANK[rank]
-    # фоллбэк на формат рожаницы
-    role = (pasp.get("предназначение") or "").strip().lower()
+    role = (p.get("предназначение") or "").strip().lower()
     if "хранит" in role:
         return "hram"
     if "трейд" in role or "торг" in role:
@@ -75,60 +60,45 @@ def _vetka_for(pasp: dict) -> str:
     return _VETKA_DEFAULT
 
 
-def _name_of(pasp: dict) -> str:
-    return (pasp.get("Official_Name")
-            or pasp.get("имя")
-            or pasp.get("id")
-            or "?")
+def _name_of(p):
+    return p.get("Official_Name") or p.get("имя") or p.get("id") or "?"
 
 
-def _note_of(pasp: dict) -> str:
-    prof = (pasp.get("Profession") or pasp.get("предназначение")
-            or pasp.get("Social_Rank") or "—")
-    rare = (pasp.get("Rarity") or pasp.get("редкость") or "").strip()
-    prof = prof.strip().rstrip(".")
+def _note_of(p):
+    prof = (p.get("Profession") or p.get("предназначение") or p.get("Social_Rank") or "—").strip().rstrip(".")
+    rare = (p.get("Rarity") or p.get("редкость") or "").strip()
     return f"{prof} · {rare}" if rare else prof
 
 
-def _scan_zhiteli() -> list[dict]:
-    """Живой скан жителей. Рекурсивно по жители/ + guardians.
-    Берём паспорт-ЛИЦО (внешний {имя}.json), внутренний дом passport.json
-    пропускаем — это один житель, не два."""
+def _scan_zhiteli():
     found = []
     for base in (ZHITELI_DIR, GUARDIANS_DIR):
         if not base.exists():
             continue
-        for p in sorted(base.rglob("*.json")):
-            if p.name in _DOM_FILES:
-                continue  # внутренний паспорт дома — пропускаем (двойник)
-            try:
-                found.append(_json.loads(p.read_text(encoding="utf-8")))
-            except Exception:
-                pass  # битый — сито, не щупальце
+        for prof_dir in base.iterdir():
+            if not prof_dir.is_dir():
+                continue
+            for item in prof_dir.iterdir():
+                if item.is_file() and item.suffix == ".json":
+                    try:
+                        found.append(_json.loads(item.read_text(encoding="utf-8")))
+                    except Exception:
+                        pass
     return found
 
 
-def _zhitel_node(pasp: dict) -> dict:
-    return {
-        "id":    pasp.get("ID_Object") or pasp.get("id") or _name_of(pasp),
-        "label": _name_of(pasp),
-        "icon":  "⬡",
-        "kind":  "ядро",
-        "note":  _note_of(pasp),
-        "gate":  None,
-        "children": [],
-    }
+def _zhitel_node(p):
+    return {"id": p.get("ID_Object") or p.get("id") or _name_of(p),
+            "label": _name_of(p), "icon": "⬡", "kind": "ядро",
+            "note": _note_of(p), "gate": None, "children": []}
 
 
-def _podvesit(tree: dict, zhiteli: list[dict]) -> dict:
-    """Вешает живых жителей на ветви каркаса по принадлежности.
-    Каркас не меняем — наполняем children существующих веток."""
+def _podvesit(tree, zhiteli):
     by_id = {ch.get("id"): ch for ch in tree.get("children", [])}
-    for pasp in zhiteli:
-        vetka = by_id.get(_vetka_for(pasp))
-        if vetka is None:
-            continue
-        vetka.setdefault("children", []).append(_zhitel_node(pasp))
+    for p in zhiteli:
+        v = by_id.get(_vetka_for(p))
+        if v is not None:
+            v.setdefault("children", []).append(_zhitel_node(p))
     return tree
 
 
@@ -178,7 +148,6 @@ def scan_hierarchy() -> dict:
             },
         ],
     }
-    # KARTA_ZHIVOY_SKAN_V2: живые жители на каркас
     return _podvesit(_karkas, _scan_zhiteli())
 
 
