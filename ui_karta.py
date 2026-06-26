@@ -279,7 +279,7 @@ def _render_node(node: dict, is_unit: bool = False):
                 ui.html('<span class="node-gate-off">врата ждут</span>')
 
         children = node.get("children", [])
-        if node.get("kind") in ("этаж", "квартал", "цех"):
+        if node.get("kind") in ("единица", "этаж", "квартал", "цех"):
             with ui.element("div").classes("children"):
                 if children:
                     for ch in children:
@@ -304,13 +304,18 @@ def page_karta():
         with ui.element("div").classes("tree"):
             _render_node(tree, is_unit=True)
 
-        # подвал — честно про каркас
-        ui.html(
-            '<div class="karta-foot">⬡ Это каркас. Дерево пока статично — '
-            'сборщик каталогов (ступень 3) ещё не построен.<br>'
-            'Когда родятся хранители и кварталы — они появятся ветвями. '
-            'Карта читает <b>scan_hierarchy()</b> — шов под живой скан паспортов готов.</div>'
-        )
+        # подвал — ВИДИМАЯ ДИАГНОСТИКА (временно): путь + что нашёл скан
+        try:
+            _zh = _scan_zhiteli()
+            _names = ", ".join(_name_of(z) for z in _zh) or "— никого —"
+            _diag = (f"ДИАГНОСТИКА СКАНА:<br>"
+                     f"• путь жителей: {ZHITELI_DIR}<br>"
+                     f"• папка существует: {ZHITELI_DIR.exists()}<br>"
+                     f"• найдено жителей: {len(_zh)}<br>"
+                     f"• имена: {_names}")
+        except Exception as _e:
+            _diag = f"ДИАГНОСТИКА УПАЛА: {_e}"
+        ui.html(f'<div class="karta-foot">{_diag}</div>')
 
 
 if __name__ in {"__main__", "__mp_main__"}:
