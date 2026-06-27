@@ -194,7 +194,7 @@ body{ width:100vw; height:100vh; overflow:hidden !important; background:transpar
 .zavatar-cap .role{ font-size:0.55rem; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.08em; }
 .runs-panel{ flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
 .zcore{ padding:12px 16px; font-size:0.72rem; color:rgba(255,255,255,0.6); font-style:italic; line-height:1.5; }
-.nicegui-content{ overflow:hidden !important; height:100% !important; padding:0 !important; }
+.nicegui-content{ overflow:hidden !important; height:100% !important; }
 """
 
 
