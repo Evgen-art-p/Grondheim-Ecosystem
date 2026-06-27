@@ -117,60 +117,70 @@ def rodit_pasport_kusochek(obj: dict) -> str:
 # ── PATCH_4_SLOYA: заводим 4 слоя памяти на этаже жителя ──
 # core/resonance/sensory/archive. Память ПУСТАЯ — слои только заводятся.
 # Кусочек {имя}.json становится папкой {имя}/ с паспортом и слоями.
-def zavesti_sloi(obj: dict) -> str:  # DOM_ZADEL_MASKI_V1
+def zavesti_sloi(obj: dict) -> str:  # ROZHDENIE_TONKOE_V1
     """
-    Заводит 4 слоя-папки жителя на его этаже (по предназначению).
-    Превращает плоский кусочек в папку:
-        жители/{предназначение}/{имя}/
-            passport.json   ← ядро (= core, якорь)
-            core/  resonance/  sensory/  archive/
-    Память пустая (наполнение — ступень 5). Возвращает путь папки.
+    Рождение ТОНКОЙ ЛИЧНОСТЬЮ в КОВЧЕГ (паспорт-пирог, слой 1).
+
+    Закон: паспорт = пирог. Рождается слой 1 (личность). Маска и прописка —
+    НЕ при рождении. Брат впишет прописку позже (слой 2).
+
+        GRONDHEIM_CITY/жители/ковчег/{имя}/      ← все новорождённые сюда
+            passport.json   ← ЛИЧНОСТЬ (маска вычищена, "прописка": null)
+            core/ resonance/ sensory/ archive/
+            маски/работа/mask.json  ← маска (слой 2, _активна: false)
+
+    Житель ПРЕБЫВАЕТ в ковчеге, пока Брат не пропишет. Возвращает путь дома.
     """
+    import json as _json
     name = _safe_name(obj.get("Official_Name", ""))
     if name == "без_имени":
         return ""
-    naznach_raw = obj.get("Profession", "") or "без_предназначения"
 
-    dom = _etazh_dlya(naznach_raw) / name     # PATCH_HRANITEL: папка жителя на его этаже
+    # ── ДОМ В КОВЧЕГ — не по профессии! Все пребывающие вместе. ──
+    dom = ZHITELI_DIR / "ковчег" / name
     dom.mkdir(parents=True, exist_ok=True)
 
-    # 4 слоя — наш закон
+    # 4 слоя памяти — наш закон
     for sloy in ("core", "resonance", "sensory", "archive"):
         (dom / sloy).mkdir(parents=True, exist_ok=True)
 
-    # DOM_ZADEL_MASKI_V1: задел маски (дом обеспечивается, маска приедет позже).
-    # Пока пустой каркас — структура дома готова под расцепление якорь/маска.
-    import json as _json
+    # ── РАСЦЕПЛЕНИЕ: маска (слой 2) уезжает в маски/работа/, пока не активна ──
     maska_rabota = dom / "маски" / "работа"
     maska_rabota.mkdir(parents=True, exist_ok=True)
-    _mask_file = maska_rabota / "mask.json"
-    if not _mask_file.exists():
-        _mask_file.write_text(_json.dumps({
-            "_note": "задел маски 'работа'. Соц-профиль приедет при расцеплении якорь/маска.",
-            "Workshop_ID": "", "Social_Rank": "", "Profession": "",
-            "Area_of_Responsibility": "", "Access_Level": None,
-            "Quarter": "", "Core_Phrase": "",
-        }, ensure_ascii=False, indent=2), encoding="utf-8")
+    _MASKA_POLYA = ("Social_Rank", "Profession", "Area_of_Responsibility",
+                    "Access_Level", "Workshop_ID", "Turbo_Role", "Quarter",
+                    "Core_Phrase")
+    _maska = {"_note": "маска 'работа' (слой 2 паспорта). Активирует Брат при прописке.",
+              "_активна": False}
+    for _k in _MASKA_POLYA:
+        _maska[_k] = obj.get(_k, "")
+    (maska_rabota / "mask.json").write_text(
+        _json.dumps(_maska, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # passport.json (ядро) — рядом и копией в core/ (паспорт = якорь = core)
-    pasport_json = json.dumps(obj, ensure_ascii=False, indent=2)
+    # ── ЯКОРЬ-ЛИЧНОСТЬ: вычищаем маску, ставим прописку=null ──
+    lichnost = dict(obj)
+    for _k in _MASKA_POLYA:
+        lichnost.pop(_k, None)          # маска ушла в файл
+    lichnost["прописка"] = None         # ПРЕБЫВАЕТ в ковчеге (слой 2 пуст)
+    lichnost["порода"] = obj.get("порода", "") or ""  # PORODA_PRI_ROZHDENII_V1: род, слой 1, навсегда
+
+    pasport_json = _json.dumps(lichnost, ensure_ascii=False, indent=2)
     (dom / "passport.json").write_text(pasport_json, encoding="utf-8")
     (dom / "core" / "anchor.json").write_text(pasport_json, encoding="utf-8")
 
-    # пустые заготовки слоёв (память придёт на ступени 5)
+    # пустые заготовки слоёв (память придёт с движком)
     (dom / "resonance" / "emotional_weights.json").write_text("{}", encoding="utf-8")
     (dom / "resonance" / "event_log.jsonl").write_text("", encoding="utf-8")
     (dom / "sensory" / "sensory_memory.json").write_text(
-        json.dumps({"entries": [], "_note": "оперативка · пусто при рождении"},
+        _json.dumps({"entries": [], "_note": "оперативка · пусто при рождении"},
                    ensure_ascii=False, indent=2), encoding="utf-8")
     (dom / "archive" / "archive.jsonl").write_text("", encoding="utf-8")
 
-    # маркер: слои заведены
-    mark = dom / "_слои_заведены.txt"
-    mark.write_text("core · resonance · sensory · archive\nпамять пустая (ступень 5)",
-                    encoding="utf-8")
+    (dom / "_слои_заведены.txt").write_text(
+        "core · resonance · sensory · archive\n"
+        "ПРЕБЫВАЕТ в ковчеге · прописки нет · маска в маски/работа/", encoding="utf-8")
 
-    # ── PATCH_FOTO_NEW: фото из временной → в дом жителя (avatar) ──
+    # ── фото из временной → в дом (avatar) ──
     try:
         import shutil as _sh
         _src = obj.get("_image_path", "") or ""
@@ -178,19 +188,17 @@ def zavesti_sloi(obj: dict) -> str:  # DOM_ZADEL_MASKI_V1
             _ext = Path(_src).suffix or ".png"
             _dst = dom / f"avatar{_ext}"
             _sh.copyfile(_src, _dst)
-            obj["_image_path"] = str(_dst)   # паспорт теперь смотрит в дом
-            obj["avatar"] = f"avatar{_ext}"
-            # чистим временную (фото переехало в дом)
+            lichnost["_image_path"] = str(_dst)
+            lichnost["avatar"] = f"avatar{_ext}"
             try:
                 Path(_src).unlink(missing_ok=True)
             except Exception:
                 pass
-            # перепишем паспорт с путём аватара в доме
-            _pj = json.dumps(obj, ensure_ascii=False, indent=2)
+            _pj = _json.dumps(lichnost, ensure_ascii=False, indent=2)
             (dom / "passport.json").write_text(_pj, encoding="utf-8")
             (dom / "core" / "anchor.json").write_text(_pj, encoding="utf-8")
     except Exception:
-        pass  # нет фото — дом всё равно полный (паспорт + слои)
+        pass
 
     return str(dom)
 
@@ -1356,8 +1364,8 @@ def page_registry():
                   hidden_taste_widget = {"w": None}
                   trigger_keywords_widget = {"w": None}
                   workshop_widget = {"w": None}
-                  role_widget = {"w": None}
-                  core_phrase_widget = {"w": None}
+                  current_poroda = {"value": ""}  # DNK_PORODA_VMESTO_ROLI_V1
+                  poroda_btns = {}
                   dna_static_widgets = {}
                   balance_gnd_widget = {"w": None}
                   balance_tepl_widget = {"w": None}
@@ -1405,6 +1413,32 @@ def page_registry():
                                     ui.html(f'<div style="font-size:0.62rem;opacity:0.6">{t_desc}</div>')
                                 type_btns[t_id] = btn
 
+                  # ── PORODA_PRI_ROZHDENII_V1: порода (резидент/хранитель/воркер) ──
+                  current_poroda = {"value": ""}
+                  poroda_btns = {}
+                  poroda_block_ref = {"el": None}
+
+                  with ui.element("div").classes("reg-block") as _poroda_block:
+                    poroda_block_ref["el"] = _poroda_block
+                    _poroda_block.set_visibility(False)
+                    with ui.element("div").classes("reg-block-header"):
+                        ui.html('<div class="icon">⟁</div>')
+                        ui.html("<h3>Порода</h3>")
+                        ui.html('<div class="tag">Род, навсегда · §2.1</div>')
+                    with ui.element("div").classes("reg-block-body"):
+                        with ui.row().classes("w-full gap-1"):
+                            _PORODA_LABELS = {"резидент": "Резидент · один", "хранитель": "Хранитель · штучный", "воркер": "Воркер · много"}
+                            for por in ("резидент", "хранитель", "воркер"):
+                                def make_poroda_click(p=por):
+                                    def on_click():
+                                        current_poroda["value"] = p
+                                        update_poroda_buttons()
+                                    return on_click
+                                pbtn = ui.button(
+                                    _PORODA_LABELS[por], on_click=make_poroda_click(por)
+                                ).classes("rar-btn").props("flat unelevated no-caps")
+                                poroda_btns[por] = pbtn
+
                   # ── Image upload ──
                   with ui.element("div").classes("reg-block").style("margin-bottom:0"):
                     with ui.element("div").classes("reg-block-header"):
@@ -1428,6 +1462,18 @@ def page_registry():
                                 "background: var(--r-void); border: 2px dashed var(--r-border); border-radius: 5px"
                             )
                             img_preview_element = ui.column().classes("w-full")
+
+                def update_poroda_buttons():
+                    for p, b in poroda_btns.items():
+                        b.classes(remove="active-mythic")
+                        if p == current_poroda["value"]:
+                            b.classes(add="active-mythic")
+
+                def update_poroda_buttons():
+                    for p, b in poroda_btns.items():
+                        b.classes(remove="active-mythic")
+                        if p == current_poroda["value"]:
+                            b.classes(add="active-mythic")
 
                 def update_rarity_buttons():
                     for r, b in rarity_buttons.items():
@@ -1455,6 +1501,8 @@ def page_registry():
 
                 def update_type_blocks():
                     t = current_obj_type["value"]
+                    if poroda_block_ref["el"]:
+                        poroda_block_ref["el"].set_visibility(t == "agent")
                     for tid, btn in type_btns.items():
                         btn.classes(remove=f"active-{tid}")
                         if tid == t:
@@ -1478,15 +1526,12 @@ def page_registry():
                         ui.html('<div class="tag">Только для агентов</div>')
                     with ui.element("div").classes("reg-block-body"):
 
-                        # Цех и роль
+                        # Цех и порода — DNK_PORODA_VMESTO_ROLI_V1
                         with ui.grid(columns=2).classes("w-full gap-3 mb-3"):
                             with ui.column().classes("w-full gap-0"):
                                 _WORKSHOP_QUARTER = {"residents": "Высотка", "turbo": "Квартал Мастеров", "social_mix": "Квартал Мастеров", "video_long": "Квартал Мастеров", "video_shorts": "Квартал Мастеров", "web_story": "Квартал Мастеров", "clipmakers": "Квартал Мастеров", "advertising": "Квартал Мастеров", "emo_card": "Квартал Мастеров", "logo_design": "Квартал Мастеров", "market_hit": "Квартал Мастеров", "living_book": "Квартал Мастеров", "trading": "Торговый Квартал", "hram": "Храм"}
                                 def on_workshop_change(e):
                                     ws = e.value or ""
-                                    # ЗАКОН КАРТРИДЖА: роли — из phases манифеста цеха
-                                    opts = get_role_options(ws)
-                                    new_options = {v: v if v else "— не задана —" for v in opts}
                                     # Автозаполнение квартала: манифест цеха → словарь → дефолт
                                     if agent_quarter_widget["w"] and ws:
                                         _cart = None
@@ -1498,10 +1543,6 @@ def page_registry():
                                         auto_q = (_cart or {}).get("quarter") or _WORKSHOP_QUARTER.get(ws, "Квартал Мастеров")
                                         agent_quarter_widget["w"].value = auto_q
                                         agent_quarter_widget["w"].update()
-                                    if role_widget["w"]:
-                                        role_widget["w"].options = new_options
-                                        role_widget["w"].value = ""
-                                        role_widget["w"].update()
 
                                 workshop_widget["w"] = ui.select(
                                     label="Workshop_ID (Цех)",
@@ -1510,16 +1551,19 @@ def page_registry():
                                 ).classes("w-full")
 
                             with ui.column().classes("w-full gap-0"):
-                                role_widget["w"] = ui.select(
-                                    label="Роль",
-                                    options={v: v if v else "— не задана —" for v in TURBO_ROLE_OPTIONS}
-                                ).classes("w-full")
-
-                        # Коронная фраза
-                        core_phrase_widget["w"] = ui.input(
-                            label="Коронная фраза (неизменяемая)",
-                            placeholder="Три удара — и зритель твой..."
-                        ).classes("w-full mb-3")
+                                ui.html('<div style="font-size:0.72rem;color:var(--r-text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Порода · §2.1</div>')
+                                with ui.row().classes("w-full gap-1"):
+                                    _PORODA_LABELS = {"резидент": "Резидент", "хранитель": "Хранитель", "воркер": "Воркер"}
+                                    for por in ("резидент", "хранитель", "воркер"):
+                                        def make_poroda_click(p=por):
+                                            def on_click():
+                                                current_poroda["value"] = p
+                                                update_poroda_buttons()
+                                            return on_click
+                                        pbtn = ui.button(
+                                            _PORODA_LABELS[por], on_click=make_poroda_click(por)
+                                        ).classes("rar-btn").props("flat unelevated no-caps")
+                                        poroda_btns[por] = pbtn
 
                         # Якорные точки
                         ui.html('<div style="font-size:0.72rem;color:var(--r-text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">⚓ Якорные точки (3-5 вечных констант)</div>')
@@ -1825,6 +1869,7 @@ def page_registry():
                     obj = {
                         "Rarity": current_rarity["value"],
                         "Object_Type_Class": current_obj_type["value"],  # agent/location/asset
+                        "порода": current_poroda["value"] if current_obj_type["value"] == "agent" else "",  # PORODA_PRI_ROZHDENII_V1
                     }
                     for name, widget in form_data.items():
                         val = widget.value
@@ -1845,8 +1890,7 @@ def page_registry():
                         # PATCH: цех Храм → предназначение "хранитель" (летит в 3_guardians)
                         if (obj.get("Workshop_ID") or "") == "hram" and not (obj.get("Profession") or "").strip():
                             obj["Profession"] = "хранитель"
-                        if role_widget["w"]: obj["Turbo_Role"] = role_widget["w"].value or ""
-                        if core_phrase_widget["w"]: obj["Core_Phrase"] = core_phrase_widget["w"].value or ""
+                        obj["порода"] = current_poroda["value"]  # DNK_PORODA_VMESTO_ROLI_V1
                         if anchor_points_widget["w"]: obj["Anchor_Points"] = anchor_points_widget["w"].value or ""
                         if home_story_widget["w"]: obj["Home_Story"] = home_story_widget["w"].value or ""
                         if pull_vector_widget["w"]: obj["Pull_Vector"] = pull_vector_widget["w"].value or ""
@@ -1890,6 +1934,8 @@ def page_registry():
                     """Fill form from object dict."""
                     current_rarity["value"] = obj.get("Rarity", "")
                     update_rarity_buttons()
+                    current_poroda["value"] = obj.get("порода", "")  # PORODA_PRI_ROZHDENII_V1
+                    update_poroda_buttons()
 
                     # Тип объекта
                     t = obj.get("Object_Type_Class", "")
@@ -1908,8 +1954,8 @@ def page_registry():
                     if t == "agent":
                         if agent_quarter_widget["w"]: agent_quarter_widget["w"].value = obj.get("Quarter", "")
                         if workshop_widget["w"]: workshop_widget["w"].value = obj.get("Workshop_ID", "")
-                        if role_widget["w"]: role_widget["w"].value = obj.get("Turbo_Role", "")
-                        if core_phrase_widget["w"]: core_phrase_widget["w"].value = obj.get("Core_Phrase", "")
+                        current_poroda["value"] = obj.get("порода", "")  # DNK_PORODA_VMESTO_ROLI_V1
+                        update_poroda_buttons()
                         if anchor_points_widget["w"]: anchor_points_widget["w"].value = obj.get("Anchor_Points", "")
                         if home_story_widget["w"]: home_story_widget["w"].value = obj.get("Home_Story", "")
                         if pull_vector_widget["w"]: pull_vector_widget["w"].value = obj.get("Pull_Vector", "")
@@ -1944,7 +1990,9 @@ def page_registry():
                     """Reset all form fields."""
                     current_rarity["value"] = ""
                     current_obj_type["value"] = ""
+                    current_poroda["value"] = ""  # PORODA_PRI_ROZHDENII_V1
                     update_rarity_buttons()
+                    update_poroda_buttons()
                     update_type_blocks()
                     for name, widget in form_data.items():
                         if name == "Creation_Date":
@@ -1962,7 +2010,9 @@ def page_registry():
                     for p_id, _, _, default in DNA_STATIC_PARAMS:
                         if p_id in dna_static_widgets:
                             dna_static_widgets[p_id].value = default
-                    for w in [workshop_widget, role_widget, core_phrase_widget,
+                    current_poroda["value"] = ""  # DNK_PORODA_VMESTO_ROLI_V1
+                    update_poroda_buttons()
+                    for w in [workshop_widget,
                               anchor_points_widget, home_story_widget,
                               pull_vector_widget, hidden_taste_widget, trigger_keywords_widget]:
                         if w["w"]: w["w"].value = ""
@@ -1999,6 +2049,24 @@ def page_registry():
 
                     obj["_timestamp"] = datetime.now().isoformat()
 
+                    # ── PORODA_PRI_ROZHDENII_V1: резидент один на город — предупреждение ──
+                    if obj.get("порода") == "резидент":
+                        _dup_name = (obj.get("Official_Name") or "").strip().lower()
+                        _existing_resident = next(
+                            (o for o in catalog
+                             if o.get("порода") == "резидент"
+                             and (o.get("Official_Name") or "").strip().lower() == _dup_name
+                             and o.get("ID_Object") != obj.get("ID_Object")),
+                            None
+                        )
+                        if _existing_resident:
+                            ui.notify(
+                                f"⚠ Резидент «{obj.get('Official_Name')}» уже есть в городе "
+                                f"({_existing_resident.get('ID_Object')}). Один на город — закон §2.1. "
+                                f"Сохраняю, но проверь, не плодим ли второго.",
+                                type="warning", timeout=8000
+                            )
+
                     # ── Печать Создателя: хешируем секретную фразу ──
                     seal = obj.get("Creator_Seal", "").strip()
                     if seal:
@@ -2018,7 +2086,7 @@ def page_registry():
 
                     # ── PATCH_DVA_FILA: второй файл — паспорт-кусочек на свой этаж ──
                     try:
-                        _kus = rodit_pasport_kusochek(obj)
+                        _kus = ""  # ROZHDENIE_TONKOE_V1: кусочек по профессии отключён (дом в ковчеге)
                         # PATCH_4_SLOYA: заводим 4 слоя на этаже жителя
                         try:
                             _dom = zavesti_sloi(obj)
