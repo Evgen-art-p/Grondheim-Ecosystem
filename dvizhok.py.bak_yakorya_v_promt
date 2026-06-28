@@ -131,23 +131,14 @@ class Dvizhok:
 
     def vydoh_stol(self, fakt: str, vdoh_result: dict) -> dict:
         """Выдох: накрывает СТОЛ для решения жителя. НЕ решает сам.
-        Стол = факт + кто она + что заряд открыл + личность (якоря/
-        резонанс/натура — YAKORYA_V_PROMT_V1). Житель посмотрит и выберет."""
+        Стол = факт + кто она + что заряд открыл. Житель посмотрит и выберет."""
         self._zapisat_sobytie(vdoh_result.get("осело_в", "sensory"), fakt, vdoh_result)  # PAMYAT_SOBYTIY_V1
         return {
-            "кто_я":          self.p.get("Official_Name"),
-            "факт":           fakt,
-            "заряд":          vdoh_result["заряд"],
-            "открыто":        vdoh_result["открыто"],
-            "ядро":           self.p.get("Core_Phrase", ""),
-            # YAKORYA_V_PROMT_V1: те же поля, что правая колонка кабинета
-            # показывает Шефу (update_viewer) — теперь и LLM их видит.
-            "история":        self.p.get("Hidden_History", ""),
-            "чувство":        self.p.get("Sensory_Response", ""),
-            "якоря":          self.p.get("Anchor_Points", ""),
-            "скрытый_вкус":   self.p.get("Hidden_Taste", ""),
-            "тянет_к":        self.p.get("Pull_Vector", ""),
-            "натура":         self.p.get("DNA_Static", {}),
+            "кто_я":    self.p.get("Official_Name"),
+            "факт":     fakt,
+            "заряд":    vdoh_result["заряд"],
+            "открыто":  vdoh_result["открыто"],
+            "ядро":     self.p.get("Core_Phrase", ""),
         }
 
     def sохранить(self):
