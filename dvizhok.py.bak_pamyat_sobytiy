@@ -82,45 +82,9 @@ class Dvizhok:
             "осело_в":     osel_v,
         }
 
-    def _zapisat_sobytie(self, sloy: str, fakt: str, vdoh_result: dict):
-        """PAMYAT_SOBYTIY_V1: событие оседает в свой слой (sloy — из
-        vdoh_result['осело_в'], уже посчитан по KONTEKST_SLOI).
-        Без порога — пишем всё (мелкое 'привет' тоже часть памяти)."""
-        zapis = {
-            "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "слой": sloy,
-            "факт": fakt,
-            "заряд": vdoh_result.get("заряд"),
-        }
-        try:
-            if sloy == "sensory":
-                # sensory_memory.json — JSON-объект с массивом entries
-                p = self.dom / "sensory" / "sensory_memory.json"
-                data = {"entries": []}
-                if p.exists():
-                    try:
-                        data = json.loads(p.read_text(encoding="utf-8"))
-                    except Exception:
-                        data = {"entries": []}
-                data.setdefault("entries", []).append(zapis)
-                p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-            elif sloy == "resonance":
-                # event_log.jsonl — JSONL, дозапись строкой
-                p = self.dom / "resonance" / "event_log.jsonl"
-                with open(p, "a", encoding="utf-8") as f:
-                    f.write(json.dumps(zapis, ensure_ascii=False) + "\n")
-            elif sloy == "archive":
-                # archive.jsonl — JSONL, дозапись строкой
-                p = self.dom / "archive" / "archive.jsonl"
-                with open(p, "a", encoding="utf-8") as f:
-                    f.write(json.dumps(zapis, ensure_ascii=False) + "\n")
-        except Exception:
-            pass  # память не должна ронять дыхание — пропускаем тихо
-
     def vydoh_stol(self, fakt: str, vdoh_result: dict) -> dict:
         """Выдох: накрывает СТОЛ для решения жителя. НЕ решает сам.
         Стол = факт + кто она + что заряд открыл. Житель посмотрит и выберет."""
-        self._zapisat_sobytie(vdoh_result.get("осело_в", "sensory"), fakt, vdoh_result)  # PAMYAT_SOBYTIY_V1
         return {
             "кто_я":    self.p.get("Official_Name"),
             "факт":     fakt,

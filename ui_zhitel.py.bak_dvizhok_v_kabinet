@@ -27,75 +27,10 @@ area-left / area-stage / area-right, золото #c9a84c, glass.
 `шесть·проверено·до·корня`
 """
 import json
-import os
-import asyncio
 from pathlib import Path
 from datetime import datetime
 
 from nicegui import ui
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except Exception:
-    pass
-
-from dvizhok import Dvizhok  # DVIZHOK_V_KABINET_V1: личный движок жителя
-
-OPENROUTER_KEY   = os.getenv("OPENROUTER_API_KEY", "")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
-PROXY_URL        = os.getenv("PROXY_URL", "") or None
-
-
-async def call_zhitel_llm(messages, model=None):
-    """Тот же паттерн, что у Брата (ui_brat.py) — один способ говорить с LLM."""
-    if not OPENROUTER_KEY:
-        return "⚠ OPENROUTER_API_KEY не задан. Положи ключ в .env."
-    use_model = model or OPENROUTER_MODEL
-    import httpx
-    headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
-    payload = {"model": use_model, "messages": messages}
-    try:
-        async with httpx.AsyncClient(timeout=120, proxy=PROXY_URL) as client:
-            r = await client.post("https://openrouter.ai/api/v1/chat/completions",
-                                  headers=headers, json=payload)
-            r.raise_for_status()
-            return r.json()["choices"][0]["message"]["content"]
-    except Exception as e:
-        return f"⚠ Ошибка вызова {model or use_model}: {e}"
-
-
-def _otsenit_tonus_silu(text: str) -> tuple:
-    """Простые правила: тонус (плюс/минус/ровно) и сила (0..1) сообщения.
-    Не классификатор LLM — быстрые правила по словам и пунктуации."""
-    t = (text or "").strip()
-    if not t:
-        return "ровно", 0.1
-
-    low = t.lower()
-    SLOVA_PLUS = ("спасибо", "молодец", "хорошо", "отлично", "люблю", "рад",
-                  "круто", "класс", "умница", "горжусь", "красиво", "правильно")
-    SLOVA_MINUS = ("плохо", "зря", "ошибка", "виновата", "глупо", "не так",
-                   "стыдно", "жаль", "грустно", "больно", "обидно", "злюсь",
-                   "не должна", "нельзя", "хватит", "достаточно")
-
-    has_plus = any(w in low for w in SLOVA_PLUS)
-    has_minus = any(w in low for w in SLOVA_MINUS)
-    if has_minus and not has_plus:
-        tonus = "минус"
-    elif has_plus and not has_minus:
-        tonus = "плюс"
-    else:
-        tonus = "ровно"
-
-    # сила: длина + крик (заглавные) + восклицания/вопросы
-    dlina = min(1.0, len(t) / 200.0)
-    bukv = [c for c in t if c.isalpha()]
-    kapslok = (sum(1 for c in bukv if c.isupper()) / len(bukv)) if bukv else 0.0
-    vosklic = min(1.0, (t.count("!") + t.count("?")) / 3.0)
-    sila = min(1.0, 0.3 + dlina * 0.4 + kapslok * 0.3 + vosklic * 0.3)
-
-    return tonus, round(sila, 2)
 
 _ROOT = Path(__file__).resolve().parent
 ZHITELI_DIR = _ROOT / "GRONDHEIM_CITY" / "жители"
@@ -359,66 +294,16 @@ def page_zhitel(zid: str = ""):
         with el:
             ui.html('<div style="opacity:0.4; font-size:11px; padding:4px;">— руды нет —</div>')
 
-    async def send():
+    def send():
         inp = refs["input"]
-        if not inp or state.get("waiting"):
-            return
+        if not inp: return
         t = (inp.value or "").strip()
-        if not t:
-            return
+        if not t: return
         state["chat"].append({"role":"user","content":t})
         inp.set_value("")
-        update_chat()
-        state["waiting"] = True
-        await asyncio.sleep(0.03)
-
-        # ── DVIZHOK_V_KABINET_V1: реальный вдох, если дом найден ──
-        stol = None
-        dvizhok = None
-        if dom is not None and (dom / "passport.json").exists():
-            try:
-                dvizhok = Dvizhok(dom)
-                tonus, sila = _otsenit_tonus_silu(t)
-                vdoh_res = dvizhok.vdoh(kontekst="общение", sila=sila,
-                                        svezhest=1.0, tonus=tonus)
-                stol = dvizhok.vydoh_stol(fakt=t, vdoh_result=vdoh_res)
-            except Exception as _e:
-                stol = None
-
-        if stol is not None:
-            if stol.get('ядро'):
-                soul = (
-                    f"Ты — {stol['кто_я']}, житель Грондхейма. Говоришь от первого лица, "
-                    f"живым голосом, не как ассистент.\n"
-                    f"Твоё ядро (коронная фраза): «{stol['ядро']}»\n"
-                )
-            else:
-                soul = (
-                    f"Ты — {stol['кто_я']}, житель Грондхейма. "
-                    f"Говоришь от первого лица, живым голосом, не как ассистент.\n"
-                )
-            soul += (
-                f"Сейчас твой заряд (внутреннее состояние): {stol['заряд']} "
-                f"(от -1 до 1; отрицательный — тревога/обида, положительный — тепло/радость, "
-                f"0 — покой).\n"
-                f"Тебе открыты слои памяти: {', '.join(stol['открыто'])}.\n"
-                f"Отвечай коротко, по-человечески, исходя из своего текущего заряда — "
-                f"не упоминай слова 'заряд' или 'слои' напрямую, просто веди себя в тон."
-            )
-            messages = [{"role": "system", "content": soul}]
-            for m in state["chat"][-12:]:
-                role = "user" if m["role"] == "user" else "assistant"
-                messages.append({"role": role, "content": m["content"]})
-            reply = await call_zhitel_llm(messages, state.get("model"))
-            try:
-                dvizhok.sохранить()
-            except Exception:
-                pass
-        else:
-            reply = "(дом не найден или паспорт пуст — движок не дышит. Кабинет-каркас.)"
-
-        state["chat"].append({"role": "zhitel", "content": reply})
-        state["waiting"] = False
+        # движок/LLM подключим глубже — пока эхо-заглушка честная
+        state["chat"].append({"role":"zhitel",
+            "content": "(движок ещё не подключён — кабинет-каркас. Скоро отвечу по-настоящему.)"})
         update_chat()
 
     with ui.element("div").classes("app-container"):
@@ -458,7 +343,7 @@ def page_zhitel(zid: str = ""):
                             update_viewer()
                 with ui.element("div").classes("floating-console"):
                     refs["input"] = ui.input(placeholder=f"скажи {name}...").props("borderless").style("flex:1")
-                    refs["input"].on("keydown.enter", lambda e: asyncio.create_task(send()))  # DVIZHOK_V_KABINET_V1
+                    refs["input"].on("keydown.enter", lambda e: send())
                     ui.button("ОТПРАВИТЬ", on_click=send).classes("send-button")
 
         # RIGHT — аватар + приборы

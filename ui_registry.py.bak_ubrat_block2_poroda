@@ -1185,6 +1185,17 @@ BLOCKS = [
         ]
     },
     {
+        "icon": "②",
+        "title": "Социальный профиль",
+        "tag": "Государство",
+        "fields": [
+            ("Social_Rank", "select", ["", "Хозяин", "Хозяйка", "Хранитель", "Мастер", "Мастерица", "Специалист", "Гражданин", "Гражданка"], False),
+            ("Profession", "input", "Сценарист смыслов...", False),
+            ("Area_of_Responsibility", "input", "За что отвечает в мире", True),
+            ("Access_Level", "slider", (1, 10, 5), False),
+        ]
+    },
+    {
         "icon": "③",
         "title": "Физическое воплощение",
         "tag": "Визуал",
@@ -1352,6 +1363,8 @@ def page_registry():
                   pull_vector_widget = {"w": None}
                   hidden_taste_widget = {"w": None}
                   trigger_keywords_widget = {"w": None}
+                  current_poroda = {"value": ""}  # PORODA_UBORKA_V1
+                  poroda_btns = {}
                   dna_static_widgets = {}
                   balance_gnd_widget = {"w": None}
                   balance_tepl_widget = {"w": None}
@@ -1422,6 +1435,12 @@ def page_registry():
                             )
                             img_preview_element = ui.column().classes("w-full")
 
+                def update_poroda_buttons():
+                    for p, b in poroda_btns.items():
+                        b.classes(remove="active-mythic")
+                        if p == current_poroda["value"]:
+                            b.classes(add="active-mythic")
+
                 def update_rarity_buttons():
                     for r, b in rarity_buttons.items():
                         b.classes(remove=f"active-{r.lower()}")
@@ -1471,8 +1490,20 @@ def page_registry():
                         ui.html('<div class="tag">Только для агентов</div>')
                     with ui.element("div").classes("reg-block-body"):
 
-                        # Порода убрана из формы рождения — UBRAT_BLOCK2_I_PORODU_V1
-                        # (порода теперь задаётся через маску/прописку, не при рождении)
+                        # Порода — PORODA_UBORKA_V1 (закон §2.1, личность слой 1, без прописки)
+                        ui.html('<div style="font-size:0.72rem;color:var(--r-text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Порода · резидент один на город / хранитель штучный / воркер много</div>')
+                        with ui.row().classes("w-full gap-1 mb-3"):
+                            _PORODA_LABELS = {"резидент": "Резидент", "хранитель": "Хранитель", "воркер": "Воркер"}
+                            for por in ("резидент", "хранитель", "воркер"):
+                                def make_poroda_click(p=por):
+                                    def on_click():
+                                        current_poroda["value"] = p
+                                        update_poroda_buttons()
+                                    return on_click
+                                pbtn = ui.button(
+                                    _PORODA_LABELS[por], on_click=make_poroda_click(por)
+                                ).classes("rar-btn").props("flat unelevated no-caps")
+                                poroda_btns[por] = pbtn
 
                         # Якорные точки
                         ui.html('<div style="font-size:0.72rem;color:var(--r-text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">⚓ Якорные точки (3-5 вечных констант)</div>')
@@ -1547,8 +1578,8 @@ def page_registry():
                   # ═══ ЛЕВАЯ КОЛОНКА ═══
                   with ui.element("div").style("display:flex;flex-direction:column;gap:0"):
 
-                    # Блоки 1,3 (Идентификация, Физическое) — UBRAT_BLOCK2_I_PORODU_V1
-                    for block in BLOCKS[:2]:
+                    # Блоки 1,2,3 (Идентификация, Социальный, Физическое)
+                    for block in BLOCKS[:3]:
                         with ui.element("div").classes("reg-block"):
                             with ui.element("div").classes("reg-block-header"):
                                 ui.html(f'<div class="icon">{block["icon"]}</div>')
@@ -1585,8 +1616,8 @@ def page_registry():
                   # ═══ ПРАВАЯ КОЛОНКА ═══
                   with ui.element("div").style("display:flex;flex-direction:column;gap:0"):
 
-                    # Блоки 4,5,6 (Глубинная суть, Динамика, Печать) — UBRAT_BLOCK2_I_PORODU_V1
-                    for block in BLOCKS[2:5]:
+                    # Блоки 4,5,6 (Глубинная суть, Динамика, Печать)
+                    for block in BLOCKS[3:]:
                         with ui.element("div").classes("reg-block"):
                             with ui.element("div").classes("reg-block-header"):
                                 ui.html(f'<div class="icon">{block["icon"]}</div>')
@@ -1781,6 +1812,7 @@ def page_registry():
 
                     # Агент
                     if t == "agent":
+                        obj["порода"] = current_poroda["value"]  # PORODA_UBORKA_V1
                         if anchor_points_widget["w"]: obj["Anchor_Points"] = anchor_points_widget["w"].value or ""
                         if home_story_widget["w"]: obj["Home_Story"] = home_story_widget["w"].value or ""
                         if pull_vector_widget["w"]: obj["Pull_Vector"] = pull_vector_widget["w"].value or ""
@@ -1840,6 +1872,8 @@ def page_registry():
 
                     # Агент
                     if t == "agent":
+                        current_poroda["value"] = obj.get("порода", "")  # PORODA_UBORKA_V1
+                        update_poroda_buttons()
                         if anchor_points_widget["w"]: anchor_points_widget["w"].value = obj.get("Anchor_Points", "")
                         if home_story_widget["w"]: home_story_widget["w"].value = obj.get("Home_Story", "")
                         if pull_vector_widget["w"]: pull_vector_widget["w"].value = obj.get("Pull_Vector", "")
@@ -1892,6 +1926,8 @@ def page_registry():
                     for p_id, _, _, default in DNA_STATIC_PARAMS:
                         if p_id in dna_static_widgets:
                             dna_static_widgets[p_id].value = default
+                    current_poroda["value"] = ""  # PORODA_UBORKA_V1
+                    update_poroda_buttons()
                     for w in [anchor_points_widget, home_story_widget,
                               pull_vector_widget, hidden_taste_widget, trigger_keywords_widget]:
                         if w["w"]: w["w"].value = ""
@@ -1927,8 +1963,23 @@ def page_registry():
 
                     obj["_timestamp"] = datetime.now().isoformat()
 
-                    # Проверка уникальности резидента убрана вместе с породой — UBRAT_BLOCK2_I_PORODU_V1
-                    # (порода теперь задаётся через маску, проверка переедет туда же)
+                    # ── PORODA_PRI_ROZHDENII_V1: резидент один на город — предупреждение ──
+                    if obj.get("порода") == "резидент":
+                        _dup_name = (obj.get("Official_Name") or "").strip().lower()
+                        _existing_resident = next(
+                            (o for o in catalog
+                             if o.get("порода") == "резидент"
+                             and (o.get("Official_Name") or "").strip().lower() == _dup_name
+                             and o.get("ID_Object") != obj.get("ID_Object")),
+                            None
+                        )
+                        if _existing_resident:
+                            ui.notify(
+                                f"⚠ Резидент «{obj.get('Official_Name')}» уже есть в городе "
+                                f"({_existing_resident.get('ID_Object')}). Один на город — закон §2.1. "
+                                f"Сохраняю, но проверь, не плодим ли второго.",
+                                type="warning", timeout=8000
+                            )
 
                     # ── Печать Создателя: хешируем секретную фразу ──
                     seal = obj.get("Creator_Seal", "").strip()
