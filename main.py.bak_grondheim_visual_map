@@ -22,14 +22,7 @@
 from dotenv import load_dotenv
 load_dotenv()  # читаем .env до импорта страниц
 
-from pathlib import Path
-from nicegui import ui, app
-
-# ── СТАТИКА КАРТЫ — картинки сцен (grondheim.png, hram_kompleks.png) ──
-# PATCH_GRONDHEIM_VISUAL_MAP
-_KARTA_STATIC_DIR = Path(__file__).resolve().parent / "GRONDHEIM_CITY" / "карта" / "static"
-_KARTA_STATIC_DIR.mkdir(parents=True, exist_ok=True)
-app.add_static_files("/karta_static", str(_KARTA_STATIC_DIR))
+from nicegui import ui
 
 # ── БРАТ — врата мира (единая дверь: запустил Брата → попадаешь везде) ──
 from ui_brat import page_brat
@@ -37,12 +30,6 @@ from ui_brat import page_brat
 @ui.page("/brat")
 def _brat():
     page_brat()
-
-# ── ГОРОД — визуальная карта (две сцены) ── PATCH_GRONDHEIM_VISUAL_MAP
-from ui_grondheim import page_grondheim
-@ui.page("/grondheim")
-def _grondheim():
-    page_grondheim()
 
 # ── ЧЕРНОВИК ui_rozhenitsa ВЫКЛЮЧЕН (в топку, путь А) ──
 # Настоящая Страница Жизни — ui_registry ниже.

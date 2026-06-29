@@ -949,10 +949,7 @@ def page_brat():
         # STAGE: тулбар + чат + отчёт + ввод
         with ui.element("div").classes("area-stage"):
             with ui.element("div").classes("glass stage-monitor"):
-                # ── ТУЛБАР: одни врата — ГОРОД (визуальная карта) ──
-                # PATCH_GRONDHEIM_VISUAL_MAP: старые 4 кнопки (Храм/Торговый/
-                # Мастеров/Живая книга) убраны — переходы внутри города
-                # теперь идут кликом по локации на самой карте, без кнопок.
+                # ── ТУЛБАР: врата (прозрачная плашка, кнопки по центру) ──
                 with ui.element("div").classes("stage-toolbar").style(
                     "flex-shrink:0; grid-template-columns:1fr; justify-items:center; "
                     "align-items:end !important; height:auto !important; "
@@ -963,9 +960,12 @@ def page_brat():
                     with ui.element("div").style(
                         "display:flex; gap:8px; align-items:center; justify-content:center;"
                     ):
-                        ui.button("ГОРОД",
-                                  on_click=lambda: ui.navigate.to("/grondheim")
-                                  ).props("flat").classes("brat-gate")  # PATCH_GRONDHEIM_VISUAL_MAP
+                        ui.button("Храм",
+                                  on_click=lambda: ui.navigate.to("/hram/index.html")
+                                  ).props("flat").classes("brat-gate")  # PATCH_HRAM_GATE
+                        ui.button("Торговый").props("flat").classes("brat-gate")
+                        ui.button("Мастеров").props("flat").classes("brat-gate")
+                        ui.button("Живая книга").props("flat").classes("brat-gate")
                 with ui.element("div").classes("stage-content").style(
                     "padding-top:0 !important; padding-bottom:90px;"):
                     with ui.element("div").classes("split-view"):
