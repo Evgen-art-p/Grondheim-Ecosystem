@@ -97,7 +97,7 @@ def _otsenit_tonus_silu(text: str) -> tuple:
 
     return tonus, round(sila, 2)
 
-_ROOT = Path(__file__).resolve().parent
+_ROOT = Path(__file__).resolve().parent.parent  # PATCH_PERENOS_V_PAPKI: файл в жители/, корень репо — на уровень выше
 ZHITELI_DIR = _ROOT / "GRONDHEIM_CITY" / "жители"
 GUARDIANS_DIR = _ROOT / "GRONDHEIM_CITY" / "Hexagon" / "3_guardians"
 

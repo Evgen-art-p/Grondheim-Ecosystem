@@ -36,7 +36,7 @@ from nicegui import ui
 from pathlib import Path as _Path
 import json as _json
 
-_ROOT = _Path(__file__).resolve().parent
+_ROOT = _Path(__file__).resolve().parent.parent  # PATCH_PERENOS_V_PAPKI: файл в ГОРОД/, корень репо — на уровень выше
 ZHITELI_DIR = _ROOT / "GRONDHEIM_CITY" / "жители"
 GUARDIANS_DIR = _ROOT / "GRONDHEIM_CITY" / "Hexagon" / "3_guardians"
 

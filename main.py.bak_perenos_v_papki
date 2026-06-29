@@ -1,4 +1,4 @@
-# main.py  # PATCH_REAL_ZHIZN_APPLIED  # PATCH_ROZHENITSA_GATE_APPLIED  # PATCH_KARTA_GATE_APPLIED  # PATCH_ZHITEL_GATE_APPLIED  # PATCH_PERENOS_V_PAPKI — запуск мира Грондхейм
+# main.py  # PATCH_REAL_ZHIZN_APPLIED  # PATCH_ROZHENITSA_GATE_APPLIED  # PATCH_KARTA_GATE_APPLIED  # PATCH_ZHITEL_GATE_APPLIED — запуск мира Грондхейм
 """
 Точка входа. Поднимает NiceGUI и регистрирует страницы.
 
@@ -11,42 +11,23 @@
 
 Откроется:  http://localhost:8080/brat
 
-СТРУКТУРА ПАПОК (PATCH_PERENOS_V_PAPKI — дерево репо = дерево мира):
-    Брат/        — ui_brat.py, ui_registry.py (Брат прописывает и связывает)
-    жители/      — ui_zhitel.py, dvizhok.py (всё про самого жителя)
-    ГОРОД/       — ui_karta.py, ui_grondheim.py + static/ (картинки сцен)
-    GRONDHEIM_CITY/ — ДАННЫЕ (не код): паспорта жителей, локаций
-
 Страницы (всё доступно через кабинет Брата):
     /brat              — кабинет Брата (врата мира, единая дверь)
-    /grondheim         — ГОРОД, визуальная карта (две сцены: общая + храм)
     /karta             — карта города (зрение Брата; клик на жителя → его кабинет)
     /registry          — Страница Жизни (рождение жителя)
     /zhitel/{id}       — кабинет жителя (по ID_Object, напр. 0001_Liya_Heat)
     /zhitel            — кабинет жителя без id → список выбора
     /hram/index.html   — Храм (статика)
 """
-import sys
-from pathlib import Path
-
-# ── ПУТИ К ПОДПАПКАМ-ПАКЕТАМ ── PATCH_PERENOS_V_PAPKI
-# Код мира разложен по смыслу (Брат/, жители/, ГОРОД/), не плоско в корне.
-# Чтобы "from ui_brat import ..." и т.п. работали без __init__.py и без
-# превращения папок в формальные пакеты — добавляем их в sys.path.
-_ROOT = Path(__file__).resolve().parent
-for _sub in ("Брат", "жители", "ГОРОД"):
-    _p = str(_ROOT / _sub)
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
-
 from dotenv import load_dotenv
 load_dotenv()  # читаем .env до импорта страниц
 
+from pathlib import Path
 from nicegui import ui, app
 
 # ── СТАТИКА КАРТЫ — картинки сцен (grondheim.png, hram_kompleks.png) ──
-# PATCH_GRONDHEIM_VISUAL_MAP / PATCH_PERENOS_V_PAPKI
-_KARTA_STATIC_DIR = _ROOT / "ГОРОД" / "static"
+# PATCH_GRONDHEIM_VISUAL_MAP
+_KARTA_STATIC_DIR = Path(__file__).resolve().parent / "GRONDHEIM_CITY" / "карта" / "static"
 _KARTA_STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.add_static_files("/karta_static", str(_KARTA_STATIC_DIR))
 
