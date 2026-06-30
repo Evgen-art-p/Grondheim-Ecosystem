@@ -1,295 +1,209 @@
 # ui_grondheim.py
-# PATCH_GRONDHEIM_VISUAL_MAP — визуальная карта города (зрение Брата, образ)
+# PATCH_GRONDHEIM_VISUAL_MAP — визуальная карта города (ГОРОД, зрение Брата)
 """
 ГОРОД — визуальная карта Грондхейма. Route: /grondheim.
 
-Устройство канваса — калька старого кабинета студии (-2, ui_cabinet.py):
-drag+zoom через чистый JS, локации — абсолютные прямоугольники на картинке,
-координаты — пиксель в пиксель с art-макетом (Map_X/Y/W/H).
+МЕХАНИКА — ТОЧНАЯ КАЛЬКА рабочей карты старого кабинета студии (-2,
+ui_cabinet.py + css.py): cab-map-viewport / cab-map-canvas / cab-map-sector,
+drag+zoom через <script> в body (НЕ ui.run_javascript), фикс. стартовый
+scale=0.55, ожидание DOM через setTimeout. Проверено живьём в -2 —
+механику не переписываю, только данные мои (две сцены).
 
-ДВЕ СЦЕНЫ (дерево сцен, не один бесконечный canvas):
-  СЦЕНА 1 "grondheim"   — общая карта города (grondheim.png, 2761×1504)
-                           Храмовый комплекс  → клик → сцена "hram"
-                           Деловой центр      → плоский, без перехода
-                           Портовый узел      → плоский, без перехода
-  СЦЕНА 2 "hram"        — храмовый комплекс (hram_kompleks.png, 2760×1504)
-                           Гексагон → лист, без перехода
-                           Ковчег   → лист, без перехода
+ДВЕ СЦЕНЫ (переключаются без перезагрузки страницы):
+  СЦЕНА 1 "grondheim"  — общая карта (grondheim.png, 2761x1504)
+      Храмовый комплекс -> клик -> сцена "hram"
+      Деловой центр, Портовый узел -> плоские
+  СЦЕНА 2 "hram"       — храмовый комплекс (hram_kompleks.png, 2760x1504)
+      Гексагон, Ковчег -> листья
 
-Локация = недвижимое. Координата живёт в ПАСПОРТЕ локации (здесь как данные
-сцены), не в жителе и не в маске. Маска (роль) и локация (место) — разные
-оси, не сцеплены. Житель к этой карте пока не привязан — это шаг отдельный
-(через sensory_memory, последнее перемещение), не сегодня.
+Картинки: /karta_static/grondheim.png, /karta_static/hram_kompleks.png
+(маршрут /karta_static регистрирует main.py на ГОРОД/static/).
 
-Кнопки внутри карты — минимум навигации, не функционал:
-  "← назад"  со сцены "hram" → сцена "grondheim"
-  "← назад"  со сцены "grondheim" → /brat (кабинет Брата)
-
-Палитра и устройство стиля — по образцу ui_brat.py / ui_karta.py
-(золото #c9a84c, glass, тёмный фон).
-`шесть·проверено·до·корня`
+"<- назад": со сцены "hram" -> "grondheim"; со сцены "grondheim" -> /brat.
+шесть·проверено·до·корня
 """
 from nicegui import ui
-
-# ═══════════════════════════════════════════════════════════
-# ДАННЫЕ СЦЕН — координаты локаций (пиксель в пиксель с картинкой)
-# ═══════════════════════════════════════════════════════════
 
 SCENES = {
     "grondheim": {
         "image": "/karta_static/grondheim.png",
-        "width": 2761,
-        "height": 1504,
-        "title": "ГРОНДХЕЙМ",
-        "back_to": "/brat",
+        "width": 2761, "height": 1504,
+        "title": "ГРОНДХЕЙМ", "back_to": "/brat",
         "locations": [
-            {
-                "id": "temple_complex",
-                "label": "Храмовый комплекс",
-                "x": 114, "y": 148, "w": 2481, "h": 1190,
-                "goto_scene": "hram",
-            },
-            {
-                "id": "business_center",
-                "label": "Деловой центр",
-                "x": 0, "y": 0, "w": 2760, "h": 245,
-                "goto_scene": None,
-            },
-            {
-                "id": "port_node",
-                "label": "Портовый узел",
-                "x": 0, "y": 331, "w": 2760, "h": 1173,
-                "goto_scene": None,
-            },
+            {"id": "temple_complex", "name": "Храмовый комплекс",
+             "x": 114, "y": 148, "w": 2481, "h": 1190, "goto": "hram"},
+            {"id": "business_center", "name": "Деловой центр",
+             "x": 0, "y": 0, "w": 2760, "h": 245, "goto": None},
+            {"id": "port_node", "name": "Портовый узел",
+             "x": 0, "y": 331, "w": 2760, "h": 1173, "goto": None},
         ],
     },
     "hram": {
         "image": "/karta_static/hram_kompleks.png",
-        "width": 2760,
-        "height": 1504,
-        "title": "ХРАМОВЫЙ КОМПЛЕКС",
-        "back_to": "grondheim",  # имя сцены — переход внутри карты, не URL
+        "width": 2760, "height": 1504,
+        "title": "ХРАМОВЫЙ КОМПЛЕКС", "back_to": "grondheim",
         "locations": [
-            {
-                "id": "hexagon",
-                "label": "Гексагон",
-                "x": 413, "y": 299, "w": 1008, "h": 726,
-                "goto_scene": None,
-            },
-            {
-                "id": "ark",
-                "label": "Ковчег",
-                "x": 1624, "y": 299, "w": 791, "h": 726,
-                "goto_scene": None,
-            },
+            {"id": "hexagon", "name": "Гексагон",
+             "x": 413, "y": 299, "w": 1008, "h": 726, "goto": None},
+            {"id": "ark", "name": "Ковчег",
+             "x": 1624, "y": 299, "w": 791, "h": 726, "goto": None},
         ],
     },
 }
 
 DEFAULT_SCENE = "grondheim"
 
-
-# ═══════════════════════════════════════════════════════════
-# СТИЛИ
-# ═══════════════════════════════════════════════════════════
-
 GRONDHEIM_CSS = r"""
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
 
 .grond-root{
   position: fixed; inset: 0;
-  background: #050510;
+  background: #050508;
   font-family: Inter, system-ui, sans-serif;
   color: #fff;
+  display: flex; flex-direction: column;
   overflow: hidden;
 }
-
-.grond-head{
-  position: absolute; top: 0; left: 0; right: 0; z-index: 5;
-  display:flex; align-items:center; gap:16px;
-  padding: 18px 24px;
-  background: linear-gradient(to bottom, rgba(5,5,16,0.85), transparent);
-  pointer-events: none;
+.grond-header{
+  padding: 14px 22px;
+  display: flex; align-items: center; gap: 18px;
+  background: linear-gradient(to bottom, rgba(5,5,16,0.92), rgba(5,5,16,0.4) 70%, transparent);
+  flex-shrink: 0; z-index: 5;
 }
-.grond-head > *{ pointer-events: auto; }
-.grond-title{
-  font-size: 1.1rem; font-weight: 900; letter-spacing: 0.14em;
-  color: #c9a84c;
-}
-.grond-sub{
-  font-size: 0.6rem; color: rgba(255,255,255,0.4);
-  letter-spacing: 0.1em; text-transform: uppercase;
-}
+.grond-title{ font-size: 1.15rem; font-weight: 900; letter-spacing: 0.14em; color: #c9a84c; }
+.grond-sub{ font-size: 0.6rem; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; text-transform: uppercase; }
 .grond-back{
+  margin-left: auto;
   padding: 7px 18px; border-radius: 10px;
   background: linear-gradient(135deg, rgba(201,168,76,0.16), rgba(201,168,76,0.08));
   border: 1px solid rgba(201,168,76,0.35);
-  color:#fff; font-weight:400; font-size:0.78rem; cursor:pointer;
-  text-transform:none;
+  color:#fff; font-weight:400; font-size:0.78rem; cursor:pointer; text-transform:none;
 }
 .grond-back:hover{ background: linear-gradient(135deg, rgba(201,168,76,0.26), rgba(201,168,76,0.15)); }
 
-/* вьюпорт — окно, в котором двигается полотно */
 .grond-viewport{
-  position: absolute; inset: 0;
-  overflow: hidden;
-  cursor: grab;
-  touch-action: none;
+  flex: 1; overflow: hidden;
+  cursor: grab; user-select: none; touch-action: none;
+  position: relative;
 }
-.grond-viewport.dragging{ cursor: grabbing; }
+.grond-viewport:active{ cursor: grabbing; }
 
-/* полотно — фиксированный размер картинки, двигается transform'ом */
 .grond-canvas{
   position: absolute; top: 0; left: 0;
   transform-origin: 0 0;
-  background-size: cover;
+  background-color: #050508;
   background-repeat: no-repeat;
+  background-position: 0 0;
 }
 
-/* сектор-локация — абсолютный прямоугольник на полотне */
 .grond-sector{
-  position: absolute;
-  border: 1px solid rgba(201,168,76,0.45);
-  background: rgba(201,168,76,0.04);
-  border-radius: 4px;
-  display:flex; align-items:flex-start; justify-content:flex-start;
-  padding: 10px 14px;
+  position: absolute; border-radius: 8px;
+  border: 2px solid rgba(0,140,160,0.9);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 8px 14px;
+  background: transparent;
+  color: rgba(160,220,230,0.95);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.95);
   box-sizing: border-box;
-  transition: background 0.15s, border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s;
 }
-.grond-sector.clickable{
-  cursor: pointer;
-  pointer-events: auto;
-}
+.grond-sector.clickable{ cursor: pointer; }
 .grond-sector.clickable:hover{
-  background: rgba(201,168,76,0.13);
-  border-color: rgba(201,168,76,0.85);
-}
-.grond-sector.flat{
-  pointer-events: none;
-}
-.grond-sector-label{
-  font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
-  color: rgba(255,255,255,0.85);
-  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
-  white-space: nowrap;
+  border-color: rgba(0,220,240,1);
+  background: rgba(0,140,160,0.12);
 }
 
-/* подсказка масштаба — низ экрана */
 .grond-hint{
-  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
-  z-index: 5;
-  font-size: 0.6rem; color: rgba(255,255,255,0.35);
-  letter-spacing: 0.06em; text-transform: uppercase;
-  pointer-events: none;
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  font-size: 0.58rem; color: rgba(255,255,255,0.32);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  pointer-events: none; z-index: 5;
 }
 """
 
+GRONDHEIM_JS = """
+<script>
+function initGrondMap() {
+  const vp = document.querySelector('.grond-viewport');
+  if(!vp) { setTimeout(initGrondMap, 100); return; }
 
-# ═══════════════════════════════════════════════════════════
-# ОТРИСОВКА
-# ═══════════════════════════════════════════════════════════
+  let scale=0.55, pos={x:0,y:0}, dragging=false, dragStart={x:0,y:0};
 
-def _render_scene(scene_key: str, container_id: str):
-    scene = SCENES[scene_key]
+  function applyTransform(){
+    const c=vp.querySelector('.grond-canvas');
+    if(c) c.style.transform=`translate(${pos.x}px,${pos.y}px) scale(${scale})`;
+  }
 
-    sectors_html = ""
+  vp.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const s=e.deltaY*-0.001;
+    let ns=Math.min(Math.max(0.15,scale+s),2.5);
+    if(ns===scale) return;
+    const r=vp.getBoundingClientRect();
+    const mx=e.clientX-r.left, my=e.clientY-r.top;
+    pos.x=mx-((mx-pos.x)*(ns/scale));
+    pos.y=my-((my-pos.y)*(ns/scale));
+    scale=ns; applyTransform();
+  },{passive:false});
+
+  vp.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.grond-sector.clickable')) return;
+    dragging=true;
+    dragStart={x:e.clientX-pos.x,y:e.clientY-pos.y};
+    vp.setPointerCapture(e.pointerId);
+  });
+
+  window.addEventListener('pointermove',e=>{
+    if(!dragging) return;
+    pos.x=e.clientX-dragStart.x; pos.y=e.clientY-dragStart.y;
+    applyTransform();
+  });
+
+  window.addEventListener('pointerup',()=>{ dragging=false; });
+
+  const r=vp.getBoundingClientRect();
+  const c=vp.querySelector('.grond-canvas');
+  if(c){
+    const cw=parseFloat(c.style.width)||c.offsetWidth;
+    const ch=parseFloat(c.style.height)||c.offsetHeight;
+    pos.x=(r.width - cw*scale)/2;
+    pos.y=(r.height - ch*scale)/2;
+  }
+  applyTransform();
+
+  window.grondGoto = function(sceneKey){ emitEvent('grond-goto', sceneKey); };
+}
+
+window.grondReinit = function(){ setTimeout(initGrondMap, 80); };
+
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initGrondMap);
+} else {
+  setTimeout(initGrondMap, 200);
+}
+</script>
+"""
+
+
+def _canvas_html(scene: dict) -> str:
+    sectors = ""
     for loc in scene["locations"]:
-        clickable = bool(loc.get("goto_scene"))
-        cls = "grond-sector clickable" if clickable else "grond-sector flat"
-        onclick = (
-            f' onclick="window.__grondGoto && window.__grondGoto(\'{loc["goto_scene"]}\')"'
-            if clickable else ""
+        clickable = bool(loc.get("goto"))
+        cls = "grond-sector clickable" if clickable else "grond-sector"
+        onclick = (" onclick=\"window.grondGoto && window.grondGoto('%s')\"" % loc["goto"]
+                   if clickable else "")
+        sectors += (
+            '<div class="%s"%s style="left:%dpx;top:%dpx;width:%dpx;height:%dpx;">%s</div>'
+            % (cls, onclick, loc["x"], loc["y"], loc["w"], loc["h"], loc["name"])
         )
-        sectors_html += (
-            f'<div class="{cls}" data-loc-id="{loc["id"]}"{onclick} '
-            f'style="left:{loc["x"]}px; top:{loc["y"]}px; '
-            f'width:{loc["w"]}px; height:{loc["h"]}px;">'
-            f'<span class="grond-sector-label">{loc["label"]}</span>'
-            f'</div>'
-        )
-
-    canvas_html = (
-        f'<div class="grond-canvas" id="{container_id}_canvas" '
-        f'style="width:{scene["width"]}px; height:{scene["height"]}px; '
-        f'background-image:url(\'{scene["image"]}\');">'
-        f'{sectors_html}'
-        f'</div>'
+    return (
+        '<div class="grond-canvas" style="width:%dpx;height:%dpx;'
+        'background-image:url(\'%s\');background-size:%dpx %dpx;">%s</div>'
+        % (scene["width"], scene["height"], scene["image"],
+           scene["width"], scene["height"], sectors)
     )
-
-    ui.html(canvas_html)
-
-
-def _viewport_script(container_id: str, scene_width: int, scene_height: int):
-    """JS drag + zoom — по устройству старого cab-map-viewport (-2)."""
-    ui.run_javascript(f"""
-        (function() {{
-            const vp = document.getElementById('{container_id}_viewport');
-            const canvas = document.getElementById('{container_id}_canvas');
-            if (!vp || !canvas) return;
-
-            const sceneW = {scene_width}, sceneH = {scene_height};
-
-            function fitScale() {{
-                const r = vp.getBoundingClientRect();
-                const sx = r.width / sceneW, sy = r.height / sceneH;
-                return Math.min(sx, sy, 1) * 0.96;
-            }}
-
-            let scale = fitScale();
-            let tx = (vp.getBoundingClientRect().width  - sceneW * scale) / 2;
-            let ty = (vp.getBoundingClientRect().height - sceneH * scale) / 2;
-
-            function apply() {{
-                canvas.style.transform =
-                    `translate(${{tx}}px, ${{ty}}px) scale(${{scale}})`;
-            }}
-            apply();
-
-            let dragging = false, lastX = 0, lastY = 0;
-
-            vp.addEventListener('pointerdown', (e) => {{
-                if (e.target.closest('.grond-sector.clickable')) return;
-                dragging = true; lastX = e.clientX; lastY = e.clientY;
-                vp.classList.add('dragging');
-                vp.setPointerCapture(e.pointerId);
-            }});
-            vp.addEventListener('pointermove', (e) => {{
-                if (!dragging) return;
-                tx += e.clientX - lastX; ty += e.clientY - lastY;
-                lastX = e.clientX; lastY = e.clientY;
-                apply();
-            }});
-            vp.addEventListener('pointerup', () => {{
-                dragging = false; vp.classList.remove('dragging');
-            }});
-            vp.addEventListener('pointercancel', () => {{
-                dragging = false; vp.classList.remove('dragging');
-            }});
-
-            vp.addEventListener('wheel', (e) => {{
-                e.preventDefault();
-                const r = vp.getBoundingClientRect();
-                const mx = e.clientX - r.left, my = e.clientY - r.top;
-                const old = scale;
-                const factor = e.deltaY < 0 ? 1.12 : 0.89;
-                scale = Math.min(2.5, Math.max(0.15, scale * factor));
-                tx = mx - (mx - tx) * (scale / old);
-                ty = my - (my - ty) * (scale / old);
-                apply();
-            }}, {{ passive: false }});
-        }})();
-    """)
-
-
-def _goto_scene_script(view_state_holder):
-    """Регистрирует window.__grondGoto — клик по кликабельному сектору
-    шлёт событие в NiceGUI без отдельной кнопки."""
-    ui.run_javascript("""
-        window.__grondGoto = function(sceneKey) {
-            window.dispatchEvent(new CustomEvent('grond-goto', {detail: sceneKey}));
-        };
-    """)
 
 
 def page_grondheim():
@@ -300,13 +214,10 @@ def page_grondheim():
 
     def render():
         root_ref["el"].clear()
-        scene_key = state["scene"]
-        scene = SCENES[scene_key]
-        container_id = f"grond_{scene_key}"
+        scene = SCENES[state["scene"]]
 
         with root_ref["el"]:
-            # шапка
-            with ui.element("div").classes("grond-head"):
+            with ui.element("div").classes("grond-header"):
                 ui.html(
                     f'<div><div class="grond-title">{scene["title"]}</div>'
                     f'<div class="grond-sub">зрение Брата · карта</div></div>'
@@ -317,31 +228,29 @@ def page_grondheim():
                     if bt in SCENES:
                         state["scene"] = bt
                         render()
+                        ui.run_javascript("if(window.grondReinit) window.grondReinit();")
                     else:
                         ui.navigate.to(bt)
 
                 ui.button("← назад", on_click=go_back).props("flat").classes("grond-back")
 
-            # вьюпорт + полотно
-            with ui.element("div").classes("grond-viewport").props(
-                f'id="{container_id}_viewport"'
-            ):
-                _render_scene(scene_key, container_id)
+            with ui.element("div").classes("grond-viewport"):
+                ui.html(_canvas_html(scene))
 
             ui.html('<div class="grond-hint">колесо — масштаб · перетаскивание — обзор</div>')
-
-        _viewport_script(container_id, scene["width"], scene["height"])
-        _goto_scene_script(state)
 
     with ui.element("div").classes("grond-root") as root:
         root_ref["el"] = root
         render()
+
+    ui.add_body_html(GRONDHEIM_JS)
 
     def on_goto(e):
         target = e.args
         if target and target in SCENES:
             state["scene"] = target
             render()
+            ui.run_javascript("if(window.grondReinit) window.grondReinit();")
 
     ui.on("grond-goto", on_goto)
 
