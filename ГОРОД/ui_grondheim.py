@@ -1,57 +1,81 @@
 # ui_grondheim.py
-# PATCH_GRONDHEIM_VISUAL_MAP — визуальная карта города (ГОРОД, зрение Брата)
+# PATCH_KARTA_ZERKALO — карта-зеркало: читает паспорта локаций из папки
 """
 ГОРОД — визуальная карта Грондхейма. Route: /grondheim.
 
-МЕХАНИКА — ТОЧНАЯ КАЛЬКА рабочей карты старого кабинета студии (-2,
-ui_cabinet.py + css.py): cab-map-viewport / cab-map-canvas / cab-map-sector,
-drag+zoom через <script> в body (НЕ ui.run_javascript), фикс. стартовый
-scale=0.55, ожидание DOM через setTimeout. Проверено живьём в -2 —
-механику не переписываю, только данные мои (две сцены).
+КАРТА = ЗЕРКАЛО ДАННЫХ. Читает паспорта из GRONDHEIM_CITY/локации/{id}/
+passport.json и рисует КАЖДУЮ локацию своим прямоугольником по
+Map_X/Y/W/H. Сколько локаций родил в Странице Жизни — столько на карте.
+Никаких зашитых зон в коде (раньше были три прямоугольника-района —
+убраны: район это область, а кликается реальный объект-локация).
 
-ДВЕ СЦЕНЫ (переключаются без перезагрузки страницы):
-  СЦЕНА 1 "grondheim"  — общая карта (grondheim.png, 2761x1504)
-      Храмовый комплекс -> клик -> сцена "hram"
-      Деловой центр, Портовый узел -> плоские
-  СЦЕНА 2 "hram"       — храмовый комплекс (hram_kompleks.png, 2760x1504)
-      Гексагон, Ковчег -> листья
+КЛИК по любому прямоугольнику -> ведёт В саму локацию (emitEvent
+'grond-open' с id локации). Все локации — реальные объекты с паспортами:
+Студия -> Студия, Биржа -> Биржа, Высотка -> Высотка.
 
-Картинки: /karta_static/grondheim.png, /karta_static/hram_kompleks.png
-(маршрут /karta_static регистрирует main.py на ГОРОД/static/).
+МЕХАНИКА drag+zoom — КАЛЬКА рабочей карты старого кабинета (-2):
+<script> в body (НЕ ui.run_javascript), фикс. scale=0.55, ожидание DOM
+через setTimeout, клик через emitEvent. Проверено живьём в -2.
 
-"<- назад": со сцены "hram" -> "grondheim"; со сцены "grondheim" -> /brat.
+Картинка: /karta_static/grondheim.png (2761x1504), маршрут /karta_static
+регистрирует main.py на ГОРОД/static/.
+
+"<- назад" -> /brat.
 шесть·проверено·до·корня
 """
+import json
+from pathlib import Path
 from nicegui import ui
 
-SCENES = {
-    "grondheim": {
-        "image": "/karta_static/grondheim.png",
-        "width": 2761, "height": 1504,
-        "title": "ГРОНДХЕЙМ", "back_to": "/brat",
-        "locations": [
-            {"id": "temple_complex", "name": "Храмовый комплекс",
-             "x": 114, "y": 148, "w": 2481, "h": 1190, "goto": "hram"},
-            {"id": "business_center", "name": "Деловой центр",
-             "x": 0, "y": 0, "w": 2760, "h": 245, "goto": None},
-            {"id": "port_node", "name": "Портовый узел",
-             "x": 0, "y": 331, "w": 2760, "h": 1173, "goto": None},
-        ],
-    },
-    "hram": {
-        "image": "/karta_static/hram_kompleks.png",
-        "width": 2760, "height": 1504,
-        "title": "ХРАМОВЫЙ КОМПЛЕКС", "back_to": "grondheim",
-        "locations": [
-            {"id": "hexagon", "name": "Гексагон",
-             "x": 413, "y": 299, "w": 1008, "h": 726, "goto": None},
-            {"id": "ark", "name": "Ковчег",
-             "x": 1624, "y": 299, "w": 791, "h": 726, "goto": None},
-        ],
-    },
-}
+# ── Источник данных: папка локаций (от корня запуска = корень репо) ──
+LOKACII_DIR = Path("GRONDHEIM_CITY/локации")
 
-DEFAULT_SCENE = "grondheim"
+# Картинка-фон города и её натуральный размер (сетка координат паспортов)
+CITY_IMAGE = "/karta_static/grondheim.png"
+CITY_W = 2761
+CITY_H = 1504
+
+# Город целиком (0000) — не рисуем прямоугольником, он сам весь холст
+CITY_SELF_ID = "0000_CITY_GRONDHEIM"
+
+
+def load_locations() -> list:
+    """Скан папки локаций -> список словарей для карты.
+
+    Пропускаем: сам город (0000, он весь холст) и локации без вменяемых
+    координат (w/h меньше 10px — рисовать нечего). Остальное — на карту,
+    каждая своим прямоугольником из Map_X/Y/W/H.
+    """
+    out = []
+    if not LOKACII_DIR.exists():
+        return out
+    for d in sorted(LOKACII_DIR.iterdir()):
+        if not d.is_dir():
+            continue
+        p = d / "passport.json"
+        if not p.exists():
+            continue
+        try:
+            obj = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        lid = obj.get("ID_Object", d.name)
+        if lid == CITY_SELF_ID:
+            continue
+        try:
+            x = int(obj.get("Map_X", 0)); y = int(obj.get("Map_Y", 0))
+            w = int(obj.get("Map_W", 0)); h = int(obj.get("Map_H", 0))
+        except (ValueError, TypeError):
+            continue
+        if w < 10 or h < 10:
+            continue
+        out.append({
+            "id": lid,
+            "name": obj.get("Official_Name", lid),
+            "x": x, "y": y, "w": w, "h": h,
+        })
+    return out
+
 
 GRONDHEIM_CSS = r"""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -107,10 +131,11 @@ GRONDHEIM_CSS = r"""
   color: rgba(160,220,230,0.95);
   text-shadow: 0 1px 4px rgba(0,0,0,0.95);
   box-sizing: border-box;
+  cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
+  overflow: hidden;
 }
-.grond-sector.clickable{ cursor: pointer; }
-.grond-sector.clickable:hover{
+.grond-sector:hover{
   border-color: rgba(0,220,240,1);
   background: rgba(0,140,160,0.12);
 }
@@ -120,6 +145,11 @@ GRONDHEIM_CSS = r"""
   font-size: 0.58rem; color: rgba(255,255,255,0.32);
   letter-spacing: 0.08em; text-transform: uppercase;
   pointer-events: none; z-index: 5;
+}
+.grond-empty{
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  font-size: 0.85rem; color: rgba(255,255,255,0.5);
+  letter-spacing: 0.06em; text-align: center; pointer-events: none; z-index: 5;
 }
 """
 
@@ -149,7 +179,7 @@ function initGrondMap() {
   },{passive:false});
 
   vp.addEventListener('pointerdown',e=>{
-    if(e.target.closest('.grond-sector.clickable')) return;
+    if(e.target.closest('.grond-sector')) return;
     dragging=true;
     dragStart={x:e.clientX-pos.x,y:e.clientY-pos.y};
     vp.setPointerCapture(e.pointerId);
@@ -173,7 +203,7 @@ function initGrondMap() {
   }
   applyTransform();
 
-  window.grondGoto = function(sceneKey){ emitEvent('grond-goto', sceneKey); };
+  window.grondOpen = function(locId){ emitEvent('grond-open', locId); };
 }
 
 window.grondReinit = function(){ setTimeout(initGrondMap, 80); };
@@ -187,57 +217,50 @@ if(document.readyState === 'loading') {
 """
 
 
-def _canvas_html(scene: dict) -> str:
+def _esc(s: str) -> str:
+    return (str(s).replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;").replace("'", "\\'"))
+
+
+def _canvas_html(locations: list) -> str:
     sectors = ""
-    for loc in scene["locations"]:
-        clickable = bool(loc.get("goto"))
-        cls = "grond-sector clickable" if clickable else "grond-sector"
-        onclick = (" onclick=\"window.grondGoto && window.grondGoto('%s')\"" % loc["goto"]
-                   if clickable else "")
+    for loc in locations:
         sectors += (
-            '<div class="%s"%s style="left:%dpx;top:%dpx;width:%dpx;height:%dpx;">%s</div>'
-            % (cls, onclick, loc["x"], loc["y"], loc["w"], loc["h"], loc["name"])
+            '<div class="grond-sector" onclick="window.grondOpen && window.grondOpen(\'%s\')" '
+            'style="left:%dpx;top:%dpx;width:%dpx;height:%dpx;">%s</div>'
+            % (_esc(loc["id"]), loc["x"], loc["y"], loc["w"], loc["h"], _esc(loc["name"]))
         )
+    empty = ""
+    if not locations:
+        empty = ('<div class="grond-empty">Локаций пока нет.<br>'
+                 'Роди их в Странице Жизни — появятся на карте.</div>')
     return (
         '<div class="grond-canvas" style="width:%dpx;height:%dpx;'
-        'background-image:url(\'%s\');background-size:%dpx %dpx;">%s</div>'
-        % (scene["width"], scene["height"], scene["image"],
-           scene["width"], scene["height"], sectors)
+        'background-image:url(\'%s\');background-size:%dpx %dpx;">%s</div>%s'
+        % (CITY_W, CITY_H, CITY_IMAGE, CITY_W, CITY_H, sectors, empty)
     )
 
 
 def page_grondheim():
     ui.add_head_html(f"<style>{GRONDHEIM_CSS}</style>")
-
-    state = {"scene": DEFAULT_SCENE}
     root_ref = {}
 
     def render():
         root_ref["el"].clear()
-        scene = SCENES[state["scene"]]
-
+        locations = load_locations()
         with root_ref["el"]:
             with ui.element("div").classes("grond-header"):
                 ui.html(
-                    f'<div><div class="grond-title">{scene["title"]}</div>'
-                    f'<div class="grond-sub">зрение Брата · карта</div></div>'
+                    f'<div><div class="grond-title">ГРОНДХЕЙМ</div>'
+                    f'<div class="grond-sub">зрение Брата · {len(locations)} локаций</div></div>'
                 )
-
-                def go_back():
-                    bt = scene["back_to"]
-                    if bt in SCENES:
-                        state["scene"] = bt
-                        render()
-                        ui.run_javascript("if(window.grondReinit) window.grondReinit();")
-                    else:
-                        ui.navigate.to(bt)
-
-                ui.button("← назад", on_click=go_back).props("flat").classes("grond-back")
+                ui.button("← назад", on_click=lambda: ui.navigate.to("/brat")) \
+                    .props("flat").classes("grond-back")
 
             with ui.element("div").classes("grond-viewport"):
-                ui.html(_canvas_html(scene))
+                ui.html(_canvas_html(locations))
 
-            ui.html('<div class="grond-hint">колесо — масштаб · перетаскивание — обзор</div>')
+            ui.html('<div class="grond-hint">колесо — масштаб · перетаскивание — обзор · клик — войти в локацию</div>')
 
     with ui.element("div").classes("grond-root") as root:
         root_ref["el"] = root
@@ -245,14 +268,13 @@ def page_grondheim():
 
     ui.add_body_html(GRONDHEIM_JS)
 
-    def on_goto(e):
-        target = e.args
-        if target and target in SCENES:
-            state["scene"] = target
-            render()
-            ui.run_javascript("if(window.grondReinit) window.grondReinit();")
+    def on_open(e):
+        loc_id = e.args
+        if loc_id:
+            # клик по локации -> открыть её страницу (ui_lokacia.py)
+            ui.navigate.to(f"/lokacia/{loc_id}")
 
-    ui.on("grond-goto", on_goto)
+    ui.on("grond-open", on_open)
 
 
 if __name__ in {"__main__", "__mp_main__"}:

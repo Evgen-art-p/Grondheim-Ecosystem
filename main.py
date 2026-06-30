@@ -63,6 +63,16 @@ from ui_grondheim import page_grondheim
 def _grondheim():
     page_grondheim()
 
+# ── ЛОКАЦИЯ — страница места (сестра кабинета жителя) ── PATCH_STRANICA_LOKACII
+# Клик по локации на карте /grondheim -> сюда, /lokacia/{id} по ID_Object.
+from ui_lokacia import page_lokacia
+@ui.page("/lokacia/{lid}")
+def _lokacia(lid: str = ""):
+    page_lokacia(lid)
+@ui.page("/lokacia")
+def _lokacia0():
+    page_lokacia("")
+
 # ── ЧЕРНОВИК ui_rozhenitsa ВЫКЛЮЧЕН (в топку, путь А) ──
 # Настоящая Страница Жизни — ui_registry ниже.
 # from ui_rozhenitsa import page_rozhenitsa
