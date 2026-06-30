@@ -203,6 +203,69 @@ def zavesti_sloi(obj: dict) -> str:  # ROZHDENIE_TONKOE_V1
     return str(dom)
 
 
+# ── ПАПКА ЛОКАЦИЙ — данные мест (не жители, не код) ──
+# PATCH_LOKACII_V_PAPKI
+LOKACII_DIR = Path("GRONDHEIM_CITY/локации")
+
+# ── ИЕРАРХИЯ ГОРОДА — PATCH_LOC_SOCPROFIL ──
+# Грондхейм → РАЙОНЫ (узлы/комплексы) → КВАРТАЛЫ → локации.
+# Поле "место в Грондхейме" предлагает всю иерархию: и районы, и кварталы.
+# Район = крупная область города. Квартал = часть района.
+GORODA_RAYONY = {
+    "Деловой центр": ["Высотка", "Торговый Квартал"],
+    "Портовый узел": ["Квартал Мастеров"],
+    "Храмовый комплекс": [],
+}
+
+
+def zavesti_lokaciyu(obj: dict) -> str:  # PATCH_LOKACII_V_PAPKI
+    """
+    Рождение ЛОКАЦИИ в свою папку. Локация — недвижимое, плоский паспорт:
+    не дышит, нет слоёв памяти, нет маски. Только данные места.
+
+        GRONDHEIM_CITY/локации/{ID_Object}/
+            passport.json   ← полный паспорт локации (как в каталоге)
+
+    Закон Движимого/Недвижимого: житель НИКОГДА не лежит внутри локации.
+    Карта /grondheim читает эти паспорта и рисует прямоугольники по
+    Map_X/Y/W/H — как старый кабинет (-2) читал catalog.json.
+
+    Возвращает путь папки локации.
+    """
+    import json as _json
+    lid = (obj.get("ID_Object", "") or "").strip()
+    if not lid:
+        return ""
+
+    dom = LOKACII_DIR / lid
+    dom.mkdir(parents=True, exist_ok=True)
+
+    # паспорт локации — как есть, плоско (ничего не вычищаем: у локации
+    # нет маски-слоя, она вся в одном паспорте)
+    pasport_json = _json.dumps(obj, ensure_ascii=False, indent=2)
+    (dom / "passport.json").write_text(pasport_json, encoding="utf-8")
+
+    # ── фото из временной → в папку локации (как у жителя avatar) ──
+    try:
+        import shutil as _sh
+        _src = obj.get("_image_path", "") or ""
+        if _src and Path(_src).exists():
+            _ext = Path(_src).suffix or ".png"
+            _dst = dom / f"image{_ext}"
+            _sh.copyfile(_src, _dst)
+            obj["_image_path"] = str(_dst)
+            _pj = _json.dumps(obj, ensure_ascii=False, indent=2)
+            (dom / "passport.json").write_text(_pj, encoding="utf-8")
+            try:
+                Path(_src).unlink(missing_ok=True)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return str(dom)
+
+
 def save_image(file_content: bytes, filename: str) -> str:
     """PATCH_FOTO_NEW: фото во ВРЕМЕННУЮ папку нового города.
     При рождении (zavesti_sloi) переедет в дом жителя как avatar.
@@ -1363,6 +1426,11 @@ def page_registry():
                   loc_atmosphere_widget = {"w": None}
                   loc_neighbors_widget = {"w": None}
                   loc_quarter_widget = {"w": None}   # Quarter локации
+                  loc_district_widget = {"w": None}  # PATCH_LOC_SOCPROFIL: район (узел/комплекс)
+                  loc_rank_widget = {"w": None}      # PATCH_LOC_SOCPROFIL: Social_Rank места
+                  loc_profession_widget = {"w": None}   # Profession места
+                  loc_responsibility_widget = {"w": None}  # Area_of_Responsibility
+                  loc_access_widget = {"w": None}    # Access_Level
                   loc_map_x_widget = {"w": None}
                   loc_map_y_widget = {"w": None}
                   loc_map_w_widget = {"w": None}
@@ -1678,17 +1746,69 @@ def page_registry():
                             placeholder="Библиотека, Берег, Гавань..."
                         ).classes("w-full mb-3")
 
-                        # Квартал локации
-                        quarter_opts_loc = {"": "— выбрать квартал —"}
-                        quarter_opts_loc.update({
-                            "Высотка": "Высотка",
-                            "Квартал Мастеров": "Квартал Мастеров",
-                            "Торговый Квартал": "Торговый Квартал",
-                        })
-                        loc_quarter_widget["w"] = ui.select(
-                            label="Квартал города",
-                            options=quarter_opts_loc,
-                        ).classes("w-full mb-3")
+                        # ── СОЦИАЛЬНЫЙ ПРОФИЛЬ МЕСТА — PATCH_LOC_SOCPROFIL ──
+                        # Соцпрофиль = принадлежность места: его ранг, роль в
+                        # городе, зона ответственности, уровень доступа. Для
+                        # агента это уехало в маску; у локации живёт здесь.
+                        ui.html('''
+                            <div style="font-size:0.72rem;color:var(--r-text-dim);
+                            text-transform:uppercase;letter-spacing:0.08em;
+                            margin:8px 0 10px;padding-top:8px;
+                            border-top:1px solid var(--r-border)">
+                            🏷️ Социальный профиль места
+                            </div>
+                        ''')
+                        with ui.grid(columns=2).classes("w-full gap-3 mb-2"):
+                            with ui.column().classes("w-full gap-0"):
+                                loc_rank_widget["w"] = ui.select(
+                                    label="Ранг места",
+                                    options={
+                                        "": "— выбрать —",
+                                        "Обыватель": "Обыватель",
+                                        "Резидент": "Резидент",
+                                        "Хранитель": "Хранитель",
+                                        "Мифический": "Мифический",
+                                    },
+                                ).classes("w-full")
+                            with ui.column().classes("w-full gap-0"):
+                                loc_access_widget["w"] = ui.number(
+                                    label="Уровень доступа (0-10)",
+                                    value=0, min=0, max=10,
+                                ).classes("w-full")
+                        with ui.column().classes("w-full gap-0 mb-2"):
+                            loc_profession_widget["w"] = ui.input(
+                                label="Роль места в городе",
+                                placeholder="«Главный Узел Сборки», «Точка торговли»...",
+                            ).classes("w-full")
+                        with ui.column().classes("w-full gap-0 mb-3"):
+                            loc_responsibility_widget["w"] = ui.input(
+                                label="Зона ответственности",
+                                placeholder="За что это место отвечает в Грондхейме",
+                            ).classes("w-full")
+
+                        # ── МЕСТО В ИЕРАРХИИ — район + квартал — PATCH_LOC_SOCPROFIL ──
+                        ui.html('''
+                            <div style="font-size:0.72rem;color:var(--r-text-dim);
+                            text-transform:uppercase;letter-spacing:0.08em;
+                            margin:8px 0 10px;padding-top:8px;
+                            border-top:1px solid var(--r-border)">
+                            🗺️ Место в Грондхейме
+                            </div>
+                            <div style="font-size:0.62rem;color:var(--r-text-dim);margin-bottom:8px;opacity:0.7">
+                            Грондхейм → район (узел/комплекс) → квартал → локация.<br>
+                            Сначала район, потом квартал внутри него.
+                            </div>
+                        ''')
+                        with ui.grid(columns=2).classes("w-full gap-3 mb-3"):
+                            with ui.column().classes("w-full gap-0"):
+                                district_opts = {"": "— выбрать район —"}
+                                district_opts.update({d: d for d in GORODA_RAYONY.keys()})
+                                loc_district_widget["w"] = ui.select(
+                                    label="Район (узел / комплекс)",
+                                    options=district_opts,
+                                ).classes("w-full")
+                            with ui.column().classes("w-full gap-0"):
+                                pass  # PATCH_UBRAL_KVARTAL: квартал убран — это сам объект-локация, не поле
 
                         # Координаты на карте
                         ui.html('''
@@ -1796,7 +1916,13 @@ def page_registry():
 
                     # Локация
                     elif t == "location":
-                        if loc_quarter_widget["w"]: obj["Quarter"] = loc_quarter_widget["w"].value or ""
+                        # PATCH_UBRAL_KVARTAL: поле квартала убрано
+                        # PATCH_LOC_SOCPROFIL: район + соцпрофиль места
+                        if loc_district_widget["w"]: obj["District"] = loc_district_widget["w"].value or ""
+                        if loc_rank_widget["w"]: obj["Social_Rank"] = loc_rank_widget["w"].value or ""
+                        if loc_profession_widget["w"]: obj["Profession"] = loc_profession_widget["w"].value or ""
+                        if loc_responsibility_widget["w"]: obj["Area_of_Responsibility"] = loc_responsibility_widget["w"].value or ""
+                        if loc_access_widget["w"]: obj["Access_Level"] = int(loc_access_widget["w"].value or 0)
                         if loc_capacity_widget["w"]: obj["Capacity"] = int(loc_capacity_widget["w"].value or 10)
                         if loc_scale_widget["w"]: obj["Scale"] = loc_scale_widget["w"].value or ""
                         if loc_lighting_widget["w"]: obj["Lighting"] = loc_lighting_widget["w"].value or ""
@@ -1853,7 +1979,13 @@ def page_registry():
                                 dna_static_widgets[p_id].value = dna.get(p_id, default)
                     # Локация
                     elif t == "location":
-                        if loc_quarter_widget["w"]: loc_quarter_widget["w"].value = obj.get("Quarter", "")
+                        # PATCH_UBRAL_KVARTAL: квартала больше нет
+                        # PATCH_LOC_SOCPROFIL
+                        if loc_district_widget["w"]: loc_district_widget["w"].value = obj.get("District", "")
+                        if loc_rank_widget["w"]: loc_rank_widget["w"].value = obj.get("Social_Rank", "")
+                        if loc_profession_widget["w"]: loc_profession_widget["w"].value = obj.get("Profession", "")
+                        if loc_responsibility_widget["w"]: loc_responsibility_widget["w"].value = obj.get("Area_of_Responsibility", "")
+                        if loc_access_widget["w"]: loc_access_widget["w"].value = obj.get("Access_Level", 0)
                         if loc_capacity_widget["w"]: loc_capacity_widget["w"].value = obj.get("Capacity", 10)
                         if loc_scale_widget["w"]: loc_scale_widget["w"].value = obj.get("Scale", "")
                         if loc_lighting_widget["w"]: loc_lighting_widget["w"].value = obj.get("Lighting", "")
@@ -1899,7 +2031,13 @@ def page_registry():
                         if w["w"]: w["w"].value = 0
                     # Сбрасываем локацию
                     if loc_capacity_widget["w"]: loc_capacity_widget["w"].value = 10
-                    if loc_quarter_widget["w"]: loc_quarter_widget["w"].value = ""
+                    # PATCH_UBRAL_KVARTAL: квартала больше нет
+                    # PATCH_LOC_SOCPROFIL: сброс района и соцпрофиля места
+                    if loc_district_widget["w"]: loc_district_widget["w"].value = ""
+                    if loc_rank_widget["w"]: loc_rank_widget["w"].value = ""
+                    if loc_access_widget["w"]: loc_access_widget["w"].value = 0
+                    for w in [loc_profession_widget, loc_responsibility_widget]:
+                        if w["w"]: w["w"].value = ""
                     for w in [loc_scale_widget, loc_lighting_widget,
                               loc_atmosphere_widget, loc_neighbors_widget]:
                         if w["w"]: w["w"].value = ""
@@ -1947,20 +2085,37 @@ def page_registry():
 
                     save_catalog(catalog)
 
-                    # ── PATCH_DVA_FILA: второй файл — паспорт-кусочек на свой этаж ──
-                    try:
-                        _kus = ""  # ROZHDENIE_TONKOE_V1: кусочек по профессии отключён (дом в ковчеге)
-                        # PATCH_4_SLOYA: заводим 4 слоя на этаже жителя
+                    # ── РАЗВИЛКА ПО ТИПУ — PATCH_LOKACII_V_PAPKI ──
+                    # Локация (недвижимое) → своя папка, плоский паспорт, без
+                    # слоёв/маски. Житель (движимое) → ковчег с 4 слоями.
+                    _otype = (obj.get("Object_Type", "") or "").strip().lower()
+                    if _otype == "location":
                         try:
-                            _dom = zavesti_sloi(obj)
-                            if _dom:
-                                ui.notify(f"4 слоя заведены: {_dom}", type="positive", timeout=4000)
-                        except Exception as _e2:
-                            ui.notify(f"⚠ слои не завелись: {_e2}", type="warning")
-                        if _kus:
-                            ui.notify(f"Паспорт-кусочек: {_kus}", type="positive", timeout=4000)
-                    except Exception as _e:
-                        ui.notify(f"⚠ кусочек не родился: {_e}", type="warning")
+                            _loc_dom = zavesti_lokaciyu(obj)
+                            if _loc_dom:
+                                ui.notify(f"Локация заведена: {_loc_dom}",
+                                          type="positive", timeout=4000)
+                            else:
+                                ui.notify("⚠ локация не завелась: пустой ID",
+                                          type="warning")
+                        except Exception as _eloc:
+                            ui.notify(f"⚠ локация не завелась: {_eloc}",
+                                      type="warning")
+                    else:
+                        # ── PATCH_DVA_FILA: второй файл — паспорт-кусочек на свой этаж ──
+                        try:
+                            _kus = ""  # ROZHDENIE_TONKOE_V1: кусочек по профессии отключён (дом в ковчеге)
+                            # PATCH_4_SLOYA: заводим 4 слоя на этаже жителя
+                            try:
+                                _dom = zavesti_sloi(obj)
+                                if _dom:
+                                    ui.notify(f"4 слоя заведены: {_dom}", type="positive", timeout=4000)
+                            except Exception as _e2:
+                                ui.notify(f"⚠ слои не завелись: {_e2}", type="warning")
+                            if _kus:
+                                ui.notify(f"Паспорт-кусочек: {_kus}", type="positive", timeout=4000)
+                        except Exception as _e:
+                            ui.notify(f"⚠ кусочек не родился: {_e}", type="warning")
 
                     # ── Генерация файлов студии для агентов: УБРАНО — UBRAT_MERTVUYU_GENERACIYU_V1 (был мёртвый код, if False) ──
 
