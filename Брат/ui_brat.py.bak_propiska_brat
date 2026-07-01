@@ -26,47 +26,6 @@ except Exception:
     pass
 
 OPENROUTER_KEY   = os.getenv("OPENROUTER_API_KEY", "")
-# PATCH_PROPISKA_BRAT — Брат связывает жителя и локацию (Брат СВЯЗЫВАЕТ, не
-# ДЕРЖИТ). Ничего не хранит сам — читает по требованию, пишет один раз,
-# в паспорт жителя. Локацию патч не трогает (Закон Пары).
-_REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parent.parent
-try:
-    from ui_zhitel import list_zhiteli, find_dom
-except ImportError:
-    import sys as _sys
-    _zh_dir = str(_REPO_ROOT_FOR_IMPORT / "жители")
-    if _zh_dir not in _sys.path:
-        _sys.path.insert(0, _zh_dir)
-    from ui_zhitel import list_zhiteli, find_dom
-try:
-    from ui_lokacia import list_lokacii
-except ImportError:
-    import sys as _sys
-    _gor_dir = str(_REPO_ROOT_FOR_IMPORT / "ГОРОД")
-    if _gor_dir not in _sys.path:
-        _sys.path.insert(0, _gor_dir)
-    from ui_lokacia import list_lokacii
-
-
-def propisat_zhitelya(zid: str, lid: str, domashny_prompt: str):
-    """Пишет прописку в паспорт жителя. Единственная точка записи —
-    сама локация ничего не хранит (Закон Пары), только житель несёт
-    факт о доме в себе. Возвращает (успех: bool, сообщение: str)."""
-    p, dom = find_dom(zid)
-    if p is None or dom is None:
-        return False, "житель не найден"
-    passport_path = dom / "passport.json"
-    try:
-        import json
-        p["прописка"] = lid
-        p["домашний_промпт"] = domashny_prompt
-        passport_path.write_text(
-            json.dumps(p, ensure_ascii=False, indent=2), encoding="utf-8")
-        return True, "прописан"
-    except Exception as e:
-        return False, str(e)
-
-
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
 PROXY_URL        = os.getenv("PROXY_URL", "") or None
 
@@ -904,112 +863,6 @@ def page_brat():
         state["waiting"] = False
         update_chat()
 
-    async def do_propiska():
-        """Брат связывает жителя и локацию: диалог житель → локация →
-        домашний промпт → запись в паспорт жителя."""
-        zhiteli = list_zhiteli()
-        if not zhiteli:
-            ui.notify("Жителей ещё нет — роди их в Странице Жизни", color="warning")
-            return
-        lokacii = [l for l in list_lokacii() if l.get("ID_Object") != "0000_CITY_GRONDHEIM"]
-
-        pick = {"zhitel": None, "lokacia": None}
-
-        with ui.dialog() as dlg, ui.card().style(
-            "background:#0d1117; border:1px solid rgba(255,255,255,0.12); "
-            "border-radius:16px; min-width:380px; max-width:460px; padding:20px;"
-        ):
-            body = ui.element("div")
-
-            def render():
-                body.clear()
-                with body:
-                    if pick["zhitel"] is None:
-                        ui.html('<div style="color:rgba(255,255,255,0.9); font-weight:700; '
-                                'font-size:0.9rem; margin-bottom:14px; letter-spacing:0.08em;">'
-                                '⌂ ПРОПИСКА · кого прописываем?</div>')
-                        for z in zhiteli:
-                            nm = z.get("Official_Name", "?")
-                            cur = z.get("прописка")
-                            sub = f" · сейчас: {cur}" if cur else " · без прописки"
-                            def _pick_z(z=z):
-                                pick["zhitel"] = z
-                                render()
-                            ui.button(nm + sub, on_click=_pick_z).props("flat no-caps").style(
-                                "width:100%; text-align:left; font-family:monospace; "
-                                "font-size:0.78rem; color:rgba(255,255,255,0.75); "
-                                "padding:8px 12px; border-radius:8px; "
-                                "background:rgba(255,255,255,0.04); margin-bottom:4px;")
-                        ui.button("отмена", on_click=dlg.close).props("flat").style(
-                            "margin-top:10px; color:rgba(255,255,255,0.4); font-size:0.75rem;")
-
-                    elif pick["lokacia"] is None:
-                        zn = pick["zhitel"].get("Official_Name", "?")
-                        ui.html(f'<div style="color:rgba(255,255,255,0.9); font-weight:700; '
-                                f'font-size:0.9rem; margin-bottom:14px; letter-spacing:0.08em;">'
-                                f'⌂ {zn} → куда?</div>')
-                        if not lokacii:
-                            ui.html('<div style="color:rgba(255,255,255,0.4); font-size:0.8rem;">'
-                                    '— локаций ещё нет — роди их в Странице Жизни —</div>')
-                        for loc in lokacii:
-                            nm = loc.get("Official_Name", "?")
-                            def _pick_l(loc=loc):
-                                pick["lokacia"] = loc
-                                render()
-                            ui.button(nm, on_click=_pick_l).props("flat no-caps").style(
-                                "width:100%; text-align:left; font-family:monospace; "
-                                "font-size:0.78rem; color:rgba(255,255,255,0.75); "
-                                "padding:8px 12px; border-radius:8px; "
-                                "background:rgba(255,255,255,0.04); margin-bottom:4px;")
-
-                        def _back_z():
-                            pick["zhitel"] = None
-                            render()
-                        ui.button("← назад", on_click=_back_z).props("flat").style(
-                            "margin-top:10px; color:rgba(255,255,255,0.4); font-size:0.75rem;")
-
-                    else:
-                        zn = pick["zhitel"].get("Official_Name", "?")
-                        ln = pick["lokacia"].get("Official_Name", "?")
-                        suggestion = (pick["lokacia"].get("Unique_Mark")
-                                      or pick["lokacia"].get("Hidden_History") or "")
-                        ui.html(f'<div style="color:rgba(255,255,255,0.9); font-weight:700; '
-                                f'font-size:0.9rem; margin-bottom:10px; letter-spacing:0.08em;">'
-                                f'⌂ {zn} → {ln}</div>')
-                        ui.html('<div style="color:rgba(255,255,255,0.45); font-size:0.68rem; '
-                                'margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em;">'
-                                'домашний промпт — своё, личное</div>')
-                        ta = ui.textarea(value=suggestion).props("dark outlined").style(
-                            "width:100%; font-size:0.8rem;")
-
-                        async def _confirm():
-                            ok, msg = propisat_zhitelya(
-                                pick["zhitel"].get("ID_Object", ""),
-                                pick["lokacia"].get("ID_Object", ""),
-                                (ta.value or "").strip(),
-                            )
-                            if ok:
-                                ui.notify(f"⌂ {zn} прописан(а): {ln}", color="positive")
-                                dlg.close()
-                            else:
-                                ui.notify(f"⚠ {msg}", color="negative")
-
-                        def _back_l():
-                            pick["lokacia"] = None
-                            render()
-
-                        with ui.row().style("gap:8px; margin-top:14px; width:100%;"):
-                            ui.button("← назад", on_click=_back_l).props("flat").style(
-                                "color:rgba(255,255,255,0.4); font-size:0.75rem;")
-                            ui.element("div").style("flex:1")
-                            ui.button("прописать", on_click=_confirm).props("flat no-caps").style(
-                                "padding:8px 20px; border-radius:8px; font-weight:700; font-size:0.8rem; "
-                                "background:linear-gradient(135deg,rgba(201,168,76,0.30),rgba(201,168,76,0.18)); "
-                                "border:1px solid rgba(201,168,76,0.55); color:#fff;")
-
-            render()
-        dlg.open()
-
     # ═══ LAYOUT — калька Биржи ═══
     with ui.element("div").classes("app-container"):
 
@@ -1031,12 +884,6 @@ def page_brat():
                     'background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.08)) !important; '
                     'border: 1px solid rgba(201,168,76,0.55); color:#c9a84c;')
                 ui.element("div").style("flex:1")
-                ui.button("Прописка",
-                          on_click=do_propiska  # PATCH_PROPISKA_BRAT
-                          ).props("flat no-caps").style(
-                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
-                    "background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08)); "
-                    "border:1px solid rgba(201,168,76,0.35); color:#fff;")
                 ui.button("Страница Жизни",
                           on_click=lambda: ui.navigate.to("/registry")  # PATCH_ROZH_BTN
                           ).props("flat no-caps").style(
