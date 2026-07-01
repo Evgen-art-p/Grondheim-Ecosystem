@@ -195,14 +195,9 @@ def list_zhiteli():
 # а место прибытия по смыслу. (Ковчег-как-локация-с-маяком — замысел, позже.)
 KOVCHEG_DIR = _ROOT / "GRONDHEIM_CITY" / "ковчег"
 
-# PATCH_FON_PO_PROPISKE: тот же путь, что LOKACII_DIR в ui_lokacia.py — не
-# импортируем оттуда (ui_lokacia сам импортирует нас, цикл).
-LOKACII_DIR = _ROOT / "GRONDHEIM_CITY" / "локации"
 
-
-def _bg_for_mask(dom: Path, mask: str = None, propiska: str = None) -> str:
-    """Путь фона кабинета. Порядок: активная маска → жильё жителя →
-    прописка (образ локации) → КОВЧЕГ → дефолт.
+def _bg_for_mask(dom: Path, mask: str = None) -> str:
+    """Путь фона кабинета. Порядок: активная маска → жильё жителя → КОВЧЕГ → дефолт.
     ШОВ: маски/{mask}/bg.* оживёт, когда появятся маски с фонами."""
     # 1. фон активной маски (будущее: маски/работа/bg.*, маски/дом/bg.* ...)
     if dom is not None and mask:
@@ -216,23 +211,13 @@ def _bg_for_mask(dom: Path, mask: str = None, propiska: str = None) -> str:
             cand = dom / ("bg" + ext)
             if cand.exists():
                 return f"/zhitel-static/{dom.name}/bg{ext}"
-    # PATCH_FON_PO_PROPISKE: 3. прописка — берём тот же image.*, что локация
-    # показывает на своей странице (/lokacia/{id}). Отдельный bg.*
-    # заводить не нужно — образ места один на всех, кто там бывает.
-    if propiska:
-        loc_dir = LOKACII_DIR / propiska
-        if loc_dir.exists():
-            for ext in (".png", ".jpg", ".jpeg", ".webp"):
-                cand = loc_dir / ("image" + ext)
-                if cand.exists():
-                    return f"/lokacia-static/{propiska}/image{ext}"
-    # 4. КОВЧЕГ — общий фон прибытия (нет маски, нет своего жилья, нет прописки)
+    # 3. КОВЧЕГ — общий фон прибытия (нет маски, нет своего жилья)
     if KOVCHEG_DIR.exists():
         for ext in (".jpg", ".png", ".jpeg", ".webp"):
             cand = KOVCHEG_DIR / ("bg" + ext)
             if cand.exists():
                 return "/kovcheg-static/bg" + ext
-    return ""   # дефолт — тёмный градиент с золотом (CSS).
+    return ""   # дефолт — тёмный градиент с золотом (CSS). Здесь будет ковчег.
 
 
 def _avatar_url(dom: Path, p: dict) -> str:
@@ -316,26 +301,21 @@ body{ width:100vw; height:100vh; overflow:hidden !important; background:transpar
 
 def page_zhitel(zid: str = ""):
     p, dom = find_dom(zid) if zid else (None, None)
-    propiska = p.get("прописка") if p else None  # PATCH_FON_PO_PROPISKE
 
-    # статика дома жителя + ковчега (общий фон прибытия) + локации прописки
+    # статика дома жителя + ковчега (общий фон прибытия)
     try:
         from nicegui import app
         if dom is not None and dom.exists():
             app.add_static_files(f"/zhitel-static/{dom.name}", str(dom))
         if KOVCHEG_DIR.exists():
             app.add_static_files("/kovcheg-static", str(KOVCHEG_DIR))
-        if propiska:  # PATCH_FON_PO_PROPISKE: своя статика, не ждём захода на /lokacia/{id}
-            _loc_dir = LOKACII_DIR / propiska
-            if _loc_dir.exists():
-                app.add_static_files(f"/lokacia-static/{propiska}", str(_loc_dir))
     except Exception:
         pass
 
     ui.add_head_html(f"<style>{ZHITEL_CSS}</style>")
 
-    # ФОН по маске → прописке → ковчегу
-    bg = _bg_for_mask(dom, mask=None, propiska=propiska)
+    # ФОН по маске (шов): пока активной маски нет → общий/дефолт
+    bg = _bg_for_mask(dom, mask=None)
     if bg:
         ui.add_head_html(f"<style>#zbg{{background-image:url('{bg}')!important;}}</style>")
     ui.html('<div id="zbg"></div>')
@@ -466,8 +446,6 @@ def page_zhitel(zid: str = ""):
                 soul += f"Твой скрытый вкус (эстетика): {stol['скрытый_вкус']}\n"
             if stol.get('тянет_к'):
                 soul += f"Тебя тянет к: {stol['тянет_к']}\n"
-            if stol.get('дом'):  # PATCH_DOM_V_DUSHU: дом несёшь в себе ВСЕГДА
-                soul += f"Твой дом, который ты носишь в себе всегда: {stol['дом']}\n"
             if stol.get('натура'):
                 _nat = stol['натура']
                 if isinstance(_nat, dict) and _nat:

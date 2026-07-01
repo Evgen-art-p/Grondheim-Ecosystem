@@ -466,8 +466,6 @@ def page_zhitel(zid: str = ""):
                 soul += f"Твой скрытый вкус (эстетика): {stol['скрытый_вкус']}\n"
             if stol.get('тянет_к'):
                 soul += f"Тебя тянет к: {stol['тянет_к']}\n"
-            if stol.get('дом'):  # PATCH_DOM_V_DUSHU: дом несёшь в себе ВСЕГДА
-                soul += f"Твой дом, который ты носишь в себе всегда: {stol['дом']}\n"
             if stol.get('натура'):
                 _nat = stol['натура']
                 if isinstance(_nat, dict) and _nat:
