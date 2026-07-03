@@ -97,20 +97,6 @@ def _otsenit_tonus_silu(text: str) -> tuple:
 
     return tonus, round(sila, 2)
 
-
-def _izvlech_memory_request(text: str) -> str:
-    """PATCH_ZHITEL_VSPOMINAET: первая строка MEMORY_REQUEST: <запрос> из ответа жителя."""
-    for line in (text or "").splitlines():
-        if "MEMORY_REQUEST:" in line:
-            return line.split("MEMORY_REQUEST:", 1)[1].strip()
-    return ""
-
-
-def _ubrat_memory_request(text: str) -> str:
-    """PATCH_ZHITEL_VSPOMINAET: технические строки MEMORY_REQUEST вычищаются из видимого ответа."""
-    lines = [l for l in (text or "").splitlines() if "MEMORY_REQUEST:" not in l]
-    return "\n".join(lines).strip()
-
 _ROOT = Path(__file__).resolve().parent.parent  # PATCH_PERENOS_V_PAPKI: файл в жители/, корень репо — на уровень выше
 ZHITELI_DIR = _ROOT / "GRONDHEIM_CITY" / "жители"
 GUARDIANS_DIR = _ROOT / "GRONDHEIM_CITY" / "Hexagon" / "3_guardians"
@@ -496,42 +482,11 @@ def page_zhitel(zid: str = ""):
                 f"Отвечай коротко, по-человечески, исходя из своей личности выше и текущего "
                 f"заряда — не упоминай слова 'заряд' или 'слои' напрямую, просто веди себя в тон."
             )
-            # PATCH_ZHITEL_VSPOMINAET: воля жителя — подсказка. Не «заряд открыл —
-            # на, читай», а сам решает, что и когда поднять из памяти.
-            soul += (
-                "\nУ тебя есть своя память — события прошлых разговоров. Если "
-                "что-то кажется знакомым, но не помнишь точно — напиши в ответе "
-                "отдельной строкой MEMORY_REQUEST: <что вспомнить> и тебе "
-                "поднимется это из твоей памяти."
-            )
             messages = [{"role": "system", "content": soul}]
             for m in state["chat"][-12:]:
                 role = "user" if m["role"] == "user" else "assistant"
                 messages.append({"role": role, "content": m["content"]})
             reply = await call_zhitel_llm(messages, state.get("model"))
-            # PATCH_ZHITEL_VSPOMINAET: житель сам решил вспомнить — один подъём за ход,
-            # без петель. Шеф видит только финальный ответ.
-            _mem_q = _izvlech_memory_request(reply)
-            if _mem_q and dvizhok is not None:
-                try:
-                    _naydeno = dvizhok.vspomnit(_mem_q)
-                except Exception:
-                    _naydeno = ""
-                _vtoroy = list(messages)
-                _vtoroy.append({"role": "assistant", "content": reply})
-                if _naydeno:
-                    _vtoroy.append({"role": "user", "content": (
-                        f"(Из твоей памяти поднято по запросу «{_mem_q}»:\n"
-                        f"{_naydeno}\n"
-                        f"Ответь заново, уже помня это, живым голосом. "
-                        f"Механизм памяти не упоминай.)")})
-                else:
-                    _vtoroy.append({"role": "user", "content": (
-                        f"(В твоей памяти по запросу «{_mem_q}» ничего не нашлось — "
-                        f"этого следа нет. Ответь заново честно, не выдумывая. "
-                        f"Механизм памяти не упоминай.)")})
-                reply = await call_zhitel_llm(_vtoroy, state.get("model"))
-            reply = _ubrat_memory_request(reply) or reply
             try:
                 dvizhok.sохранить()
             except Exception:

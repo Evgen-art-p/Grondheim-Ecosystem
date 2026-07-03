@@ -154,55 +154,6 @@ class Dvizhok:
             "натура":         self.p.get("DNA_Static", {}),
         }
 
-    def vspomnit(self, zapros: str, limit: int = 6) -> str:
-        """PATCH_ZHITEL_VSPOMINAET: житель САМ решил вспомнить (MEMORY_REQUEST).
-        Текстовый поиск по своим слоям: sensory + resonance + archive.
-        БЕЗ шлюза по заряду — воля жителя выше стресс-шлюза (закон -2:
-        вспомнить можно в любом месте, безусловно). Свежее и точное — выше.
-        Возвращает строки находок или "" (пусто = следа нет, честно)."""
-        slova = [w for w in (zapros or "").lower().split() if len(w) > 2]
-        if not slova:
-            return ""
-        zapisi = []
-        # sensory — JSON-объект с entries
-        try:
-            p = self.dom / "sensory" / "sensory_memory.json"
-            if p.exists():
-                data = json.loads(p.read_text(encoding="utf-8"))
-                zapisi.extend(data.get("entries", []))
-        except Exception:
-            pass
-        # resonance + archive — JSONL, строка за строкой
-        for rel in ("resonance/event_log.jsonl", "archive/archive.jsonl"):
-            try:
-                p = self.dom / rel
-                if p.exists():
-                    for line in p.read_text(encoding="utf-8").splitlines():
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            zapisi.append(json.loads(line))
-                        except Exception:
-                            pass
-            except Exception:
-                pass
-        # оценка: сколько слов запроса встретилось в факте записи
-        naydeno = []
-        for z in zapisi:
-            fakt = str(z.get("факт", "")).lower()
-            score = sum(1 for w in slova if w in fakt)
-            if score > 0:
-                naydeno.append((score, str(z.get("ts", "")), z))
-        if not naydeno:
-            return ""
-        naydeno.sort(key=lambda x: (x[0], x[1]), reverse=True)
-        stroki = []
-        for _, _, z in naydeno[:limit]:
-            ts = str(z.get("ts", ""))[:10]
-            stroki.append(f"— [{ts}] {z.get('факт', '')}")
-        return "\n".join(stroki)
-
     def sохранить(self):
         """Заряд оседает в паспорт (состояние помнится между вдохами)."""
         self.p["_charge"] = round(self.charge, 4)
