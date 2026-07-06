@@ -1052,10 +1052,7 @@ def page_brat():
         if not zhiteli:
             ui.notify("Жителей ещё нет — роди их в Странице Жизни", color="warning")
             return
-        # PATCH_PROPISKA_ZHILYE — прописываем только в жилое, не в публичные места
-        lokacii = [l for l in list_lokacii()
-                   if l.get("ID_Object") != "0000_CITY_GRONDHEIM"
-                   and l.get("тип", "") == "жилая"]
+        lokacii = [l for l in list_lokacii() if l.get("ID_Object") != "0000_CITY_GRONDHEIM"]
 
         pick = {"zhitel": None, "lokacia": None}
 

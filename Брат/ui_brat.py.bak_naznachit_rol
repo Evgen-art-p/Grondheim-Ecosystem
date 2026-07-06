@@ -67,46 +67,6 @@ def propisat_zhitelya(zid: str, lid: str, domashny_prompt: str):
         return False, str(e)
 
 
-# PATCH_NAZNACHIT_ROL — Брат надевает РОЛЬ жителю (тип + маска «работа»).
-# Роль и адрес (Прописка) — разные акты (Чертёж §1.5.2). Тип живёт
-# рядом с породой в паспорте — тот же обязательный ключ границы
-# (Гл.7.3: «тройка ID+имя+тип»).
-def naznachit_rol(zid: str, tip: str, workshop_id: str,
-                  turbo_role: str, core_phrase: str):
-    """Пишет тип в passport.json, активирует маску «работа»
-    (mask.json: Workshop_ID/Turbo_Role/Core_Phrase, "_активна": True).
-    Прописку (локацию) не трогает. Возвращает (успех: bool, сообщение: str)."""
-    p, dom = find_dom(zid)
-    if p is None or dom is None:
-        return False, "житель не найден"
-    try:
-        import json
-        passport_path = dom / "passport.json"
-        p["тип"] = tip
-        passport_path.write_text(
-            json.dumps(p, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        mask_path = dom / "маски" / "работа" / "mask.json"
-        mask_path.parent.mkdir(parents=True, exist_ok=True)
-        mask = {}
-        if mask_path.exists():
-            try:
-                mask = json.loads(mask_path.read_text(encoding="utf-8"))
-            except Exception:
-                mask = {}
-        mask["_note"] = ("маска 'работа' (слой 2 паспорта). "
-                         "Активирована Братом при назначении роли.")
-        mask["_активна"] = True
-        mask["Workshop_ID"] = workshop_id
-        mask["Turbo_Role"] = turbo_role
-        mask["Core_Phrase"] = core_phrase
-        mask_path.write_text(
-            json.dumps(mask, ensure_ascii=False, indent=2), encoding="utf-8")
-        return True, "роль назначена"
-    except Exception as e:
-        return False, str(e)
-
-
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
 PROXY_URL        = os.getenv("PROXY_URL", "") or None
 
@@ -944,107 +904,6 @@ def page_brat():
         state["waiting"] = False
         update_chat()
 
-    async def do_naznachit_rol():
-        """Брат надевает роль жителю: житель → тип → цех+слот+фраза →
-        назначить. Активирует маску «работа», не трогает прописку."""
-        zhiteli = list_zhiteli()
-        if not zhiteli:
-            ui.notify("Жителей ещё нет — роди их в Странице Жизни", color="warning")
-            return
-
-        TIPY = ["резидент", "хранитель", "воркер"]
-        pick = {"zhitel": None, "tip": None}
-
-        with ui.dialog() as dlg, ui.card().style(
-            "background:#0d1117; border:1px solid rgba(255,255,255,0.12); "
-            "border-radius:16px; min-width:380px; max-width:460px; padding:20px;"
-        ):
-            body = ui.element("div")
-
-            def render():
-                body.clear()
-                with body:
-                    if pick["zhitel"] is None:
-                        ui.html('<div style="color:rgba(255,255,255,0.9); font-weight:700; '
-                                'font-size:0.9rem; margin-bottom:14px; letter-spacing:0.08em;">'
-                                '⚙ РОЛЬ · кому назначаем?</div>')
-                        for z in zhiteli:
-                            nm = z.get("Official_Name", "?")
-                            cur_tip = z.get("тип")
-                            sub = f" · сейчас: {cur_tip}" if cur_tip else " · без роли"
-                            def _pick_z(z=z):
-                                pick["zhitel"] = z
-                                render()
-                            ui.button(nm + sub, on_click=_pick_z).props("flat no-caps").style(
-                                "width:100%; text-align:left; font-family:monospace; "
-                                "font-size:0.78rem; color:rgba(255,255,255,0.75); "
-                                "padding:8px 12px; border-radius:8px; "
-                                "background:rgba(255,255,255,0.04); margin-bottom:4px;")
-                        ui.button("отмена", on_click=dlg.close).props("flat").style(
-                            "margin-top:10px; color:rgba(255,255,255,0.4); font-size:0.75rem;")
-
-                    elif pick["tip"] is None:
-                        zn = pick["zhitel"].get("Official_Name", "?")
-                        ui.html(f'<div style="color:rgba(255,255,255,0.9); font-weight:700; '
-                                f'font-size:0.9rem; margin-bottom:14px; letter-spacing:0.08em;">'
-                                f'⚙ {zn} → какой тип?</div>')
-                        for t in TIPY:
-                            def _pick_t(t=t):
-                                pick["tip"] = t
-                                render()
-                            ui.button(t, on_click=_pick_t).props("flat no-caps").style(
-                                "width:100%; text-align:left; font-family:monospace; "
-                                "font-size:0.78rem; color:rgba(255,255,255,0.75); "
-                                "padding:8px 12px; border-radius:8px; "
-                                "background:rgba(255,255,255,0.04); margin-bottom:4px;")
-                        def _back_z():
-                            pick["zhitel"] = None
-                            render()
-                        ui.button("← назад", on_click=_back_z).props("flat").style(
-                            "margin-top:10px; color:rgba(255,255,255,0.4); font-size:0.75rem;")
-
-                    else:
-                        zn = pick["zhitel"].get("Official_Name", "?")
-                        ui.html(f'<div style="color:rgba(255,255,255,0.9); font-weight:700; '
-                                f'font-size:0.9rem; margin-bottom:10px; letter-spacing:0.08em;">'
-                                f'⚙ {zn} · {pick["tip"]}</div>')
-                        ws = ui.input("Цех (Workshop_ID)").props("dark outlined").style(
-                            "width:100%; font-size:0.8rem; margin-bottom:8px;")
-                        role = ui.input("Слот роли (Turbo_Role)").props("dark outlined").style(
-                            "width:100%; font-size:0.8rem; margin-bottom:8px;")
-                        phrase = ui.input("Коронная фраза (Core_Phrase)").props(
-                            "dark outlined").style("width:100%; font-size:0.8rem;")
-
-                        async def _confirm():
-                            ok, msg = naznachit_rol(
-                                pick["zhitel"].get("ID_Object", ""),
-                                pick["tip"],
-                                (ws.value or "").strip(),
-                                (role.value or "").strip(),
-                                (phrase.value or "").strip(),
-                            )
-                            if ok:
-                                ui.notify(f"⚙ {zn}: роль назначена ({pick['tip']})", color="positive")
-                                dlg.close()
-                            else:
-                                ui.notify(f"⚠ {msg}", color="negative")
-
-                        def _back_t():
-                            pick["tip"] = None
-                            render()
-
-                        with ui.row().style("gap:8px; margin-top:14px; width:100%;"):
-                            ui.button("← назад", on_click=_back_t).props("flat").style(
-                                "color:rgba(255,255,255,0.4); font-size:0.75rem;")
-                            ui.element("div").style("flex:1")
-                            ui.button("назначить", on_click=_confirm).props("flat no-caps").style(
-                                "padding:8px 20px; border-radius:8px; font-weight:700; font-size:0.8rem; "
-                                "background:linear-gradient(135deg,rgba(120,168,201,0.30),rgba(120,168,201,0.18)); "
-                                "border:1px solid rgba(120,168,201,0.55); color:#fff;")
-
-            render()
-        dlg.open()
-
     async def do_propiska():
         """Брат связывает жителя и локацию: диалог житель → локация →
         домашний промпт → запись в паспорт жителя."""
@@ -1052,10 +911,7 @@ def page_brat():
         if not zhiteli:
             ui.notify("Жителей ещё нет — роди их в Странице Жизни", color="warning")
             return
-        # PATCH_PROPISKA_ZHILYE — прописываем только в жилое, не в публичные места
-        lokacii = [l for l in list_lokacii()
-                   if l.get("ID_Object") != "0000_CITY_GRONDHEIM"
-                   and l.get("тип", "") == "жилая"]
+        lokacii = [l for l in list_lokacii() if l.get("ID_Object") != "0000_CITY_GRONDHEIM"]
 
         pick = {"zhitel": None, "lokacia": None}
 
@@ -1181,12 +1037,6 @@ def page_brat():
                     "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
                     "background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08)); "
                     "border:1px solid rgba(201,168,76,0.35); color:#fff;")
-                ui.button("Роль",
-                          on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
-                          ).props("flat no-caps").style(
-                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
-                    "background:linear-gradient(135deg,rgba(120,168,201,0.15),rgba(120,168,201,0.08)); "
-                    "border:1px solid rgba(120,168,201,0.35); color:#fff;")
                 ui.button("Страница Жизни",
                           on_click=lambda: ui.navigate.to("/registry")  # PATCH_ROZH_BTN
                           ).props("flat no-caps").style(
