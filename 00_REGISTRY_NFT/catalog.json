@@ -271,7 +271,7 @@
   {
     "Rarity": "Rare",
     "Object_Type_Class": "agent",
-    "ID_Object": "A01_ISKRA",
+    "ID_Object": "020_VERA",
     "Official_Name": "Вера",
     "Object_Type": "Character",
     "Author_Signature": "[JAM] 6F-Origin",
@@ -306,7 +306,7 @@
       "Autonomy_Level": 0.05,
       "Resonance_Frequency": 0.3
     },
-    "_timestamp": "2026-07-07T01:00:41.463798",
+    "_timestamp": "2026-07-07T01:25:49.488076",
     "_Creator_Seal_Hash": "dd897156530d80358eedca95122722ead009ad909479abbbca2e6e31ef82f81f"
   }
 ]
