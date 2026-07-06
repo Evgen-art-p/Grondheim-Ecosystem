@@ -1,12 +1,12 @@
 {
-  "_note": "маска 'работа' (слой 2 паспорта). Активирует Брат при прописке.",
-  "_активна": false,
+  "_note": "маска 'работа' (слой 2 паспорта). Активирована Братом при назначении роли.",
+  "_активна": true,
   "Social_Rank": "",
   "Profession": "",
   "Area_of_Responsibility": "",
   "Access_Level": "",
-  "Workshop_ID": "",
-  "Turbo_Role": "",
+  "Workshop_ID": "торговый_хаос",
+  "Turbo_Role": "A01",
   "Quarter": "",
-  "Core_Phrase": ""
+  "Core_Phrase": "Умираю… родился новый"
 }
