@@ -37,6 +37,7 @@ _REPO = Path(__file__).resolve().parent.parent
 if str(_REPO) not in _sys.path:
     _sys.path.insert(0, str(_REPO))
 import kalibrovka_core as core
+import sostoyanie as sost   # единая дверь к месту жителя (корень репо)
 
 # Сканер — сосед по зданию
 _BIRZHA = Path(__file__).resolve().parent
@@ -177,22 +178,35 @@ def _sobrat_promt(k: dict) -> str:
 # ───────────────────────────────────────────────────────────────
 # ГЛАВНОЕ: калибровка всего цеха на открытие сессии
 # ───────────────────────────────────────────────────────────────
-def kalibrovat_ceh(ceh_id: str, now_utc: datetime = None, llm=None) -> dict:
+def kalibrovat_ceh(ceh_id: str, now_utc: datetime = None, llm=None,
+                   stamp: bool = True) -> dict:
     """Пройти все занятые слоты цеха, откалибровать на текущую сессию.
-    Пустые слоты (вакансии) пропускаются — калибровать некого."""
+    Пустые слоты (вакансии) пропускаются — калибровать некого.
+    stamp=False — сухой прогон (не пишет state.json). Только для
+    самопроверки/отладки: реальный такт города обязан штамповать место,
+    иначе карта не увидит правду. Никогда не выключай stamp в бою."""
     ceh = reg.get_ceh(ceh_id, "Биржа")
     if ceh is None:
         return {"ошибка": f"цех «{ceh_id}» не найден"}
 
     sessiya = aktivnaya_sessiya(now_utc)
+    # рабочее здание цеха — из манифеста (не хардкод). Куда физически
+    # ходят на смену. Нет поля → место не штампуем (карта оставит дома).
+    zdanie = (ceh.get("здание") or "").strip() or None
+
     itog = {
         "цех": ceh_id,
         "сессия": sessiya["имя"] if sessiya else "рынок спит",
         "сессия_id": sessiya["id"] if sessiya else None,
+        "здание": zdanie,
         "единицы": [],
     }
     if sessiya is None:
-        itog["_note"] = "рынок закрыт — калибровка не нужна, все по домам"
+        if stamp:
+            for row in reg.list_nositeli(ceh_id, "Биржа"):
+                if row["носитель"]:
+                    sost.domoy(row["носитель"]["папка"], "рынок закрыт")
+        itog["_note"] = "рынок закрыт — все по домам"
         return itog
 
     for row in reg.list_nositeli(ceh_id, "Биржа"):
@@ -201,6 +215,10 @@ def kalibrovat_ceh(ceh_id: str, now_utc: datetime = None, llm=None) -> dict:
             continue  # вакансия — калибровать некого
         passport = _passport(nositel["папка"])
         rezhim = core.compute_mode(passport)
+        if zdanie and stamp:
+            sost.postavit_mesto(
+                nositel["папка"], zdanie,
+                f"сессия {sessiya['имя']}, режим {rezhim['mode']}")
         zapis = {
             "слот":  row["слот"],
             "роль":  row["роль"],

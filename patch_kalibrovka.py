@@ -56,6 +56,16 @@ def install():
     print(f"репо: {REPO}")
     sdelano, propushcheno = [], []
 
+    # 0. состояние жителя в корень (единая дверь к месту)
+    sost_dst = REPO / "sostoyanie.py"
+    if sost_dst.exists():
+        propushcheno.append(sost_dst.name)
+        print(f"  ○ уже стоит: {sost_dst.name}")
+    else:
+        sost_dst.write_text(_load_source("sostoyanie.py"), encoding="utf-8")
+        sdelano.append(sost_dst.name)
+        print(f"  ✔ создан: {sost_dst.name}")
+
     # 1. ядро в корень
     core_dst = REPO / "kalibrovka_core.py"
     if core_dst.exists():
@@ -72,13 +82,17 @@ def install():
         print(f"  ✖ нет папки Биржа/ — сначала накати patch_birzha_baza.py")
         return False
     ruka_dst = birzha_dir / "kalibrovka.py"
-    if ruka_dst.exists():
+    _ruka_ustarela = (ruka_dst.exists()
+                      and "postavit_mesto" not in ruka_dst.read_text(encoding="utf-8"))
+    if ruka_dst.exists() and not _ruka_ustarela:
         propushcheno.append("Биржа/kalibrovka.py")
-        print(f"  ○ уже стоит: Биржа/kalibrovka.py")
+        print(f"  ○ уже стоит (новая, со связкой места): Биржа/kalibrovka.py")
     else:
+        if _ruka_ustarela:
+            print(f"  ⚠ старая рука без связки места (sostoyanie) — заменяю честно")
         ruka_dst.write_text(_load_source("kalibrovka_birzha.py"), encoding="utf-8")
-        sdelano.append("Биржа/kalibrovka.py")
-        print(f"  ✔ создан: Биржа/kalibrovka.py")
+        sdelano.append("Биржа/kalibrovka.py" + (" (обновлена)" if _ruka_ustarela else ""))
+        print(f"  ✔ создан/обновлён: Биржа/kalibrovka.py")
 
     # 3. блок калибровки в манифест цеха
     mf_path = (REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха"
@@ -87,6 +101,7 @@ def install():
         print(f"  ✖ нет манифеста торгового_хаоса — накати patch_birzha_baza.py")
         return False
     mf = json.loads(mf_path.read_text(encoding="utf-8"))
+    mf_changed = False
     if "калибровка" in mf:
         propushcheno.append("манифест: блок калибровки")
         print(f"  ○ блок 'калибровка' уже в манифесте")
@@ -98,10 +113,27 @@ def install():
             "граница": "сессия",
             "источник_памяти": "журналы/pnl.jsonl",
         }
-        mf_path.write_text(json.dumps(mf, ensure_ascii=False, indent=2),
-                           encoding="utf-8")
+        mf_changed = True
         sdelano.append("манифест: блок калибровки")
         print(f"  ✔ добавлен блок 'калибровка' в манифест")
+
+    # поле "здание" — куда физически ходят на смену (для штампа места).
+    # Житель сам держит место, но калибровке нужен адрес рабочего здания.
+    if "здание" in mf:
+        propushcheno.append("манифест: поле здание")
+        print(f"  ○ поле 'здание' уже в манифесте")
+    else:
+        mf["здание"] = "0014_EXCHANGE"
+        mf["_note_здание"] = ("локация-здание, куда единицы приходят на "
+                              "смену. Калибровка штампует её жителю на "
+                              "время сессии; карта читает и светит точку.")
+        mf_changed = True
+        sdelano.append("манифест: поле здание")
+        print(f"  ✔ добавлено поле 'здание' (0014_EXCHANGE) в манифест")
+
+    if mf_changed:
+        mf_path.write_text(json.dumps(mf, ensure_ascii=False, indent=2),
+                           encoding="utf-8")
 
     # 4. синтаксис обоих модулей
     for path in (core_dst, ruka_dst):
@@ -125,8 +157,9 @@ def install():
 
     from datetime import datetime, timezone
     fake_europe = datetime.now(timezone.utc).replace(hour=10, minute=0)
-    r = ruka.kalibrovat_ceh("торговый_хаос", now_utc=fake_europe)
-    print(f"  сессия (UTC 10:00): {r.get('сессия')}")
+    r = ruka.kalibrovat_ceh("торговый_хаос", now_utc=fake_europe, stamp=False)
+    print(f"  сессия (UTC 10:00): {r.get('сессия')} · сухой прогон, "
+          f"место жителей НЕ трогаю (это лишь проверка установки)")
     edinicy = r.get("единицы", [])
     if not edinicy:
         print("  ⚙ занятых слотов нет — калибровать некого (все вакансии).")
