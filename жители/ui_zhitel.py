@@ -28,6 +28,7 @@ area-left / area-stage / area-right, золото #c9a84c, glass.
 """
 import json
 import os
+import sys
 import asyncio
 from pathlib import Path
 from datetime import datetime
