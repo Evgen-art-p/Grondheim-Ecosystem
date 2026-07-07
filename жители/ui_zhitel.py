@@ -327,17 +327,17 @@ body{ width:100vw; height:100vh; overflow:hidden !important; background:transpar
 .nicegui-content{ overflow:hidden !important; height:100% !important; }
 
 /* ZHITEL_PANEL_ZHIVAYA_V1 — плашка локации + показатели */
-.zloc-strip{ flex-shrink:0; display:flex; gap:10px; align-items:center;
-  padding:8px; border-radius:14px; border:1px solid rgba(255,255,255,0.08);
-  background:rgba(255,255,255,0.03); }
-.zloc-thumb{ width:52px; height:52px; border-radius:10px; flex-shrink:0;
+.zloc-strip{ flex-shrink:0; display:flex; flex-direction:column; gap:0;
+  border-radius:14px; border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03); overflow:hidden; }
+.zloc-thumb{ width:100%; aspect-ratio:1/1; flex-shrink:0;
   background-size:cover; background-position:center;
-  border:1px solid rgba(201,168,76,0.3); }
-.zloc-meta{ min-width:0; }
-.zloc-zag{ font-size:0.72rem; font-weight:800; color:#c9a84c;
+  border-bottom:1px solid rgba(201,168,76,0.25); }
+.zloc-meta{ min-width:0; padding:10px 12px; text-align:center; }
+.zloc-zag{ font-size:0.8rem; font-weight:800; color:#c9a84c;
   text-transform:uppercase; letter-spacing:0.06em; }
-.zloc-pod{ font-size:0.56rem; color:rgba(255,255,255,0.5);
-  letter-spacing:0.04em; margin-top:2px; }
+.zloc-pod{ font-size:0.58rem; color:rgba(255,255,255,0.5);
+  letter-spacing:0.04em; margin-top:3px; }
 .zpok{ padding:10px 16px; display:flex; flex-direction:column; gap:9px; }
 .zpok-row{ display:flex; flex-direction:column; gap:3px; }
 .zpok-lab{ display:flex; justify-content:space-between; font-size:0.56rem;
@@ -346,6 +346,10 @@ body{ width:100vw; height:100vh; overflow:hidden !important; background:transpar
 .zpok-bar{ height:6px; border-radius:4px; background:rgba(255,255,255,0.08);
   overflow:hidden; }
 .zpok-fill{ height:100%; border-radius:4px; }
+.zpok-bar--zaryad{ position:relative; }
+.zpok-bar--zaryad .zpok-fill{ position:absolute; top:0; bottom:0; }
+.zpok-mid{ position:absolute; left:50%; top:-2px; bottom:-2px; width:1px;
+  background:rgba(255,255,255,0.4); z-index:2; }
 .zpok-dna{ font-size:0.55rem; color:rgba(255,255,255,0.45);
   font-family:'JetBrains Mono',monospace; line-height:1.6;
   padding-top:4px; border-top:1px solid rgba(255,255,255,0.06); }
@@ -415,13 +419,16 @@ def _pokazateli_html(p: dict) -> str:
     elif mut < 0.55:
         optika, ocolor = "ровно", "rgba(201,168,76,0.9)"
     elif mut < 0.8:
-        optika, ocolor = "мутит", "rgba(255,160,60,0.9)"
+        optika, ocolor = "штырит", "rgba(255,160,60,0.9)"
     else:
-        optika, ocolor = "залито", "rgba(255,80,80,0.9)"
-    # полоса заряда: от центра, знак цветом
+        optika, ocolor = "колбасит", "rgba(255,80,80,0.9)"
+    # ZHITEL_ZARYAD_BIPOLAR_V1: полоса ДВУСТОРОННЯЯ — ноль в центре,
+    # плюс растёт вправо, минус растёт влево (не только модуль вправо)
     znak = "+" if charge >= 0 else "−"
     zcolor = "rgba(80,250,123,0.9)" if charge >= 0 else "rgba(255,120,120,0.9)"
-    zwidth = int(mut * 100)
+    _half = min(1.0, mut) * 50  # половина шкалы = сила 0..1 -> 0..50%
+    zleft = 50 if charge >= 0 else 50 - _half
+    zwidth = _half
 
     dna = p.get("DNA_Static", {}) or {}
     dna_str = " · ".join(f"{k.split('_')[0]} {v}" for k, v in dna.items())
@@ -429,8 +436,9 @@ def _pokazateli_html(p: dict) -> str:
     return (
         '<div class="zpok">'
         f'<div class="zpok-row"><div class="zpok-lab">заряд<b>{znak}{mut:.2f}</b></div>'
-        f'<div class="zpok-bar"><div class="zpok-fill" '
-        f'style="width:{zwidth}%; background:{zcolor};"></div></div></div>'
+        f'<div class="zpok-bar zpok-bar--zaryad"><div class="zpok-mid"></div>'
+        f'<div class="zpok-fill" '
+        f'style="left:{zleft}%; width:{zwidth}%; background:{zcolor};"></div></div></div>'
         f'<div class="zpok-row"><div class="zpok-lab">оптика<b style="color:{ocolor};">{optika}</b></div>'
         f'<div class="zpok-bar"><div class="zpok-fill" '
         f'style="width:{int((1-mut)*100)}%; background:{ocolor};"></div></div></div>'
@@ -679,7 +687,7 @@ def page_zhitel(zid: str = ""):
                 ui.html(f'<div><div class="zhead-name">{name}</div>'
                         f'<div class="zhead-sub">{_sost}</div></div>')
                 ui.element("div").style("flex:1")
-                ui.button("карта", on_click=lambda: ui.navigate.to("/karta")) \
+                ui.button("карта", on_click=lambda: ui.navigate.to("/grondheim")) \
                     .props("flat no-caps").classes("zback").style("margin-right:8px;")
                 ui.button("← Брат", on_click=lambda: ui.navigate.to("/brat")) \
                     .props("flat no-caps").classes("zback")
@@ -754,3 +762,6 @@ if __name__ in {"__main__", "__mp_main__"}:
     def _z0():
         page_zhitel("")
     ui.run(title="Кабинет жителя", port=8104, reload=False)
+# ZHITEL_KARTA_BIG_LOC_V1 — маркер идемпотентности
+
+# ZHITEL_OPTIKA_SLOVA_V2 — маркер идемпотентности
