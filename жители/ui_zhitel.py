@@ -534,7 +534,7 @@ def page_zhitel(zid: str = ""):
         if not el: return
         el.clear()
         with el:
-            parts = ["### Якорь — кто она\n"]
+            parts = ["### Якорь — кто он?\n"]
             hist = p.get("Hidden_History", "")
             if hist:
                 parts.append(f"**Скрытая история.** {hist}\n")
