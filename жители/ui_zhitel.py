@@ -325,7 +325,118 @@ body{ width:100vw; height:100vh; overflow:hidden !important; background:transpar
 .runs-panel{ flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
 .zcore{ padding:12px 16px; font-size:0.72rem; color:rgba(255,255,255,0.6); font-style:italic; line-height:1.5; }
 .nicegui-content{ overflow:hidden !important; height:100% !important; }
+
+/* ZHITEL_PANEL_ZHIVAYA_V1 — плашка локации + показатели */
+.zloc-strip{ flex-shrink:0; display:flex; gap:10px; align-items:center;
+  padding:8px; border-radius:14px; border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03); }
+.zloc-thumb{ width:52px; height:52px; border-radius:10px; flex-shrink:0;
+  background-size:cover; background-position:center;
+  border:1px solid rgba(201,168,76,0.3); }
+.zloc-meta{ min-width:0; }
+.zloc-zag{ font-size:0.72rem; font-weight:800; color:#c9a84c;
+  text-transform:uppercase; letter-spacing:0.06em; }
+.zloc-pod{ font-size:0.56rem; color:rgba(255,255,255,0.5);
+  letter-spacing:0.04em; margin-top:2px; }
+.zpok{ padding:10px 16px; display:flex; flex-direction:column; gap:9px; }
+.zpok-row{ display:flex; flex-direction:column; gap:3px; }
+.zpok-lab{ display:flex; justify-content:space-between; font-size:0.56rem;
+  text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.5); }
+.zpok-lab b{ color:rgba(255,255,255,0.85); font-weight:700; }
+.zpok-bar{ height:6px; border-radius:4px; background:rgba(255,255,255,0.08);
+  overflow:hidden; }
+.zpok-fill{ height:100%; border-radius:4px; }
+.zpok-dna{ font-size:0.55rem; color:rgba(255,255,255,0.45);
+  font-family:'JetBrains Mono',monospace; line-height:1.6;
+  padding-top:4px; border-top:1px solid rgba(255,255,255,0.06); }
 """
+
+
+def _lokacia_thumb(loc_id: str) -> str:
+    """Мини-образ локации где житель сейчас. image.* той же локации,
+    что даёт фон. Нет — пусто (плашка не рисуется, не пустой квадрат)."""
+    if not loc_id:
+        return ""
+    loc_dir = LOKACII_DIR / loc_id
+    if not loc_dir.exists():
+        return ""
+    for ext in (".png", ".jpg", ".jpeg", ".webp"):
+        if (loc_dir / ("image" + ext)).exists():
+            return f"/lokacia-static/{loc_id}/image{ext}"
+    return ""
+
+
+def _lokacia_name(loc_id: str) -> str:
+    """Имя локации из её паспорта (для подписи). Нет — сам id."""
+    if not loc_id:
+        return ""
+    import json as _j
+    pp = LOKACII_DIR / loc_id / "passport.json"
+    if pp.exists():
+        try:
+            return _j.loads(pp.read_text(encoding="utf-8")).get("Official_Name", loc_id)
+        except Exception:
+            pass
+    return loc_id
+
+
+def _mesto_podpis(dom, loc_id: str, p: dict):
+    """Живой заголовок места: ГДЕ житель сейчас (sostoyanie.gde_ya).
+    Возвращает (заголовок, подпись). Не хардкод 'ковчег'."""
+    imya_loc = _lokacia_name(loc_id) if loc_id else ""
+    doma = True
+    try:
+        _repo = Path(__file__).resolve().parent.parent
+        if str(_repo) not in sys.path:
+            sys.path.insert(0, str(_repo))
+        import sostoyanie as _sost
+        r = _sost.gde_ya(dom)
+        doma = r.get("дома", True)
+    except Exception:
+        pass
+    if not loc_id:
+        return ("В КОВЧЕГЕ", "приземлилась, ждёт прописки")
+    if doma:
+        return (f"ДОМА · {imya_loc}", "по месту прописки")
+    return (f"НА МЕСТЕ · {imya_loc}", "сейчас здесь")
+
+
+def _pokazateli_html(p: dict) -> str:
+    """Живые показатели жителя из паспорта: заряд, оптика, натура.
+    Как в старом кабинете — под аватаром жизненные показатели."""
+    try:
+        charge = float(p.get("_charge", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        charge = 0.0
+    mut = abs(charge)
+    # оптика словом (та же шкала, что kalibrovka_core)
+    if mut < 0.25:
+        optika, ocolor = "чисто", "rgba(80,250,123,0.9)"
+    elif mut < 0.55:
+        optika, ocolor = "ровно", "rgba(201,168,76,0.9)"
+    elif mut < 0.8:
+        optika, ocolor = "мутит", "rgba(255,160,60,0.9)"
+    else:
+        optika, ocolor = "залито", "rgba(255,80,80,0.9)"
+    # полоса заряда: от центра, знак цветом
+    znak = "+" if charge >= 0 else "−"
+    zcolor = "rgba(80,250,123,0.9)" if charge >= 0 else "rgba(255,120,120,0.9)"
+    zwidth = int(mut * 100)
+
+    dna = p.get("DNA_Static", {}) or {}
+    dna_str = " · ".join(f"{k.split('_')[0]} {v}" for k, v in dna.items())
+
+    return (
+        '<div class="zpok">'
+        f'<div class="zpok-row"><div class="zpok-lab">заряд<b>{znak}{mut:.2f}</b></div>'
+        f'<div class="zpok-bar"><div class="zpok-fill" '
+        f'style="width:{zwidth}%; background:{zcolor};"></div></div></div>'
+        f'<div class="zpok-row"><div class="zpok-lab">оптика<b style="color:{ocolor};">{optika}</b></div>'
+        f'<div class="zpok-bar"><div class="zpok-fill" '
+        f'style="width:{int((1-mut)*100)}%; background:{ocolor};"></div></div></div>'
+        + (f'<div class="zpok-dna">{dna_str}</div>' if dna_str else '')
+        + '</div>'
+    )
 
 
 def page_zhitel(zid: str = ""):
@@ -579,6 +690,17 @@ def page_zhitel(zid: str = ""):
                 with ui.element("div").classes("glass").style("flex:1; overflow:hidden;"):
                     ui.html('<div class="panel-title">⛏ руда — входящее</div>')
                     ui.upload(multiple=True, auto_upload=True).props("flat color=amber").style("margin:8px;")
+                    # ZHITEL_LOC_VLEVO_V1: аватарка локации где житель сейчас —
+                    # под загрузчиком руды, над списком файлов
+                    _loc_thumb_l = _lokacia_thumb(tekushaya_lokacia)
+                    if _loc_thumb_l:
+                        _lz, _lp = _mesto_podpis(dom, tekushaya_lokacia, p)
+                        ui.html(
+                            f'<div class="zloc-strip" style="margin:8px;">'
+                            f'<div class="zloc-thumb" style="background-image:url(\'{_loc_thumb_l}\');"></div>'
+                            f'<div class="zloc-meta"><div class="zloc-zag">{_lz}</div>'
+                            f'<div class="zloc-pod">{_lp}</div></div></div>'
+                        )
                     refs["files"] = ui.element("div").classes("file-list")
                     update_files()
 
@@ -600,7 +722,7 @@ def page_zhitel(zid: str = ""):
                     refs["input"].on("keydown.enter", lambda e: asyncio.create_task(send()))  # DVIZHOK_V_KABINET_V1
                     ui.button("ОТПРАВИТЬ", on_click=send).classes("send-button")
 
-        # RIGHT — аватар + приборы
+        # RIGHT — аватар + ЖИВЫЕ показатели (ZHITEL_PANEL_ZHIVAYA_V1)
         with ui.element("div").classes("area-right"):
             with ui.element("div").classes("right-col"):
                 with ui.element("div").classes("zavatar"):
@@ -611,16 +733,17 @@ def page_zhitel(zid: str = ""):
                         ui.html('<div style="font-size:3rem; color:rgba(201,168,76,0.5);">⬡</div>')
                     ui.html(f'<div class="zavatar-cap"><div class="nm">{name}</div>'
                             f'<div class="role">{rank}</div></div>')
+
+                # место (заголовок) для панели показателей — считаем здесь,
+                # сама плашка локации переехала ВЛЕВО (ZHITEL_LOC_VLEVO_V1)
+                _mesto_zag, _mesto_pod = _mesto_podpis(dom, tekushaya_lokacia, p)
+
+                # ЖИВЫЕ ПОКАЗАТЕЛИ агента (как в старом кабинете — под точкой)
                 with ui.element("div").classes("glass runs-panel"):
-                    ui.html('<div class="panel-title">ковчег · прибытие</div>')
+                    ui.html(f'<div class="panel-title">{_mesto_zag}</div>')
+                    ui.html(_pokazateli_html(p))
                     if core_phrase:
                         ui.html(f'<div class="zcore">«{core_phrase}»</div>')
-                    _propiska = p.get("прописка")
-                    if not _propiska:
-                        ui.html('<div class="zcore" style="opacity:0.7;">⬡ в ковчеге — '
-                                'приземлилась, ждёт прописки. Город ещё не принял.</div>')
-                    else:
-                        ui.html(f'<div class="zcore" style="opacity:0.7;">⬡ прописана: {_propiska}</div>')
 
 
 if __name__ in {"__main__", "__mp_main__"}:

@@ -246,7 +246,7 @@ function initGrondMap() {
   },{passive:false});
 
   vp.addEventListener('pointerdown',e=>{
-    if(e.target.closest('.grond-sector')) return;
+    if(e.target.closest('.grond-sector, .grond-zhitel, .grond-zhitel--active')) return;
     dragging=true;
     dragStart={x:e.clientX-pos.x,y:e.clientY-pos.y};
     vp.setPointerCapture(e.pointerId);
