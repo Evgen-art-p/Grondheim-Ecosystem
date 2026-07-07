@@ -24,6 +24,7 @@ Map_X/Y/W/H. Сколько локаций родил в Странице Жиз
 шесть·проверено·до·корня
 """
 import json
+import sys
 from pathlib import Path
 from nicegui import ui
 
@@ -73,6 +74,44 @@ def load_locations() -> list:
             "id": lid,
             "name": obj.get("Official_Name", lid),
             "x": x, "y": y, "w": w, "h": h,
+        })
+    return out
+
+
+def load_zhiteli() -> list:
+    """Скан домов жителей -> список для карты: кто, где сейчас, как.
+
+    ЗАКОН (замысел Шефа): карта НЕ вычисляет место — житель сам его
+    держит (sostoyanie.gde_ya). Бездомных (локация=None, нет прописки
+    и не в сессии) не рисуем — ставить некуда, это честно.
+    """
+    import json as _json
+    root = Path("GRONDHEIM_CITY/жители")
+    out = []
+    if not root.exists():
+        return out
+    _repo = Path(__file__).resolve().parent.parent
+    if str(_repo) not in sys.path:
+        sys.path.insert(0, str(_repo))
+    try:
+        import sostoyanie as sost
+    except Exception:
+        return out  # состояния ещё нет — карта честно рисует только здания
+    for passport_path in sorted(root.glob("*/*/passport.json")):
+        dom = passport_path.parent
+        try:
+            p = _json.loads(passport_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        r = sost.gde_ya(dom)
+        loc = r.get("локация")
+        if not loc:
+            continue  # бездомный — ставить некуда
+        out.append({
+            "id": p.get("ID_Object", dom.name),
+            "имя": p.get("Official_Name", dom.name),
+            "локация": loc,
+            "дома": r.get("дома", True),
         })
     return out
 
@@ -151,6 +190,34 @@ GRONDHEIM_CSS = r"""
   font-size: 0.85rem; color: rgba(255,255,255,0.5);
   letter-spacing: 0.06em; text-align: center; pointer-events: none; z-index: 5;
 }
+
+.grond-zhitel{
+  position: absolute; border-radius: 50%; z-index: 3; box-sizing: border-box;
+  background: rgba(80,250,123,0.85);
+  border: 1px solid rgba(80,250,123,0.5);
+  transition: transform 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+.grond-zhitel:hover{
+  transform: scale(1.4);
+  box-shadow: 0 0 10px rgba(80,250,123,0.6);
+  z-index: 6;
+}
+.grond-zhitel--active{
+  position: absolute; border-radius: 50%; z-index: 4; box-sizing: border-box;
+  background: rgba(201,168,76,0.85);
+  border: 1px solid rgba(201,168,76,0.6);
+  animation: grondPulseWalk 1.5s infinite;
+  cursor: pointer;
+}
+.grond-zhitel--active:hover{
+  transform: scale(1.4);
+  z-index: 6;
+}
+@keyframes grondPulseWalk{
+  0%,100%{ box-shadow: 0 0 0 0 rgba(201,168,76,0.5); }
+  50%{ box-shadow: 0 0 0 6px rgba(201,168,76,0); }
+}
 """
 
 GRONDHEIM_JS = """
@@ -204,6 +271,7 @@ function initGrondMap() {
   applyTransform();
 
   window.grondOpen = function(locId){ emitEvent('grond-open', locId); };
+  window.grondOpenZhitel = function(zid){ emitEvent('grond-zhitel-open', zid); };
 }
 
 window.grondReinit = function(){ setTimeout(initGrondMap, 80); };
@@ -222,7 +290,36 @@ def _esc(s: str) -> str:
             .replace(">", "&gt;").replace('"', "&quot;").replace("'", "\\'"))
 
 
-def _canvas_html(locations: list) -> str:
+def _tochki_zhitelej_html(locations: list, zhiteli: list) -> str:
+    """Точки жителей — раскладка сеткой внутри прямоугольника ИХ
+    локации. Не вычисляем зону — локация уже дана житилем (gde_ya)."""
+    by_loc = {}
+    for z in zhiteli:
+        by_loc.setdefault(z["локация"], []).append(z)
+    dot, gap, pad = 13, 4, 6
+    points = ""
+    for loc in locations:
+        residents = by_loc.get(loc["id"], [])
+        if not residents:
+            continue
+        per_row = max(1, (loc["w"] - 2 * pad) // (dot + gap))
+        for i, z in enumerate(residents):
+            row, col = divmod(i, per_row)
+            px = loc["x"] + pad + col * (dot + gap)
+            py = loc["y"] + pad + row * (dot + gap)
+            cls = "grond-zhitel" if z["дома"] else "grond-zhitel--active"
+            title = _esc(z["имя"] + (" · дома" if z["дома"] else " · на месте"))
+            points += (
+                '<div class="%s" title="%s" '
+                'onclick="window.grondOpenZhitel && window.grondOpenZhitel(\'%s\')" '
+                'style="left:%dpx;top:%dpx;width:%dpx;height:%dpx;"></div>'
+                % (cls, title, _esc(z["id"]), px, py, dot, dot)
+            )
+    return points
+
+
+def _canvas_html(locations: list, zhiteli: list = None) -> str:
+    zhiteli = zhiteli or []
     sectors = ""
     for loc in locations:
         sectors += (
@@ -230,14 +327,15 @@ def _canvas_html(locations: list) -> str:
             'style="left:%dpx;top:%dpx;width:%dpx;height:%dpx;">%s</div>'
             % (_esc(loc["id"]), loc["x"], loc["y"], loc["w"], loc["h"], _esc(loc["name"]))
         )
+    points = _tochki_zhitelej_html(locations, zhiteli)
     empty = ""
     if not locations:
         empty = ('<div class="grond-empty">Локаций пока нет.<br>'
                  'Роди их в Странице Жизни — появятся на карте.</div>')
     return (
         '<div class="grond-canvas" style="width:%dpx;height:%dpx;'
-        'background-image:url(\'%s\');background-size:%dpx %dpx;">%s</div>%s'
-        % (CITY_W, CITY_H, CITY_IMAGE, CITY_W, CITY_H, sectors, empty)
+        'background-image:url(\'%s\');background-size:%dpx %dpx;">%s%s</div>%s'
+        % (CITY_W, CITY_H, CITY_IMAGE, CITY_W, CITY_H, sectors, points, empty)
     )
 
 
@@ -248,17 +346,19 @@ def page_grondheim():
     def render():
         root_ref["el"].clear()
         locations = load_locations()
+        zhiteli = load_zhiteli()
         with root_ref["el"]:
             with ui.element("div").classes("grond-header"):
                 ui.html(
                     f'<div><div class="grond-title">ГРОНДХЕЙМ</div>'
-                    f'<div class="grond-sub">зрение Брата · {len(locations)} локаций</div></div>'
+                    f'<div class="grond-sub">зрение Брата · {len(locations)} локаций'
+                    f'{f" · {len(zhiteli)} на карте" if zhiteli else ""}</div></div>'
                 )
                 ui.button("← назад", on_click=lambda: ui.navigate.to("/brat")) \
                     .props("flat").classes("grond-back")
 
             with ui.element("div").classes("grond-viewport"):
-                ui.html(_canvas_html(locations))
+                ui.html(_canvas_html(locations, zhiteli))
 
             ui.html('<div class="grond-hint">колесо — масштаб · перетаскивание — обзор · клик — войти в локацию</div>')
 
@@ -274,7 +374,16 @@ def page_grondheim():
             # клик по локации -> открыть её страницу (ui_lokacia.py)
             ui.navigate.to(f"/lokacia/{loc_id}")
 
+    def on_open_zhitel(e):
+        zid = e.args
+        if zid:
+            # клик по жителю -> живая карточка (ui_zhitel.py), в текущем
+            # состоянии — та же логика, что select_agent() в старом
+            # кабинете, только страницей, не панелью
+            ui.navigate.to(f"/zhitel/{zid}")
+
     ui.on("grond-open", on_open)
+    ui.on("grond-zhitel-open", on_open_zhitel)
 
 
 if __name__ in {"__main__", "__mp_main__"}:

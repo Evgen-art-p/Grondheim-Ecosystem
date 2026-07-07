@@ -330,26 +330,43 @@ body{ width:100vw; height:100vh; overflow:hidden !important; background:transpar
 
 def page_zhitel(zid: str = ""):
     p, dom = find_dom(zid) if zid else (None, None)
-    propiska = p.get("прописка") if p else None  # PATCH_FON_PO_PROPISKE
+    propiska = p.get("прописка") if p else None  # запасной вариант — дом
 
-    # статика дома жителя + ковчега (общий фон прибытия) + локации прописки
+    # PATCH_ZHITEL_TEKUSHAYA_LOKACIA: фон карточки — по ЖИВОМУ месту
+    # (sostoyanie.gde_ya), не по вечной прописке. Житель на сессии —
+    # видим Биржу, не Торговый Квартал. Сам замысел: карта переносит
+    # "в ту локацию где он есть", не в дом по умолчанию.
+    tekushaya_lokacia = propiska
+    if dom is not None:
+        try:
+            _repo = Path(__file__).resolve().parent.parent
+            if str(_repo) not in sys.path:
+                sys.path.insert(0, str(_repo))
+            import sostoyanie as _sost
+            _r = _sost.gde_ya(dom)
+            if _r.get("локация"):
+                tekushaya_lokacia = _r["локация"]
+        except Exception:
+            pass  # sostoyanie нет — тихий откат на прописку, как было
+
+    # статика дома жителя + ковчега (общий фон прибытия) + ТЕКУЩЕЙ локации
     try:
         from nicegui import app
         if dom is not None and dom.exists():
             app.add_static_files(f"/zhitel-static/{dom.name}", str(dom))
         if KOVCHEG_DIR.exists():
             app.add_static_files("/kovcheg-static", str(KOVCHEG_DIR))
-        if propiska:  # PATCH_FON_PO_PROPISKE: своя статика, не ждём захода на /lokacia/{id}
-            _loc_dir = LOKACII_DIR / propiska
+        if tekushaya_lokacia:  # своя статика, не ждём захода на /lokacia/{id}
+            _loc_dir = LOKACII_DIR / tekushaya_lokacia
             if _loc_dir.exists():
-                app.add_static_files(f"/lokacia-static/{propiska}", str(_loc_dir))
+                app.add_static_files(f"/lokacia-static/{tekushaya_lokacia}", str(_loc_dir))
     except Exception:
         pass
 
     ui.add_head_html(f"<style>{ZHITEL_CSS}</style>")
 
-    # ФОН по маске → прописке → ковчегу
-    bg = _bg_for_mask(dom, mask=None, propiska=propiska)
+    # ФОН по маске → ТЕКУЩЕМУ месту (не прописке!) → ковчегу
+    bg = _bg_for_mask(dom, mask=None, propiska=tekushaya_lokacia)
     if bg:
         ui.add_head_html(f"<style>#zbg{{background-image:url('{bg}')!important;}}</style>")
     ui.html('<div id="zbg"></div>')
