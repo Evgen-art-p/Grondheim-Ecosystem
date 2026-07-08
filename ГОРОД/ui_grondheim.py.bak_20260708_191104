@@ -339,13 +339,6 @@ def _canvas_html(locations: list, zhiteli: "list | None" = None) -> str:
     )
 
 
-# ── ВРАТА РАБОЧИХ КАБИНЕТОВ — локация -> свой кабинет (не паспорт) ──
-# Закон Пары: локация сама заявляет о кабинете. Нет записи -> /lokacia/{id}.
-LOCATION_GATES = {
-    "0014_EXCHANGE": "/torg",   # Биржа -> стол Совета (ui_torg.py)
-}
-
-
 def page_grondheim():
     ui.add_head_html(f"<style>{GRONDHEIM_CSS}</style>")
     root_ref = {}
@@ -378,11 +371,8 @@ def page_grondheim():
     def on_open(e):
         loc_id = e.args
         if loc_id:
-            # клик по локации -> её рабочий кабинет, если есть (Закон Пары:
-            # локация сама заявляет о своём кабинете в LOCATION_GATES),
-            # иначе честный паспорт места (ui_lokacia.py)
-            gate = LOCATION_GATES.get(loc_id)
-            ui.navigate.to(gate if gate else f"/lokacia/{loc_id}")
+            # клик по локации -> открыть её страницу (ui_lokacia.py)
+            ui.navigate.to(f"/lokacia/{loc_id}")
 
     def on_open_zhitel(e):
         zid = e.args

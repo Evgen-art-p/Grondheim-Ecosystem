@@ -378,7 +378,7 @@ ROLE_OPTIONS_MAP = {
 def get_workshop_options() -> list[str]:
     """Цеха для селекта рождения. Новый город: studio/ нет — fallback."""
     try:
-        from studio.modules_registry import list_cartridges  # pyright: ignore[reportMissingImports]
+        from studio.modules_registry import list_cartridges
         return ["", "residents"] + [c["id"] for c in list_cartridges()]
     except Exception:
         # Новый город — старого studio/ нет. Отдаём встроенный список.
@@ -394,7 +394,7 @@ def get_role_options(workshop: str) -> list[str]:
     if workshop == "residents":
         return RESIDENT_ROLE_OPTIONS
     try:
-        from studio.modules_registry import get_cartridge  # pyright: ignore[reportMissingImports]
+        from studio.modules_registry import get_cartridge
         cart = get_cartridge(workshop)
         if cart and cart.get("roles"):
             return [""] + list(cart["roles"])
