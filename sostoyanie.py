@@ -110,11 +110,9 @@ def domoy(dom, pochemu: str = "вернулся домой") -> dict:
 
 
 if __name__ == "__main__":
-    import sys, tempfile, shutil
-    try:
+    import sys, tempfile, shutil, io
+    if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
     print("═══ СОСТОЯНИЕ ЖИТЕЛЯ — самопроверка ═══")
     tmp = Path(tempfile.mkdtemp())
     try:

@@ -34,7 +34,7 @@ from pathlib import Path
 # Чтобы "from ui_brat import ..." и т.п. работали без __init__.py и без
 # превращения папок в формальные пакеты — добавляем их в sys.path.
 _ROOT = Path(__file__).resolve().parent
-for _sub in ("Брат", "жители", "ГОРОД"):
+for _sub in ("Брат", "жители", "ГОРОД", "Биржа"):
     _p = str(_ROOT / _sub)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -110,6 +110,19 @@ def _zhitel(zid: str = ""):
 @ui.page("/zhitel")
 def _zhitel0():
     page_zhitel("")
+
+
+# ── СТОЛ ЦЕХА — Совет Биржи (Закон Пары: слот -> резидент) ── TORG_STOL_V1
+# Клик по пузырьку переключает активного; РЫНОК зовёт Калибровку.
+from ui_torg import page_torg
+
+@ui.page("/torg/{tseh_id}")
+def _torg(tseh_id: str = "торговый_хаос"):
+    page_torg(tseh_id)
+
+@ui.page("/torg")
+def _torg0():
+    page_torg()
 
 
 if __name__ in {"__main__", "__mp_main__"}:

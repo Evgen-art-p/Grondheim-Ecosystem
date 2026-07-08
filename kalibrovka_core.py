@@ -96,10 +96,9 @@ def stroit_plan(mode: str) -> bool:
 
 if __name__ == "__main__":
     import sys
-    try:
+    import io
+    if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
     print("═══ КАЛИБРОВКА · ЯДРО — самопроверка ═══")
     proby = [
         ("чистая оптика",        {"_charge": 0.0,  "DNA_Static": {"Stubbornness": 0.5}}),

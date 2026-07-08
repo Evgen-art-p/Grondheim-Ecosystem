@@ -59,7 +59,7 @@ _SESSII = [
 ]
 
 
-def aktivnaya_sessiya(now_utc: datetime = None) -> dict | None:
+def aktivnaya_sessiya(now_utc: datetime | None = None) -> dict | None:
     """Какая сессия идёт прямо сейчас (по UTC-часу). None — рынок спит
     (окно между Америкой и Азией). При наложении Европа+Америка берём
     более позднюю по открытию (оверлап — американский драйв)."""
@@ -178,7 +178,7 @@ def _sobrat_promt(k: dict) -> str:
 # ───────────────────────────────────────────────────────────────
 # ГЛАВНОЕ: калибровка всего цеха на открытие сессии
 # ───────────────────────────────────────────────────────────────
-def kalibrovat_ceh(ceh_id: str, now_utc: datetime = None, llm=None,
+def kalibrovat_ceh(ceh_id: str, now_utc: datetime | None = None, llm=None,
                    stamp: bool = True) -> dict:
     """Пройти все занятые слоты цеха, откалибровать на текущую сессию.
     Пустые слоты (вакансии) пропускаются — калибровать некого.
@@ -240,10 +240,9 @@ def kalibrovat_ceh(ceh_id: str, now_utc: datetime = None, llm=None,
 
 
 if __name__ == "__main__":
-    try:
+    import io as _io
+    if isinstance(_sys.stdout, _io.TextIOWrapper):
         _sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
     print("═══ КАЛИБРОВКА · РУКА БИРЖИ — самопроверка ═══")
     # показать текущую сессию
     s = aktivnaya_sessiya()

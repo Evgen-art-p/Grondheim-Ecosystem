@@ -151,10 +151,9 @@ def list_nositeli(ceh_id: str, kvartal: str = "Биржа") -> list:
 # ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import sys as _s
-    try:
+    import io as _io
+    if isinstance(_s.stdout, _io.TextIOWrapper):
         _s.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
     print("═══ CARTRIDGE REGISTRY — самопроверка ═══")
     ceha = list_ceha("Биржа")
     print(f"цехов на Бирже: {len(ceha)}")
