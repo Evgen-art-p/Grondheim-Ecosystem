@@ -21,7 +21,7 @@ import hashlib
 import base64
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
 from nicegui import ui, app, events
 
@@ -1344,10 +1344,10 @@ def page_registry():
     filter_rarity = {"value": ""}
 
     # References to UI elements we'll need to refresh
-    catalog_container = None
-    json_container = None
-    stats_label = None
-    image_preview_container = None
+    catalog_container: Any = None
+    json_container: Any = None
+    stats_label: Any = None
+    image_preview_container: Any = None
     rarity_buttons = {}
 
     # ── Inject styles ──
@@ -1406,40 +1406,40 @@ def page_registry():
                   # ── Object type selector ──
                   current_obj_type = {"value": ""}
                   type_btns = {}
-                  agent_block_ref = {"el": None}
-                  location_block_ref = {"el": None}
-                  asset_block_ref = {"el": None}
+                  agent_block_ref: dict = {"el": None}
+                  location_block_ref: dict = {"el": None}
+                  asset_block_ref: dict = {"el": None}
 
                   # Виджеты агента
-                  anchor_points_widget = {"w": None}
-                  pull_vector_widget = {"w": None}
-                  hidden_taste_widget = {"w": None}
-                  trigger_keywords_widget = {"w": None}
+                  anchor_points_widget: dict = {"w": None}
+                  pull_vector_widget: dict = {"w": None}
+                  hidden_taste_widget: dict = {"w": None}
+                  trigger_keywords_widget: dict = {"w": None}
                   dna_static_widgets = {}
-                  balance_gnd_widget = {"w": None}
-                  balance_tepl_widget = {"w": None}
-                  home_story_widget = {"w": None}
+                  balance_gnd_widget: dict = {"w": None}
+                  balance_tepl_widget: dict = {"w": None}
+                  home_story_widget: dict = {"w": None}
                   # Виджеты локации
-                  loc_capacity_widget = {"w": None}
-                  loc_scale_widget = {"w": None}
-                  loc_lighting_widget = {"w": None}
-                  loc_atmosphere_widget = {"w": None}
-                  loc_neighbors_widget = {"w": None}
-                  loc_quarter_widget = {"w": None}   # Quarter локации
-                  loc_district_widget = {"w": None}  # PATCH_LOC_SOCPROFIL: район (узел/комплекс)
-                  loc_rank_widget = {"w": None}      # PATCH_LOC_SOCPROFIL: Social_Rank места
-                  loc_profession_widget = {"w": None}   # Profession места
-                  loc_responsibility_widget = {"w": None}  # Area_of_Responsibility
-                  loc_access_widget = {"w": None}    # Access_Level
-                  loc_map_x_widget = {"w": None}
-                  loc_map_y_widget = {"w": None}
-                  loc_map_w_widget = {"w": None}
-                  loc_map_h_widget = {"w": None}
+                  loc_capacity_widget: dict = {"w": None}
+                  loc_scale_widget: dict = {"w": None}
+                  loc_lighting_widget: dict = {"w": None}
+                  loc_atmosphere_widget: dict = {"w": None}
+                  loc_neighbors_widget: dict = {"w": None}
+                  loc_quarter_widget: dict = {"w": None}   # Quarter локации
+                  loc_district_widget: dict = {"w": None}  # PATCH_LOC_SOCPROFIL: район (узел/комплекс)
+                  loc_rank_widget: dict = {"w": None}      # PATCH_LOC_SOCPROFIL: Social_Rank места
+                  loc_profession_widget: dict = {"w": None}   # Profession места
+                  loc_responsibility_widget: dict = {"w": None}  # Area_of_Responsibility
+                  loc_access_widget: dict = {"w": None}    # Access_Level
+                  loc_map_x_widget: dict = {"w": None}
+                  loc_map_y_widget: dict = {"w": None}
+                  loc_map_w_widget: dict = {"w": None}
+                  loc_map_h_widget: dict = {"w": None}
                   # Виджеты ассета
-                  asset_tags_widget = {"w": None}
-                  asset_mood_widget = {"w": None}
-                  asset_use_cases_widget = {"w": None}
-                  asset_visual_anchor_widget = {"w": None}
+                  asset_tags_widget: dict = {"w": None}
+                  asset_mood_widget: dict = {"w": None}
+                  asset_use_cases_widget: dict = {"w": None}
+                  asset_visual_anchor_widget: dict = {"w": None}
 
                   with ui.element("div").classes("reg-block").style("margin-bottom:0"):
                     with ui.element("div").classes("reg-block-header"):
@@ -1883,7 +1883,7 @@ def page_registry():
 
                 def collect_form() -> dict:
                     """Collect all form values into a dict."""
-                    obj = {
+                    obj: dict = {
                         "Rarity": current_rarity["value"],
                         "Object_Type_Class": current_obj_type["value"],  # agent/location/asset
                     }
@@ -2338,7 +2338,7 @@ def page_registry():
                         "border: 1px solid var(--r-border); border-radius: 3px; max-width: 180px"
                     )
 
-                json_container = ui.element("pre").classes("reg-json w-full")
+                json_container = ui.html("").classes("reg-json w-full")  # REGISTRY_TYPES_HONEST_V1: element("pre") не поддерживал .text — молча не обновлял экран
 
                 def refresh_export():
                     nonlocal catalog
@@ -2347,7 +2347,9 @@ def page_registry():
                     for o in catalog:
                         c = _clean_for_export(o)
                         clean.append(c)
-                    json_container.text = json.dumps(clean, ensure_ascii=False, indent=2) if clean else "// Каталог пуст"
+                    _json_txt = json.dumps(clean, ensure_ascii=False, indent=2) if clean else "// Каталог пуст"
+                    _json_esc = _json_txt.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    json_container.set_content(_json_esc)  # REGISTRY_TYPES_HONEST_V1: set_content реально обновляет экран
 
                 tab_export.on("click", lambda: refresh_export())
 
@@ -2444,3 +2446,5 @@ def page_registry():
                     }, ensure_ascii=False, indent=2)
                     ui.html(f'<pre class="reg-json" style="max-height:none">{example_json}</pre>')
                     ui.html('<p style="margin-top:10px">Кнопка «Скачать ERC-721 metadata» на вкладке Экспорт генерирует именно этот формат.</p>')
+
+# REGISTRY_TYPES_HONEST_V1 — маркер идемпотентности

@@ -215,7 +215,7 @@ KOVCHEG_DIR = _ROOT / "GRONDHEIM_CITY" / "ковчег"
 LOKACII_DIR = _ROOT / "GRONDHEIM_CITY" / "локации"
 
 
-def _bg_for_mask(dom: Path, mask: str = None, propiska: str = None) -> str:
+def _bg_for_mask(dom: Path | None, mask: str | None = None, propiska: str | None = None) -> str:
     """Путь фона кабинета. Порядок: активная маска → жильё жителя →
     прописка (образ локации) → КОВЧЕГ → дефолт.
     ШОВ: маски/{mask}/bg.* оживёт, когда появятся маски с фонами."""
@@ -250,7 +250,7 @@ def _bg_for_mask(dom: Path, mask: str = None, propiska: str = None) -> str:
     return ""   # дефолт — тёмный градиент с золотом (CSS).
 
 
-def _avatar_url(dom: Path, p: dict) -> str:
+def _avatar_url(dom: Path | None, p: dict) -> str:
     if dom is None:
         return ""
     av = p.get("avatar", "")
@@ -357,7 +357,7 @@ body{ width:100vw; height:100vh; overflow:hidden !important; background:transpar
 """
 
 
-def _lokacia_thumb(loc_id: str) -> str:
+def _lokacia_thumb(loc_id: str | None) -> str:
     """Мини-образ локации где житель сейчас. image.* той же локации,
     что даёт фон. Нет — пусто (плашка не рисуется, не пустой квадрат)."""
     if not loc_id:
@@ -371,7 +371,7 @@ def _lokacia_thumb(loc_id: str) -> str:
     return ""
 
 
-def _lokacia_name(loc_id: str) -> str:
+def _lokacia_name(loc_id: str | None) -> str:
     """Имя локации из её паспорта (для подписи). Нет — сам id."""
     if not loc_id:
         return ""
@@ -385,7 +385,7 @@ def _lokacia_name(loc_id: str) -> str:
     return loc_id
 
 
-def _mesto_podpis(dom, loc_id: str, p: dict):
+def _mesto_podpis(dom, loc_id: str | None, p: dict):
     """Живой заголовок места: ГДЕ житель сейчас (sostoyanie.gde_ya).
     Возвращает (заголовок, подпись). Не хардкод 'ковчег'."""
     imya_loc = _lokacia_name(loc_id) if loc_id else ""
@@ -514,7 +514,7 @@ def page_zhitel(zid: str = ""):
     rank = p.get("Social_Rank", "") or p.get("Profession", "")
     core_phrase = p.get("Core_Phrase", "")
     state = {"chat": [], "model": ""}
-    refs = {"chat": None, "viewer": None, "input": None, "files": None}
+    refs: dict = {"chat": None, "viewer": None, "input": None, "files": None}
 
     def update_chat():
         el = refs["chat"]
@@ -670,7 +670,8 @@ def page_zhitel(zid: str = ""):
                 reply = await call_zhitel_llm(_vtoroy, state.get("model"))
             reply = _ubrat_memory_request(reply) or reply
             try:
-                dvizhok.sохранить()
+                if dvizhok is not None:
+                    dvizhok.sохранить()
             except Exception:
                 pass
         else:
@@ -766,3 +767,5 @@ if __name__ in {"__main__", "__mp_main__"}:
 # ZHITEL_KARTA_BIG_LOC_V1 — маркер идемпотентности
 
 # ZHITEL_OPTIKA_SLOVA_V2 — маркер идемпотентности
+
+# ZHITEL_TYPES_HONEST_V1 — маркер идемпотентности

@@ -834,7 +834,7 @@ def page_brat():
     ui.html('<div id="bg"></div>')
 
     state = {"chat": [], "waiting": False, "model": DEFAULT_MODEL}
-    refs  = {"chat": None, "viewer": None, "input": None, "files": None}
+    refs: dict = {"chat": None, "viewer": None, "input": None, "files": None}
 
     def on_model_change(e):
         state["model"] = e.value
@@ -953,7 +953,7 @@ def page_brat():
             return
 
         TIPY = ["резидент", "хранитель", "воркер"]
-        pick = {"zhitel": None, "tip": None}
+        pick: dict = {"zhitel": None, "tip": None}
 
         with ui.dialog() as dlg, ui.card().style(
             "background:#0d1117; border:1px solid rgba(255,255,255,0.12); "
@@ -1057,7 +1057,7 @@ def page_brat():
                    if l.get("ID_Object") != "0000_CITY_GRONDHEIM"
                    and l.get("тип", "") == "жилая"]
 
-        pick = {"zhitel": None, "lokacia": None}
+        pick: dict = {"zhitel": None, "lokacia": None}
 
         with ui.dialog() as dlg, ui.card().style(
             "background:#0d1117; border:1px solid rgba(255,255,255,0.12); "
@@ -1371,3 +1371,5 @@ if __name__ in {"__main__", "__mp_main__"}:
     def _brat_page():
         page_brat()
     ui.run(title="Кабинет Брата", port=8101, reload=False)
+
+# BRAT_TYPES_HONEST_V1 — маркер идемпотентности
