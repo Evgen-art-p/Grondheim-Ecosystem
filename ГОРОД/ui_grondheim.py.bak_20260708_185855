@@ -318,7 +318,7 @@ def _tochki_zhitelej_html(locations: list, zhiteli: list) -> str:
     return points
 
 
-def _canvas_html(locations: list, zhiteli: "list | None" = None) -> str:
+def _canvas_html(locations: list, zhiteli: list = None) -> str:
     zhiteli = zhiteli or []
     sectors = ""
     for loc in locations:

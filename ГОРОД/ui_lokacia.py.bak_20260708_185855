@@ -92,7 +92,7 @@ def list_lokacii():
     return out
 
 
-def _image_url(dom: "Path | None", p: dict) -> str:
+def _image_url(dom: Path, p: dict) -> str:
     """Картинка места, если лежит в папке локации."""
     if dom is None:
         return ""

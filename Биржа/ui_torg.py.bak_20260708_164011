@@ -224,7 +224,7 @@ def page_torg(tseh_id: str = "\u0442\u043e\u0440\u0433\u043e\u0432\u044b\u0439_\
         with refs["right"]:
             with ui.element("div").classes("right-col"):
                 with ui.element("div").classes("zavatar"):
-                    if r and n:
+                    if n:
                         av = _avatar_url_for(n["\u043f\u0430\u043f\u043a\u0430"], static_prefix)
                         if av:
                             ui.html(f'<img src="{av}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'">')
