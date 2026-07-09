@@ -70,7 +70,7 @@ def _load_iskra_memory() -> dict:
         "t1_status": "NOT_FOUND", "zero_point_price": None, "history_dna": ""})
 
 
-def _save_iskra_memory(signal: dict, md: dict = None):  # GLOBAL_BIAS_COMPASS_V1
+def _save_iskra_memory(signal: dict, md: Optional[dict] = None):  # GLOBAL_BIAS_COMPASS_V1
     """
     Пишет память Искры в штатный trading_state.json — туда, откуда
     её прочитает Морж и следующий прогон самой Искры (prev_*).
@@ -222,7 +222,7 @@ def chat_with_iskra(question: str, last_run: Optional[dict] = None,
 
     # Душа города и в разговоре — настроение красит ответ.
     try:
-        from studio.grondheim_memory import format_soul_for_agent
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
         soul = format_soul_for_agent("A01_ISKRA", dept="trading")
         if soul:
             system = prompt + "\n\n=== ТВОЁ СОСТОЯНИЕ (душа) ===\n" + soul + "\n\n" + work_ctx
@@ -420,7 +420,7 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
     # фактом движка. Настроение не создаёт дивергенцию из воздуха.
     soul = ""
     try:
-        from studio.grondheim_memory import format_soul_for_agent
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
         soul = format_soul_for_agent("A01_ISKRA", dept="trading")
     except Exception as e:
         print(f"[ISKRA] ⚠️  Душа не загрузилась ({e}) — работаю без неё")
@@ -526,7 +526,7 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
     # Наказание за УБЫТОЧНУЮ точку теперь в hooks._settle (по pnl_r) —
     # там видно ДЕЛО: повела точка к прибыли или в минус.
     try:
-        from studio.grondheim_memory import sync_to_dna
+        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]
         if prev_status == "DETECTED" and new_status == "CONFIRMED":
             sync_to_dna("A01_ISKRA", "good_work", intensity=0.6, dept="trading")
         # DETECTED→NOT_FOUND больше НЕ штрафуется здесь (см. _settle).

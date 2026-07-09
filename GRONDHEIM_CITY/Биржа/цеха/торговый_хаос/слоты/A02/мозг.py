@@ -217,7 +217,7 @@ def chat_with_morj(question: str, last_run: Optional[dict] = None,
 
     system = prompt + work_ctx
     try:
-        from studio.grondheim_memory import format_soul_for_agent
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
         soul = format_soul_for_agent("A02_MORJ", dept="trading")
         if soul:
             system = prompt + "\n\n=== ТВОЁ СОСТОЯНИЕ (душа) ===\n" + soul + "\n\n" + work_ctx
@@ -297,7 +297,7 @@ def run_morj(symbol: str = "XAUUSD", timeframe: str = "H4",
     # ── 3. Душа города ───────────────────────────────────────
     soul = ""
     try:
-        from studio.grondheim_memory import format_soul_for_agent
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
         soul = format_soul_for_agent("A02_MORJ", dept="trading")
     except Exception as e:
         print(f"[MORJ] ⚠️  Душа не загрузилась ({e}) — работаю без неё")
@@ -393,7 +393,7 @@ def run_morj(symbol: str = "XAUUSD", timeframe: str = "H4",
     field_alive  = (not alligator.get("sleeping")) and rubber_band.get("is_peak")
     morj_says_go = signal.get("wave_1_validated") and new_status in ("AWAKE", "WAKING")
     try:
-        from studio.grondheim_memory import sync_to_dna
+        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]
         if field_alive and morj_says_go:
             sync_to_dna("A02_MORJ", "good_work", intensity=0.5, dept="trading")
         elif (not field_alive) and morj_says_go:

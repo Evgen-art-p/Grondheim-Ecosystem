@@ -189,7 +189,7 @@ def chat_with_panikyor(question: str, last_run: Optional[dict] = None,
 
     system = prompt + work_ctx
     try:
-        from studio.grondheim_memory import format_soul_for_agent
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
         soul = format_soul_for_agent("A03_PANIKYOR", dept="trading")
         if soul:
             system = prompt + "\n\n=== ТВОЁ СОСТОЯНИЕ (душа) ===\n" + soul + "\n\n" + work_ctx
@@ -267,7 +267,7 @@ def run_panikyor(symbol: str = "XAUUSD", timeframe: str = "H4",
     # ── 3. Душа города ───────────────────────────────────────
     soul = ""
     try:
-        from studio.grondheim_memory import format_soul_for_agent
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
         soul = format_soul_for_agent("A03_PANIKYOR", dept="trading")
     except Exception as e:
         print(f"[PANIC] ⚠️  Душа не загрузилась ({e}) — работаю без неё")
@@ -356,7 +356,7 @@ def run_panikyor(symbol: str = "XAUUSD", timeframe: str = "H4",
         phase in ("DISBELIEF", "PANIC")   # эти держатся на статусе+свечке, не на окне
     )
     try:
-        from studio.grondheim_memory import sync_to_dna
+        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]
         if coherent:
             sync_to_dna("A03_PANIKYOR", "good_work", intensity=0.4, dept="trading")
         else:
