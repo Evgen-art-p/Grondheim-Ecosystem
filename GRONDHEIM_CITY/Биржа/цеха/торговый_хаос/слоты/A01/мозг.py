@@ -23,20 +23,31 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
+import sys as _sys
+_repo_root_shim = Path(__file__).resolve().parents[6]
+_birzha_code_shim = _repo_root_shim / "Биржа"
+if str(_birzha_code_shim) not in _sys.path:
+    _sys.path.insert(0, str(_birzha_code_shim))
+
 from llm import chat
 # ISKRA_FAIR_JUDGEMENT_V1 · суд Искры по делу (pnl_r), не за пустышку
 
-_HERE        = Path(__file__).resolve().parent           # Биржа/
-_REPO        = _HERE.parent                                # корень репо
-# НОВЫЙ ГОРОД: промпт роли — собственность ЦЕХА (манифест торгового_хаоса
-# уже объявляет слоты/A01/промпт.md), не резидента и не старой плоской
-# папки A01/. Кто сидит на слоте — решает mask.json (Закон Пары), не этот
-# файл. Знания (WILLIAMS_MATH.md) — рядом со слотом, тот же приём.
-_CEH_DIR     = _REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха" / "торговый_хаос"
-PROMPT_PATH  = _CEH_DIR / "слоты" / "A01" / "промпт.md"
-KNOWLEDGE    = _CEH_DIR / "слоты" / "A01" / "знания" / "WILLIAMS_MATH.md"
-STATE_DIR    = _HERE / "данные"
-STATS_PATH   = STATE_DIR / "iskra_stats.json"         # накопительная статистика (наш слой)
+# ЗАКОН КАРТРИДЖА ДЛЯ КОДА: этот файл живёт ПРЯМО В СЛОТЕ, рядом со
+# своим промптом и знаниями — не в отдельном дереве репо-кода. Слот
+# несёт с собой ВСЁ: слоты/A01/{мозг.py, промпт.md, знания/, данные/}.
+_SLOT_DIR    = Path(__file__).resolve().parent            # слоты/A01/
+_CEH_DIR     = _SLOT_DIR.parent.parent                     # торговый_хаос/
+_REPO        = _CEH_DIR.parents[3]                          # корень репо
+_BIRZHA_CODE = _REPO / "Биржа"                              # общий код (движок, llm)
+
+PROMPT_PATH  = _SLOT_DIR / "промпт.md"
+KNOWLEDGE    = _SLOT_DIR / "знания" / "WILLIAMS_MATH.md"
+# Точность датчика — личный журнал РОЛИ (Ролик §4.4а), едет со слотом.
+STATE_DIR    = _SLOT_DIR / "данные"
+STATS_PATH   = STATE_DIR / "iskra_stats.json"
+# feed_config.json — общий вочлист всех символов/цехов, НЕ личное
+# слота. Ему место в общем коде, не в А01.
+_SHARED_DATA = _BIRZHA_CODE / "данные"
 
 
 # ════════════════════════════════════════════════════════════
@@ -257,7 +268,7 @@ def _start_timeframe(symbol: str, fallback: str) -> str:
     """
     try:
         import json
-        cfg_path = STATE_DIR / "feed_config.json"
+        cfg_path = _SHARED_DATA / "feed_config.json"
         if cfg_path.exists():
             cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
             for item in cfg.get("watchlist", []):

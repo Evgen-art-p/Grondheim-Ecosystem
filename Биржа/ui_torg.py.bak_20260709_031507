@@ -46,33 +46,6 @@ for _p in (_REPO, _HERE):
 
 import cartridge_registry as reg
 
-import importlib.util
-
-_BRAIN_CACHE = {}
-
-
-def _slot_brain(ceh_id: str, slot: str):
-    """Закон Картриджа для кода: мозг слота живёт РЯДОМ с промптом
-    (слоты/{slot}/мозг.py) — кабинет не хардкодит имена модулей, а
-    спрашивает у цеха, что там реально лежит. Нет файла — честная
-    вакансия мозга (None), не ошибка. Кэш на процесс — не грузим
-    заново на каждый клик."""
-    key = (ceh_id, slot)
-    if key in _BRAIN_CACHE:
-        return _BRAIN_CACHE[key]
-    brain_path = (_REPO / "GRONDHEIM_CITY" / KVARTAL / "цеха" / ceh_id
-                 / "слоты" / slot / "мозг.py")
-    if not brain_path.exists():
-        _BRAIN_CACHE[key] = None
-        return None
-    spec = importlib.util.spec_from_file_location(
-        f"_brain_{ceh_id}_{slot}", brain_path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    _BRAIN_CACHE[key] = mod
-    return mod
-
-
 KVARTAL = "Биржа"
 
 # ── СОСТАВ СОВЕТА — порядок/иконки как в старом TRADING_COUNCIL ──────
@@ -1053,11 +1026,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         state["running"] = True
         ui.notify("📡 Поднимаю контур, бужу Искру...", type="info")
         try:
-            _brain = _slot_brain("торговый_хаос", "A01")
-            if _brain is None:
-                raise RuntimeError("мозг A01 ещё не в слоте")
+            from iskra_live import run_iskra
             result = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: _brain.run_iskra(symbol="XAUUSD", timeframe="H4"))
+                None, lambda: run_iskra(symbol="XAUUSD", timeframe="H4"))
         except Exception as e:
             state["running"] = False
             ui.notify(f"Сбой прогона: {e}", type="negative")
@@ -1104,11 +1075,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         if t1 in ("DETECTED", "CONFIRMED"):
             ui.notify("📣 Есть сигнал — бужу Моржа...", type="info")
             try:
-                _brain = _slot_brain("торговый_хаос", "A02")
-                if _brain is None:
-                    raise RuntimeError("мозг A02 ещё не в слоте")
+                from morj_live import run_morj
                 mr = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _brain.run_morj(symbol="XAUUSD", timeframe="H4"))
+                    None, lambda: run_morj(symbol="XAUUSD", timeframe="H4"))
             except Exception as e:
                 ui.notify(f"Морж не проснулся: {e}", type="negative")
                 mr = {"ok": False}
@@ -1139,11 +1108,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
             ui.notify("😱 Бужу Паникёра — мерит толпу...", type="info")
             try:
-                _brain = _slot_brain("торговый_хаос", "A03")
-                if _brain is None:
-                    raise RuntimeError("мозг A03 ещё не в слоте")
+                from panikyor_live import run_panikyor
                 pr = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _brain.run_panikyor(symbol="XAUUSD", timeframe="H4"))
+                    None, lambda: run_panikyor(symbol="XAUUSD", timeframe="H4"))
             except Exception as e:
                 ui.notify(f"Паникёр не проснулся: {e}", type="negative")
                 pr = {"ok": False}
@@ -1167,11 +1134,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
             ui.notify("🎯 Бужу Ганса — ищет фрактал...", type="info")
             try:
-                _brain = _slot_brain("торговый_хаос", "A04")
-                if _brain is None:
-                    raise RuntimeError("мозг A04 ещё не в слоте")
+                from hans_live import run_hans
                 hr = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _brain.run_hans(symbol="XAUUSD", timeframe="H4"))
+                    None, lambda: run_hans(symbol="XAUUSD", timeframe="H4"))
             except Exception as e:
                 ui.notify(f"Ганс не проснулся: {e}", type="negative")
                 hr = {"ok": False}
@@ -1196,10 +1161,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
             ui.notify("📚 Бужу Архивариуса — листает Атлас...", type="info")
             try:
-                _brain = _slot_brain("контора", "архивариус")
-                if _brain is None:
-                    raise RuntimeError("мозг архивариуса ещё не в слоте")
-                ar = await asyncio.get_event_loop().run_in_executor(None, lambda: _brain.run_arkhiv())
+                from arkhiv_live import run_arkhiv
+                ar = await asyncio.get_event_loop().run_in_executor(None, lambda: run_arkhiv())
             except Exception as e:
                 ui.notify(f"Архивариус не проснулся: {e}", type="negative")
                 ar = {"ok": False}
@@ -1230,10 +1193,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 _nm = _agent_label(roster, tr["id"])
                 ui.notify(f"{tr['icon']} Бужу — {_nm} садится за стол...", type="info")
                 try:
-                    _brain = _slot_brain("торговый_хаос", tr["id"])
-                    if _brain is None:
-                        raise RuntimeError(f"мозг {tr['id']} ещё не в слоте")
-                    _run = getattr(_brain, tr["run"])
+                    import importlib
+                    _mod = importlib.import_module(tr["mod"])
+                    _run = getattr(_mod, tr["run"])
                     rt = await asyncio.get_event_loop().run_in_executor(
                         None, lambda _r=_run: _r(symbol="XAUUSD", timeframe="H4"))
                 except Exception as e:
@@ -1264,11 +1226,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
             ui.notify("📋 Исполнитель замыкает петлю...", type="info")
             try:
-                _brain = _slot_brain("контора", "исполнитель")
-                if _brain is None:
-                    raise RuntimeError("мозг исполнителя ещё не в слоте")
+                from executor_live import run_executor
                 rex = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _brain.run_executor(symbol="XAUUSD", timeframe="H4"))
+                    None, lambda: run_executor(symbol="XAUUSD", timeframe="H4"))
             except Exception as e:
                 rex = {"ok": False, "error": str(e)}
             if rex.get("ok"):
@@ -1474,25 +1434,24 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
 
         _chat_map = {
-            "A02": ("торговый_хаос", "A02", "chat_with_morj", "morj_last_run", "🦭"),
-            "A03": ("торговый_хаос", "A03", "chat_with_panikyor", "panic_last_run", "😱"),
-            "A04": ("торговый_хаос", "A04", "chat_with_hans", "hans_last_run", "🎯"),
-            "A05": ("контора", "архивариус", "chat_with_arkhiv", "arkhiv_last_run", "📚"),
-            "A06": ("торговый_хаос", "A06", "chat_with_brut", "brut_last_run", "🪨"),
-            "A07": ("торговый_хаос", "A07", "chat_with_avan", "avan_last_run", "🎲"),
-            "A08": ("торговый_хаос", "A08", "chat_with_cons", "cons_last_run", "⚖️"),
-            "A09": ("контора", "исполнитель", "chat_with_executor", "executor_last_run", "🎬"),
+            "A02": ("morj_live", "chat_with_morj", "morj_last_run", "🦭"),
+            "A03": ("panikyor_live", "chat_with_panikyor", "panic_last_run", "😱"),
+            "A04": ("hans_live", "chat_with_hans", "hans_last_run", "🎯"),
+            "A05": ("arkhiv_live", "chat_with_arkhiv", "arkhiv_last_run", "📚"),
+            "A06": ("brut_live", "chat_with_brut", "brut_last_run", "🪨"),
+            "A07": ("avan_live", "chat_with_avan", "avan_last_run", "🎲"),
+            "A08": ("cons_live", "chat_with_cons", "cons_last_run", "⚖️"),
+            "A09": ("executor_live", "chat_with_executor", "executor_last_run", "🎬"),
         }
         label = _agent_label(roster, agent_id)
 
         if agent_id in _chat_map:
-            _ceh_id, _slot, _fn_name, _last_key, _ic = _chat_map[agent_id]
+            _mod_name, _fn_name, _last_key, _ic = _chat_map[agent_id]
             ui.notify(f"{_ic} {label} думает...", type="info")
             try:
-                _brain = _slot_brain(_ceh_id, _slot)
-                if _brain is None:
-                    raise RuntimeError(f"мозг {_slot} ещё не в слоте")
-                _chat = getattr(_brain, _fn_name)
+                import importlib
+                _m = importlib.import_module(_mod_name)
+                _chat = getattr(_m, _fn_name)
                 dialog = [m for m in state["chat_history"]
                           if m.get("role") in ("user", "assistant") and m.get("content")]
                 reply = await asyncio.get_event_loop().run_in_executor(
@@ -1512,13 +1471,11 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
         ui.notify("✴️ Искра думает...", type="info")
         try:
-            _brain = _slot_brain("торговый_хаос", "A01")
-            if _brain is None:
-                raise RuntimeError("мозг A01 ещё не в слоте")
+            from iskra_live import chat_with_iskra
             dialog = [m for m in state["chat_history"]
                       if m.get("role") in ("user", "assistant") and m.get("content")]
             reply = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: _brain.chat_with_iskra(msg, state.get("iskra_last_run"), dialog))
+                None, lambda: chat_with_iskra(msg, state.get("iskra_last_run"), dialog))
         except Exception as e:
             state["chat_history"].append({
                 "role": "assistant", "agent": "A01", "content": f"⚠️ Не смогла ответить: {e}"})
