@@ -47,7 +47,6 @@ for _p in (_REPO, _HERE):
 import cartridge_registry as reg
 
 import importlib.util
-from typing import Any  # UI_TORG_TYPING_V1
 
 _BRAIN_CACHE = {}
 
@@ -68,11 +67,6 @@ def _slot_brain(ceh_id: str, slot: str):
         return None
     spec = importlib.util.spec_from_file_location(
         f"_brain_{ceh_id}_{slot}", brain_path)
-    if spec is None or spec.loader is None:
-        # UI_TORG_TYPING_V1: путь есть, но не опознан как модуль —
-        # та же честная вакансия, что и "файла нет" строкой выше
-        _BRAIN_CACHE[key] = None
-        return None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     _BRAIN_CACHE[key] = mod
@@ -544,15 +538,15 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         "arkhiv_digest": {},
     }
 
-    chat_log_ref: dict[str, Any] = {"element": None}
-    toolbar_refs: dict[str, Any] = {}
-    viewer_ref:   dict[str, Any] = {"element": None}
-    files_ref:    dict[str, Any] = {"element": None}
-    avatar_ref:   dict[str, Any] = {"element": None}
-    vitals_ref:   dict[str, Any] = {"element": None}   # заряд/оптика резидента — как везде в городе
-    stats_ref:    dict[str, Any] = {"element": None}
-    avatars_ref:  dict[str, Any] = {"elements": {}}
-    input_ref:    dict[str, Any] = {"element": None}
+    chat_log_ref = {"element": None}
+    toolbar_refs = {}
+    viewer_ref   = {"element": None}
+    files_ref    = {"element": None}
+    avatar_ref   = {"element": None}
+    vitals_ref   = {"element": None}   # заряд/оптика резидента — как везде в городе
+    stats_ref    = {"element": None}
+    avatars_ref  = {"elements": {}}
+    input_ref    = {"element": None}
 
     ui.add_head_html(f"<style>{TORG_CSS}</style>")
     _ceh0 = reg.get_ceh(tseh_id, KVARTAL)
@@ -1063,7 +1057,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             if _brain is None:
                 raise RuntimeError("мозг A01 ещё не в слоте")
             result = await asyncio.get_event_loop().run_in_executor(
-                None, lambda b=_brain: b.run_iskra(symbol="XAUUSD", timeframe="H4"))  # UI_TORG_TYPING_V1
+                None, lambda: _brain.run_iskra(symbol="XAUUSD", timeframe="H4"))
         except Exception as e:
             state["running"] = False
             ui.notify(f"Сбой прогона: {e}", type="negative")
@@ -1113,8 +1107,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 _brain = _slot_brain("торговый_хаос", "A02")
                 if _brain is None:
                     raise RuntimeError("мозг A02 ещё не в слоте")
-                mr: dict = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda b=_brain: b.run_morj(symbol="XAUUSD", timeframe="H4"))  # UI_TORG_TYPING_V1
+                mr = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: _brain.run_morj(symbol="XAUUSD", timeframe="H4"))
             except Exception as e:
                 ui.notify(f"Морж не проснулся: {e}", type="negative")
                 mr = {"ok": False}
@@ -1148,8 +1142,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 _brain = _slot_brain("торговый_хаос", "A03")
                 if _brain is None:
                     raise RuntimeError("мозг A03 ещё не в слоте")
-                pr: dict = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda b=_brain: b.run_panikyor(symbol="XAUUSD", timeframe="H4"))  # UI_TORG_TYPING_V1
+                pr = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: _brain.run_panikyor(symbol="XAUUSD", timeframe="H4"))
             except Exception as e:
                 ui.notify(f"Паникёр не проснулся: {e}", type="negative")
                 pr = {"ok": False}
@@ -1176,8 +1170,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 _brain = _slot_brain("торговый_хаос", "A04")
                 if _brain is None:
                     raise RuntimeError("мозг A04 ещё не в слоте")
-                hr: dict = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda b=_brain: b.run_hans(symbol="XAUUSD", timeframe="H4"))  # UI_TORG_TYPING_V1
+                hr = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: _brain.run_hans(symbol="XAUUSD", timeframe="H4"))
             except Exception as e:
                 ui.notify(f"Ганс не проснулся: {e}", type="negative")
                 hr = {"ok": False}
@@ -1205,7 +1199,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 _brain = _slot_brain("контора", "архивариус")
                 if _brain is None:
                     raise RuntimeError("мозг архивариуса ещё не в слоте")
-                ar: dict = await asyncio.get_event_loop().run_in_executor(None, lambda b=_brain: b.run_arkhiv())  # UI_TORG_TYPING_V1
+                ar = await asyncio.get_event_loop().run_in_executor(None, lambda: _brain.run_arkhiv())
             except Exception as e:
                 ui.notify(f"Архивариус не проснулся: {e}", type="negative")
                 ar = {"ok": False}
@@ -1671,5 +1665,3 @@ if __name__ in {"__main__", "__mp_main__"}:
     def _torg0():
         page_torg()
     ui.run(title="Совет Биржи · Грондхейм", port=8104, reload=False)
-
-# UI_TORG_TYPING_V1 — маркер идемпотентности

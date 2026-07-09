@@ -188,12 +188,7 @@ def compute_ac_series(ao_series: list[Optional[float]]) -> list[Optional[float]]
         valid  = [v for v in window if v is not None]
         if len(valid) < 5:
             continue
-        cur = ao_series[i]
-        if cur is None:
-            continue  # WILLIAMS_CORE_TYPING_V2: структурно недостижимо
-            # (window включает cur; valid==5 доказывает cur не None) —
-            # запись существующего инварианта, не новая ветка поведения
-        result[i] = cur - sum(valid[-5:]) / 5
+        result[i] = ao_series[i] - sum(valid[-5:]) / 5
     return result
 
 
@@ -1044,5 +1039,3 @@ if __name__ == "__main__":
             print(json.dumps(md, ensure_ascii=False, indent=2))
 
 # WILLIAMS_CORE_TYPING_V1 — маркер идемпотентности
-
-# WILLIAMS_CORE_TYPING_V2 — маркер идемпотентности
