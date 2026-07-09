@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "updated": "2026-07-09T22:12:42.042302",
+  "iskra": {
+    "t1_status": "NOT_FOUND",
+    "zero_point_price": null,
+    "history_dna": "BEAR_DIV_20250806_0800_ao41.32_high3378.58",
+    "trend_direction": "BULL",
+    "found_timeframe": null
+  },
+  "positions": [],
+  "feed": {
+    "mode": "tester"
+  },
+  "brut": {},
+  "avan": {},
+  "cons": {}
+}

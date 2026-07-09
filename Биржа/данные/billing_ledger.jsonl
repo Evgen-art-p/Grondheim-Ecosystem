@@ -1,0 +1,1 @@
+{"ts": "2026-07-09T22:12:42.039281", "agent_id": "A01_ISKRA", "slot_id": "trading", "model": "deepseek/deepseek-v4-pro", "prompt_tokens": 9006, "completion_tokens": 2153, "call_type": "chat", "knowledge_source": "internal"}
