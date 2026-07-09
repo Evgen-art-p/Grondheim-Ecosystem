@@ -584,7 +584,7 @@ def _prepare_atlas_digest(state: dict):
         r = m.get("reason")
         if r and (m.get("verdict") == "REJECTED" or (m.get("pnl") or 0) < 0):
             reasons[r] = reasons.get(r, 0) + 1
-    top_reason = max(reasons, key=lambda k: reasons[k]) if reasons else "none"  # HOOKS_TYPING_V2
+    top_reason = max(reasons, key=reasons.get) if reasons else "none"
 
     chain["atlas_digest"] = {
         "sample_size":        len(matches),
@@ -1201,5 +1201,3 @@ def run_live_council(bars: list, symbol: str, timeframe: str,
     return {"market_data": md, "live_mode": live, "snapshot": snapshot}
 
 # HOOKS_TYPING_V1 — маркер идемпотентности
-
-# HOOKS_TYPING_V2 — маркер идемпотентности

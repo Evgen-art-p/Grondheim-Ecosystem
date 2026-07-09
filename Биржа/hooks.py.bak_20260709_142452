@@ -12,41 +12,12 @@
 # ─────────────────────────────────────────────────────────────
 
 import json
-import sys
-import importlib.util
 from datetime import datetime
 # ISKRA_FAIR_JUDGEMENT_V1 · суд Искры по pnl_r закрытой сделки
 from pathlib import Path
 from typing import Optional
 
 from williams_core import build_market_data, read_mt5_csv
-
-# HOOKS_TYPING_V1: тот же _slot_brain, что в ui_torg.py/tester_express.py —
-# Закон Картриджа, мозг слота живёт в GRONDHEIM_CITY/Биржа/цеха/.../слоты/.../мозг.py
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parent
-_BRAIN_CACHE: dict = {}
-
-
-def _slot_brain(ceh_id: str, slot: str):
-    """Нет файла — честная вакансия (None), не ошибка. Кэш на процесс."""
-    key = (ceh_id, slot)
-    if key in _BRAIN_CACHE:
-        return _BRAIN_CACHE[key]
-    brain_path = (_REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха" / ceh_id
-                 / "слоты" / slot / "мозг.py")
-    if not brain_path.exists():
-        _BRAIN_CACHE[key] = None
-        return None
-    spec = importlib.util.spec_from_file_location(
-        f"_brain_{ceh_id}_{slot}", brain_path)
-    if spec is None or spec.loader is None:
-        _BRAIN_CACHE[key] = None
-        return None
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    _BRAIN_CACHE[key] = mod
-    return mod
 
 # ── Путь к Атласу Ошибок ──────────────────────────────────
 ATLAS_PATH = Path("economy/data/atlas_trading.jsonl")
@@ -547,10 +518,8 @@ def _prepare_atlas_digest(state: dict):
     # Считает движок Архивариуса — один источник правды для
     # кода и LLM. Внутри: правильная сигнатура + arkhiv_confidence.
     try:
-        _b_arkhiv = _slot_brain("контора", "архивариус")
-        if _b_arkhiv is None:
-            raise RuntimeError("мозг архивариуса ещё не в слоте")
-        chain["atlas_digest"] = _b_arkhiv.build_digest(signature)
+        from arkhiv_live import build_digest
+        chain["atlas_digest"] = build_digest(signature)
         print(f"[ATLAS] 📖 Digest (движок): "
               f"sample={chain['atlas_digest']['sample_size']}, "
               f"conf={chain['atlas_digest']['arkhiv_confidence']}")
@@ -579,12 +548,12 @@ def _prepare_atlas_digest(state: dict):
     success  = round(len(wins) / len(closed), 4) if closed else 0.0
 
     # Самая частая причина среди отказов/убытков
-    reasons: dict[str, int] = {}
+    reasons = {}
     for m in matches:
         r = m.get("reason")
         if r and (m.get("verdict") == "REJECTED" or (m.get("pnl") or 0) < 0):
             reasons[r] = reasons.get(r, 0) + 1
-    top_reason = max(reasons, key=lambda k: reasons[k]) if reasons else "none"  # HOOKS_TYPING_V2
+    top_reason = max(reasons, key=reasons.get) if reasons else "none"
 
     chain["atlas_digest"] = {
         "sample_size":        len(matches),
@@ -719,7 +688,7 @@ def _arkhiv_to_city(record: dict):
                 f"+{pnl_r}R. Потеряем образец крупного хода.")
 
     try:
-        from studio.memory_tools import remember  # type: ignore[import]  # HOOKS_TYPING_V1: намеренно — см. except ниже
+        from studio.memory_tools import remember
         remember(
             title=title,
             event=event,
@@ -746,7 +715,7 @@ def _judge_iskra_by_result(pos: dict, pnl_r):
     if pos.get("iskra_zero_point") is None:
         return
     try:
-        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]  # HOOKS_TYPING_V1: намеренно — см. except ниже
+        from studio.grondheim_memory import sync_to_dna
         # ENGINE_ONE_DOOR_V1 · ПЕРЕРАСПРЕДЕЛЕНИЕ ОТВЕТСТВЕННОСТИ.
         # Искра — КОМПАС: показывает разворот, но НЕ принимает решение
         # о входе (сторона/цена/стоп/против ветра — это рука трейдера).
@@ -796,7 +765,7 @@ def _judge_trader_by_result(pos: dict, pnl_r):
     )
 
     try:
-        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]  # HOOKS_TYPING_V1: намеренно — см. except ниже
+        from studio.grondheim_memory import sync_to_dna
         if pnl_r > 0:
             sync_to_dna(aid, "good_work", intensity=0.3, dept="trading")
             print(f"[TRADER] ⚖️  {trader} взял +{pnl_r}R → good_work")
@@ -1199,7 +1168,3 @@ def run_live_council(bars: list, symbol: str, timeframe: str,
     # Снимок для дашборда — полезен в обоих режимах
     snapshot = _live_snapshot(bars, symbol, timeframe, point)
     return {"market_data": md, "live_mode": live, "snapshot": snapshot}
-
-# HOOKS_TYPING_V1 — маркер идемпотентности
-
-# HOOKS_TYPING_V2 — маркер идемпотентности
