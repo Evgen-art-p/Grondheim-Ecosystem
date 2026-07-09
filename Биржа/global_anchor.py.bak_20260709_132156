@@ -58,7 +58,7 @@ def senior_timeframe(working_tf: str) -> Optional[str]:
 
 
 def global_trend(symbol: str, working_tf: str,
-                 as_of_date: Optional[str] = None) -> dict:
+                 as_of_date: str = None) -> dict:
     """
     Глобальный фильтр для стола. Берёт старший этаж через ИСТОЧНИК,
     мерит ВЕЕР Аллигатора там (канон: фильтр направления).
@@ -156,5 +156,3 @@ def apply_global_bias(market_data: dict, symbol: str, working_tf: str) -> dict:
     except Exception as e:
         print(f"[ANCHOR] global_bias не подменён ({e}) — оставлен ядерный")
     return market_data
-
-# GLOBAL_ANCHOR_TYPING_V1 — маркер идемпотентности

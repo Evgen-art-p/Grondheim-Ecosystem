@@ -19,7 +19,6 @@ import json
 import time
 import requests
 from pathlib import Path
-from typing import Optional, Callable  # LLM_TYPING_V1
 
 import billing_ledger as _ledger  # свой, локальный (Биржа/billing_ledger.py)
 
@@ -66,7 +65,7 @@ HTTP_TIMEOUT = 90
 _RETRY_DELAYS = [0, 2, 5]  # секунды перед попыткой 1, 2, 3
 
 def _post_with_retry(url: str, headers: dict, json_payload: dict,
-                     proxies: Optional[dict] = None, timeout: Optional[int] = None) -> requests.Response:
+                     proxies: dict = None, timeout: int = None) -> requests.Response:
     """requests.post с тремя попытками при сетевых ошибках (10054, ConnectionReset)."""
     last_err = None
     for attempt, delay in enumerate(_RETRY_DELAYS, start=1):
@@ -175,10 +174,10 @@ def chat_with_tools(
     system: str,
     user: str,
     knowledge: str = "",
-    tools_schema: Optional[list] = None,
+    tools_schema: list = None,
     max_tool_rounds: int = 3,
-    temperature: Optional[float] = None,
-    on_tool_call: Optional[Callable] = None,
+    temperature: float = None,
+    on_tool_call: callable = None,
     agent_id: str = "unknown",
     slot_id: str = "unknown",
     knowledge_source: str = "internal",
@@ -331,8 +330,7 @@ def chat_with_tools(
         raise RuntimeError(f"Финальный вызов после tools: {e}")
 
 
-def chat(system: str, user: str, knowledge: str = "", history: Optional[list] = None,
-         temperature: Optional[float] = None,
+def chat(system: str, user: str, knowledge: str = "", history: list = None, temperature: float = None,
          agent_id: str = "unknown", slot_id: str = "unknown",
          knowledge_source: str = "internal") -> str:
     """
@@ -435,9 +433,8 @@ def chat(system: str, user: str, knowledge: str = "", history: Optional[list] = 
     return content
 
 
-def chat_with_images(system: str, user_text: str, images: Optional[list] = None,
-                     knowledge: str = "", history: Optional[list] = None,
-                     temperature: Optional[float] = None,
+def chat_with_images(system: str, user_text: str, images: list = None,
+                     knowledge: str = "", history: list = None, temperature: float = None,
                      agent_id: str = "unknown", slot_id: str = "unknown",
                      knowledge_source: str = "internal") -> str:
     """
@@ -557,5 +554,3 @@ def chat_with_images(system: str, user_text: str, images: Optional[list] = None,
         raise RuntimeError("Модель вернула пустой ответ")
 
     return content
-
-# LLM_TYPING_V1 — маркер идемпотентности

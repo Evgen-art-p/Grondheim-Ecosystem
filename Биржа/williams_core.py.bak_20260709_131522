@@ -86,20 +86,17 @@ def _smma_series(medians: list[float], period: int) -> list[Optional[float]]:
     Первое рабочее значение = SMA(period).
     SMMA ≠ EMA ≠ SMA.
     """
-    result: list[Optional[float]] = [None] * len(medians)
+    result = [None] * len(medians)
     if len(medians) < period:
         return result
-    first = sum(medians[:period]) / period
-    result[period - 1] = first
-    prev = first  # WILLIAMS_CORE_TYPING_V1: float-аккумулятор вместо чтения
-    for i in range(period, len(medians)):  # result[i-1] — та же формула, тип чист
-        prev = (prev * (period - 1) + medians[i]) / period
-        result[i] = prev
+    result[period - 1] = sum(medians[:period]) / period
+    for i in range(period, len(medians)):
+        result[i] = (result[i - 1] * (period - 1) + medians[i]) / period
     return result
 
 
 def compute_alligator(highs: list[float], lows: list[float],
-                      point: Optional[float] = None) -> dict:
+                      point: float = None) -> dict:
     """
     Аллигатор Вильямса:
       Jaw(13)  — SMMA(13) медианы
@@ -169,7 +166,7 @@ def compute_ao_series(highs: list[float], lows: list[float]) -> list[Optional[fl
       AO[i] = SMA(median, 5)[i] - SMA(median, 34)[i]
     """
     medians = [(h + l) / 2 for h, l in zip(highs, lows)]
-    result: list[Optional[float]] = [None] * len(medians)
+    result  = [None] * len(medians)
     for i in range(33, len(medians)):
         sma5  = sum(medians[i-4:i+1])  / 5
         sma34 = sum(medians[i-33:i+1]) / 34
@@ -182,7 +179,7 @@ def compute_ac_series(ao_series: list[Optional[float]]) -> list[Optional[float]]
     Accelerator Oscillator:
       AC[i] = AO[i] - SMA(AO, 5)[i]
     """
-    result: list[Optional[float]] = [None] * len(ao_series)
+    result = [None] * len(ao_series)
     for i in range(len(ao_series)):
         window = ao_series[max(0, i-4):i+1]
         valid  = [v for v in window if v is not None]
@@ -232,7 +229,7 @@ def detect_fractals(bars: list[dict], lookback: int = 2) -> dict:
     }
 
 
-def detect_squat_bars(bars: list[dict], point: Optional[float] = None) -> dict:
+def detect_squat_bars(bars: list[dict], point: float = None) -> dict:
     """
     Приседающие бары (Squat) — окно Profitunity Вильямса (+Vol, −MFI).
     По "Торговому Хаосу", гл. 6: рынок присел перед рывком, готовясь
@@ -282,7 +279,7 @@ def detect_squat_bars(bars: list[dict], point: Optional[float] = None) -> dict:
     }
 
 
-def compute_mfi(bar: dict, prev_bar: dict, point: Optional[float] = None) -> dict:
+def compute_mfi(bar: dict, prev_bar: dict, point: float = None) -> dict:
     """
     Bill Williams Market Facilitation Index (BWMFI).
     По исходнику MT5 MarketFacilitationIndex.mq5.
@@ -455,7 +452,7 @@ def _find_ao_pivots(ao_series: list, bars: list[dict]) -> list[dict]:
 def detect_divergent_bar(
     bars:         list[dict],
     ao_series:    list,
-    teeth_series: Optional[list],
+    teeth_series: list,
 ) -> dict:
     """
     Расходящийся бар (BuDB/BDB) по Profitunity Trading Group — Bill Williams.
@@ -587,10 +584,10 @@ def _ao_divergence_at_bar(bars: list, ao_series: list, i: int, direction) -> boo
 
 def compute_rubber_band(
     bars:         list,
-    lips_series:  Optional[list],
-    teeth_series: Optional[list],
-    direction:    Optional[str],
-    point:        Optional[float],
+    lips_series:  list,
+    teeth_series: list,
+    direction:    str,
+    point:        float,
 ) -> dict:
     """
     «РЕЗИНКА» Джастин Вильямс — натяжение цены от Зелёной линии (Губы).
@@ -685,7 +682,7 @@ def compute_rubber_band(
 def read_ao_wave_form(
     bars:         list,
     ao_series:    list,
-    teeth_series: Optional[list],
+    teeth_series: list,
     window:       int = 150,
 ) -> dict:
     """
@@ -856,7 +853,7 @@ def build_market_data(
     bars:      list[dict],
     symbol:    str   = "UNKNOWN",
     timeframe: str   = "D1",
-    point:     Optional[float] = None,
+    point:     float = None,
 ) -> dict:
     """
     Из сырых баров собирает market_data для всего Совета.
@@ -913,7 +910,7 @@ def build_market_data(
     # Якорь упал / источник недоступен -> остаётся синяя (фоллбэк, стол цел).
     try:
         from global_anchor import global_trend as _gt
-        _bar_time = bars[-1]["date"]  # WILLIAMS_CORE_TYPING_V1: bars уже не пуст здесь (len>=40 отсечён выше)
+        _bar_time = bars[-1].get("date") if bars else None
         _r = _gt(symbol, timeframe, as_of_date=_bar_time)
         if _r.get("ok"):
             global_bias = _r["bias"]
@@ -1037,5 +1034,3 @@ if __name__ == "__main__":
         if md:
             print("\n=== JSON market_data ===")
             print(json.dumps(md, ensure_ascii=False, indent=2))
-
-# WILLIAMS_CORE_TYPING_V1 — маркер идемпотентности
