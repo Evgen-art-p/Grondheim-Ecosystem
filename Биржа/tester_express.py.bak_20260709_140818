@@ -28,38 +28,10 @@
 
 import sys
 import argparse
-import importlib.util
 from pathlib import Path
 from datetime import datetime
 
 _HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parent   # TESTER_EXPRESS_CARTRIDGE_V1: корень репо, для поиска мозгов
-_BRAIN_CACHE: dict = {}
-
-
-def _slot_brain(ceh_id: str, slot: str):
-    """TESTER_EXPRESS_CARTRIDGE_V1: Закон Картриджа для кода — тот же
-    механизм, что в ui_torg.py (_slot_brain). Мозг слота живёт в
-    GRONDHEIM_CITY/Биржа/цеха/{ceh_id}/слоты/{slot}/мозг.py — не
-    захардкожен списком имён, цех сам говорит, что там лежит. Нет
-    файла — честная вакансия (None), не ошибка. Кэш на процесс."""
-    key = (ceh_id, slot)
-    if key in _BRAIN_CACHE:
-        return _BRAIN_CACHE[key]
-    brain_path = (_REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха" / ceh_id
-                 / "слоты" / slot / "мозг.py")
-    if not brain_path.exists():
-        _BRAIN_CACHE[key] = None
-        return None
-    spec = importlib.util.spec_from_file_location(
-        f"_brain_{ceh_id}_{slot}", brain_path)
-    if spec is None or spec.loader is None:
-        _BRAIN_CACHE[key] = None
-        return None
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    _BRAIN_CACHE[key] = mod
-    return mod
 # TESTER_TRADE_FEED_V1 · лента сделок: открытие и закрытие видны в кабинете
 # TESTER_STERILE_V1 · бэктест по умолчанию НЕ калечит ДНК (--learn чтобы учить)
 # TESTER_CLEAN_TABLE_V1 · чистый стол на старте + settle на каждом баре
@@ -297,7 +269,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
     # прогона. Агенты думают, сделки считаются, но sync_to_dna
     # не мутирует живую ДНК. learn=True — учебный прогон.
     try:
-        import studio.grondheim_memory as _gm  # type: ignore[import]  # TESTER_EXPRESS_SOUL_IGNORE_V1: намеренно — см. except ниже
+        import studio.grondheim_memory as _gm
     except ImportError:
         # Новый город: studio.grondheim_memory (душа агентов) ещё не
         # перенесена для торговых агентов — честная заглушка вместо
@@ -342,10 +314,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
     found_cnt = 0          # TESTER_TO_CABINET_V1: у скольких спуск нашёл точку
     _last_settled = warmup - 1   # TESTER_SETTLE_GAPS_V1: докуда докатан settle
     try:
-        _b_a01 = _slot_brain("торговый_хаос", "A01")
-        if _b_a01 is None:
-            raise RuntimeError("мозг A01 (Искра) ещё не в слоте")
-        run_iskra = _b_a01.run_iskra
+        from iskra_live import run_iskra
 
         # ════════════════════════════════════════════════════
         # СИТО 1 — МАТЕМАТИКА ЯДРА (без LLM, мгновенно)
@@ -456,50 +425,40 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
             out("")
 
             # Морж
-            _b_a02 = _slot_brain("торговый_хаос", "A02")
-            if _b_a02 is None:
-                raise RuntimeError("мозг A02 (Морж) ещё не в слоте")
-            rm = _b_a02.run_morj(symbol=symbol, timeframe=timeframe)
+            from morj_live import run_morj
+            rm = run_morj(symbol=symbol, timeframe=timeframe)
             if rm.get("ok"):
                 out(f"  🦭 МОРЖ:\n     {rm.get('narrative','').strip()}")
                 _emit_report("A02", rm.get("narrative", ""))  # TESTER_REPORTS_V1
                 out("")
 
             # Паникёр
-            _b_a03 = _slot_brain("торговый_хаос", "A03")
-            if _b_a03 is None:
-                raise RuntimeError("мозг A03 (Паникёр) ещё не в слоте")
-            rp = _b_a03.run_panikyor(symbol=symbol, timeframe=timeframe)
+            from panikyor_live import run_panikyor
+            rp = run_panikyor(symbol=symbol, timeframe=timeframe)
             if rp.get("ok"):
                 out(f"  😱 ПАНИКЁР:\n     {rp.get('narrative','').strip()}")
                 _emit_report("A03", rp.get("narrative", ""))  # TESTER_REPORTS_V1
                 out("")
 
             # Ганс
-            _b_a04 = _slot_brain("торговый_хаос", "A04")
-            if _b_a04 is None:
-                raise RuntimeError("мозг A04 (Ганс) ещё не в слоте")
-            rh = _b_a04.run_hans(symbol=symbol, timeframe=timeframe)
+            from hans_live import run_hans
+            rh = run_hans(symbol=symbol, timeframe=timeframe)
             if rh.get("ok"):
                 out(f"  🎯 ГАНС:\n     {rh.get('narrative','').strip()}")
                 _emit_report("A04", rh.get("narrative", ""))  # TESTER_REPORTS_V1
                 out("")
 
             # Архивариус
-            _b_a05 = _slot_brain("контора", "архивариус")
-            if _b_a05 is None:
-                raise RuntimeError("мозг архивариуса ещё не в слоте")
-            ra = _b_a05.run_arkhiv()
+            from arkhiv_live import run_arkhiv
+            ra = run_arkhiv()
             if ra.get("ok"):
                 out(f"  📚 АРХИВАРИУС:\n     {ra.get('narrative','').strip()}")
                 _emit_report("A05", ra.get("narrative", ""))  # TESTER_REPORTS_V1
                 out("")
 
             # БРУТ — трейдер, ради него всё
-            _b_a06 = _slot_brain("торговый_хаос", "A06")
-            if _b_a06 is None:
-                raise RuntimeError("мозг A06 (Брут) ещё не в слоте")
-            rb = _b_a06.run_brut(symbol=symbol, timeframe=timeframe)
+            from brut_live import run_brut
+            rb = run_brut(symbol=symbol, timeframe=timeframe)
             if rb.get("ok"):
                 out(f"  🪨 БРУТ:\n     {rb.get('narrative','').strip()}")
                 _emit_report("A06", rb.get("narrative", ""))  # TESTER_REPORTS_V1
@@ -522,10 +481,8 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
 
             # [AVAN+CONS врезаны патчем patch_avan_cons]
             # АВАНТЮРИСТ — трейдер §6.2 (конец волны C, разворот)
-            _b_a07 = _slot_brain("торговый_хаос", "A07")
-            if _b_a07 is None:
-                raise RuntimeError("мозг A07 (Авантюрист) ещё не в слоте")
-            rav = _b_a07.run_avan(symbol=symbol, timeframe=timeframe)
+            from avan_live import run_avan
+            rav = run_avan(symbol=symbol, timeframe=timeframe)
             if rav.get("ok"):
                 out(f"  ⚡ АВАНТЮРИСТ:\n     {rav.get('narrative','').strip()}")
                 _emit_report("A07", rav.get("narrative", ""))  # TESTER_REPORTS_V1
@@ -543,10 +500,8 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
             out("")
 
             # КОНСЕРВАТОР — трейдер §6.3 (откат волны 2, опора)
-            _b_a08 = _slot_brain("торговый_хаос", "A08")
-            if _b_a08 is None:
-                raise RuntimeError("мозг A08 (Консерватор) ещё не в слоте")
-            rco = _b_a08.run_cons(symbol=symbol, timeframe=timeframe)
+            from cons_live import run_cons
+            rco = run_cons(symbol=symbol, timeframe=timeframe)
             if rco.get("ok"):
                 out(f"  🛡 КОНСЕРВАТОР:\n     {rco.get('narrative','').strip()}")
                 _emit_report("A08", rco.get("narrative", ""))  # TESTER_REPORTS_V1
@@ -565,10 +520,8 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
 
             # ИСПОЛНИТЕЛЬ — A09 замыкает петлю (открывает по факту табло)
             # [EXECUTOR врезан патчем patch_executor]
-            _b_a09 = _slot_brain("контора", "исполнитель")
-            if _b_a09 is None:
-                raise RuntimeError("мозг исполнителя ещё не в слоте")
-            rex = _b_a09.run_executor(symbol=symbol, timeframe=timeframe)
+            from executor_live import run_executor
+            rex = run_executor(symbol=symbol, timeframe=timeframe)
             # TESTER_TRADE_FEED_V1: лента открытий — что появилось на столе
             try:
                 _now = _table_snapshot()
@@ -681,7 +634,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# TESTER_EXPRESS_CARTRIDGE_V1 — маркер идемпотентности
-
-# TESTER_EXPRESS_SOUL_IGNORE_V1 — маркер идемпотентности

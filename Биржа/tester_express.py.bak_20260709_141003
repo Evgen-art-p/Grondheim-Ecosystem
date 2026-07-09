@@ -297,7 +297,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
     # прогона. Агенты думают, сделки считаются, но sync_to_dna
     # не мутирует живую ДНК. learn=True — учебный прогон.
     try:
-        import studio.grondheim_memory as _gm  # type: ignore[import]  # TESTER_EXPRESS_SOUL_IGNORE_V1: намеренно — см. except ниже
+        import studio.grondheim_memory as _gm
     except ImportError:
         # Новый город: studio.grondheim_memory (душа агентов) ещё не
         # перенесена для торговых агентов — честная заглушка вместо
@@ -683,5 +683,3 @@ if __name__ == "__main__":
     main()
 
 # TESTER_EXPRESS_CARTRIDGE_V1 — маркер идемпотентности
-
-# TESTER_EXPRESS_SOUL_IGNORE_V1 — маркер идемпотентности

@@ -19,7 +19,7 @@ import json
 import time
 import requests
 from pathlib import Path
-from typing import Optional, Callable, Any  # LLM_TYPING_V1 / LLM_TYPING_V2
+from typing import Optional, Callable  # LLM_TYPING_V1
 
 import billing_ledger as _ledger  # свой, локальный (Биржа/billing_ledger.py)
 
@@ -452,11 +452,7 @@ def chat_with_images(system: str, user_text: str, images: Optional[list] = None,
     """
     proxies = {"http": PROXY_URL, "https": PROXY_URL} if PROXY_URL else None
 
-    # LLM_TYPING_V2: content здесь честно смешанный — обычная реплика
-    # несёт строку, сообщение с картинкой ниже несёт список блоков
-    # (протокол vision OpenRouter/OpenAI). dict[str, Any] называет то,
-    # что уже происходит в рантайме, а не выдумывает новое поведение.
-    messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
+    messages = [{"role": "system", "content": system}]
     if knowledge:
         messages.append({"role": "user", "content": f"БАЗА ЗНАНИЙ:\n{knowledge}"})
         messages.append({"role": "assistant", "content": "Принял базу знаний. Готов к работе."})
@@ -563,5 +559,3 @@ def chat_with_images(system: str, user_text: str, images: Optional[list] = None,
     return content
 
 # LLM_TYPING_V1 — маркер идемпотентности
-
-# LLM_TYPING_V2 — маркер идемпотентности
