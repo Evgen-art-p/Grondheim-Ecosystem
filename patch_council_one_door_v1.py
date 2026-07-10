@@ -1,4 +1,254 @@
-# studio/modules/trading/tester_express.py
+# -*- coding: utf-8 -*-
+"""
+patch_council_one_door_v1.py
+-----------------------------------------------------------
+ENGINE_ONE_DOOR_V1 -- единая дверь пробуждения Совета.
+
+ПРОБЛЕМА (диагноз этой сессии):
+  В -2 был council.py -- ОДНА дверь wake_council(), которую звали и
+  кабинет (кнопка РЫНОК), и тестер. Сделан специально, чтобы убить
+  маскарад "Совет будится в двух местах руками". При переносе в новый
+  город council.py потерялся, и лестница расплодилась на копии:
+    - ui_torg.py (Биржа/) -- своя ручная лестница run_iskra..run_executor
+    - tester_express.py   -- своя ВТОРАЯ копия той же лестницы
+    - hooks.run_live_council() -- честная ЗАГЛУШКА (не зовёт агентов)
+  Две руками писанные копии расходятся -> "неадекват" на прогонах.
+
+ЧТО ДЕЛАЕТ ЭТОТ ПАТЧ (фаза 1):
+  1. Рождает Биржа/council.py -- единую дверь (порт из -2, адаптирован
+     под топологию слотов: _slot_brain вместо import_module).
+  2. Перезаписывает Биржа/tester_express.py -- его ручная лестница
+     заменена вызовом council.wake_council(on_event=...). Стриминг
+     отчёта/лента сделок/settle-по-gap-барам СОХРАНЕНЫ (снаружи двери).
+  3. Удаляет КОРНЕВОЙ ui_torg.py (дубль-двойник, 23КБ TORG_STOL_V2) --
+     он в тени (Биржа/ впереди корня в sys.path), но опасен: при смене
+     порядка sys.path город тихо подхватит недостроенную версию.
+     БЭКАП кладётся в _ARCHIVE/ (ничего не теряем безвозвратно).
+
+ЧЕГО ПАТЧ НЕ ДЕЛАЕТ (следующий заход):
+  - НЕ трогает Биржа/ui_torg.py (кабинет): его лестница сплетена с
+    живым UI (пузырьки, аватары, notify). Переключение на wake_council
+    через on_event -- отдельно, аккуратно, чтобы не онеметь кабинет.
+  - НЕ трогает hooks.run_live_council() (боевой путь, реальные деньги).
+
+Идемпотентно: повторный запуск просто перезапишет тем же содержимым.
+Бэкап корневого ui_torg делается только если файл ещё на месте.
+
+Запуск из КОРНЯ репозитория:
+    python patch_council_one_door_v1.py
+
+Проверено (см. отчёт в чате): council.wake_council зовёт девятку в
+верном порядке (Искра->..->Исполнитель), ворота по спуску работают
+(спуск не нашёл -> только Искра, Совет не собрался), колбэк ловит все
+события. tester_express.py проходит компиляцию, осколков старой
+лестницы не осталось.
+"""
+
+import sys
+import shutil
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent
+BIRZHA = REPO_ROOT / "Биржа"
+
+FILES = {}
+FILES['Биржа/council.py'] = r'''# Биржа/council.py
+# ─────────────────────────────────────────────────────────────
+# ЧИСТАЯ БУДИЛКА СОВЕТА — одно место, где оживает девятка.
+# ENGINE_ONE_DOOR_V1 · перенесён из -2 (studio/modules/trading/council.py)
+#   на новую топологию слотов (Закон Картриджа: _slot_brain).
+#
+# ЗАКОН (наказ Шефа): одно место пробуждения Совета на ОБА мира.
+# Раньше Совет будился в ДВУХ местах руками — в кнопке РЫНОК (с UI)
+# и в тестере (своя лестница). Это и был маскарад. Теперь — одна
+# лестница, без UI. Реал и тест зовут ЕЁ, отличаясь только источником
+# бара (его подал движок снаружи) и тем, куда слать вести (on_event).
+#
+# Порядок ОДИН-В-ОДИН с кнопкой РЫНОК (ui_torg):
+#   Искра → Морж → Паникёр → Ганс → Архивариус
+#        → [Брут · Авантюрист · Консерватор] → Исполнитель
+#
+# Движок НЕ дублирует агентов — зовёт ЖИВЫЕ run_* через _slot_brain.
+# Слеп к активу/ТФ.
+#
+# ── ОТЛИЧИЕ ОТ -2 (топология) ──
+# В -2 агенты жили плоско (studio.modules.trading.morj_live) и звались
+# через importlib.import_module. В новом городе они живут в слотах цехов
+# (Закон Картриджа), и зовутся через _slot_brain(ceh_id, slot).мозг.
+# Раскладка «кто в каком цехе/слоте» — единственное, что тут ново.
+# Порядок, ворота по спуску, мягкость к сбоям — как в -2, один-в-один.
+# ─────────────────────────────────────────────────────────────
+
+import importlib.util
+from pathlib import Path
+from typing import Optional, Callable
+
+_HERE = Path(__file__).resolve().parent            # Биржа/
+_REPO = _HERE.parent                                # корень репо
+_BRAIN_CACHE: dict = {}
+
+
+def _slot_brain(ceh_id: str, slot: str):
+    """
+    Закон Картриджа для кода — тот же механизм, что в ui_torg.py и
+    tester_express.py (_slot_brain, байт-в-байт). Мозг слота живёт в
+    GRONDHEIM_CITY/Биржа/цеха/{ceh_id}/слоты/{slot}/мозг.py — не
+    захардкожен списком имён. Нет файла — честная вакансия (None),
+    не ошибка. Кэш на процесс.
+    """
+    key = (ceh_id, slot)
+    if key in _BRAIN_CACHE:
+        return _BRAIN_CACHE[key]
+    brain_path = (_REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха" / ceh_id
+                 / "слоты" / slot / "мозг.py")
+    if not brain_path.exists():
+        _BRAIN_CACHE[key] = None
+        return None
+    spec = importlib.util.spec_from_file_location(
+        f"_brain_{ceh_id}_{slot}", brain_path)
+    if spec is None or spec.loader is None:
+        _BRAIN_CACHE[key] = None
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    _BRAIN_CACHE[key] = mod
+    return mod
+
+
+# ── РАСКЛАДКА СОВЕТА: кто в каком цехе/слоте ──
+# Единственное место правды о том, где живёт каждый агент. Порядок в
+# кортежах = порядок пробуждения (после Искры). ceh_id/slot идут в
+# _slot_brain, run — имя функции в мозге слота.
+
+# Искра — голова, будится первой отдельно (ворота по её спуску).
+_ISKRA = ("торговый_хаос", "A01", "run_iskra")
+
+# сенсоры после Искры — порядок как в кнопке РЫНОК
+_SENSORS = [
+    ("A02", "торговый_хаос", "A02", "run_morj"),
+    ("A03", "торговый_хаос", "A03", "run_panikyor"),
+    ("A04", "торговый_хаос", "A04", "run_hans"),
+]
+
+# Архивариус — память, без рынка (сам читает шину). Живёт в конторе.
+_ARKHIV = ("A05", "контора", "архивариус", "run_arkhiv")
+
+# трое трейдеров за столом
+_TRADERS = [
+    ("A06", "торговый_хаос", "A06", "run_brut", "brut"),
+    ("A07", "торговый_хаос", "A07", "run_avan", "avan"),
+    ("A08", "торговый_хаос", "A08", "run_cons", "cons"),
+]
+
+# Исполнитель — рука-код, замыкает петлю. Живёт в конторе.
+_EXECUTOR = ("A09", "контора", "исполнитель", "run_executor")
+
+
+def _call(ceh_id: str, slot: str, fn_name: str, **kw) -> dict:
+    """Зовёт живой run_* агента через слот. Любой сбой — мягко, не
+    роняем Совет (честная вакансия/ошибка отдаётся как {ok:False})."""
+    try:
+        brain = _slot_brain(ceh_id, slot)
+        if brain is None:
+            return {"ok": False, "error": f"{ceh_id}/{slot}: мозг ещё не в слоте"}
+        fn = getattr(brain, fn_name, None)
+        if fn is None:
+            return {"ok": False, "error": f"{ceh_id}/{slot}: нет {fn_name}"}
+        return fn(**kw) or {}
+    except Exception as e:
+        return {"ok": False, "error": f"{fn_name}: {e}"}
+
+
+def wake_council(symbol: str, timeframe: str,
+                 on_event: Optional[Callable] = None) -> dict:
+    """
+    БУДИТ СОВЕТ на текущем баре. symbol/timeframe — паспорт, течёт
+    в каждого агента (они сами берут бар своего этажа — спуск Искры
+    решает где). on_event(dict) — вести наружу (лента кабинета/тестера),
+    может быть None.
+
+    Возвращает сводку: кто что сказал + полные результаты каждого
+    агента (в results, чтобы UI мог обновить свои панели). Позиции
+    открывает Исполнитель (рука-код), закрывает _settle на следующем
+    баре — движок этого не трогает, только будит по порядку.
+
+    on_event получает словари вида:
+      {"type": "agent", "id": "A02", "ok": True, "result": {...},
+       "narrative": "...", "verdict": "APPROVED"|None}
+      {"type": "council_idle", "why": "..."}   — спуск не нашёл точку
+    result — ПОЛНЫЙ словарь run_* (UI берёт из него signal/market/stats).
+    """
+    def _emit(ev):
+        if on_event:
+            try:
+                on_event(ev)
+            except Exception:
+                pass
+
+    summary = {"woke": [], "verdicts": {}, "orders": None,
+               "idle": False, "results": {}}
+
+    # ── Искра (голова) ──
+    ceh, slot, fn = _ISKRA
+    ri = _call(ceh, slot, fn, symbol=symbol, timeframe=timeframe)
+    summary["woke"].append("A01")
+    summary["results"]["A01"] = ri
+    _emit({"type": "agent", "id": "A01", "ok": ri.get("ok"),
+           "result": ri, "narrative": ri.get("narrative", "")})
+
+    # ворота по спуску (COUNCIL_BY_DESCENT_V1): нашёл точку — Совет
+    # собирается. нет — расходимся. Это ФАКТ спуска, не суждение
+    # Искры-LLM (её t1_status идёт в Совет как голос, не как замок).
+    descent = ri.get("descent", {}) or {}
+    if not descent.get("found"):
+        _emit({"type": "council_idle",
+               "why": "спуск не нашёл точку — Совет не собирается",
+               "descent": descent})
+        summary["idle"] = True
+        return summary
+
+    # ── сенсоры ──
+    for aid, ceh, slot, fn in _SENSORS:
+        r = _call(ceh, slot, fn, symbol=symbol, timeframe=timeframe)
+        summary["woke"].append(aid)
+        summary["results"][aid] = r
+        _emit({"type": "agent", "id": aid, "ok": r.get("ok"),
+               "result": r, "narrative": r.get("narrative", "")})
+
+    # ── Архивариус (память, без рынка — сам читает шину) ──
+    aid, ceh, slot, fn = _ARKHIV
+    ra = _call(ceh, slot, fn)
+    summary["woke"].append(aid)
+    summary["results"][aid] = ra
+    _emit({"type": "agent", "id": aid, "ok": ra.get("ok"),
+           "result": ra, "narrative": ra.get("narrative", "")})
+
+    # ── трое трейдеров ──
+    for aid, ceh, slot, fn, pre in _TRADERS:
+        r = _call(ceh, slot, fn, symbol=symbol, timeframe=timeframe)
+        summary["woke"].append(aid)
+        summary["results"][aid] = r
+        sig = r.get("signal", {}) or {}
+        summary["verdicts"][aid] = sig.get(f"{pre}_verdict")
+        _emit({"type": "agent", "id": aid, "ok": r.get("ok"),
+               "result": r, "verdict": sig.get(f"{pre}_verdict"),
+               "narrative": r.get("narrative", "")})
+
+    # ── Исполнитель (рука-код открывает по табло) ──
+    aid, ceh, slot, fn = _EXECUTOR
+    rex = _call(ceh, slot, fn, symbol=symbol, timeframe=timeframe)
+    summary["woke"].append(aid)
+    summary["results"][aid] = rex
+    esig = rex.get("signal", {}) or {}
+    summary["orders"] = (esig.get("final_dna", {}) or {}).get("orders_sent")
+    _emit({"type": "agent", "id": aid, "ok": rex.get("ok"),
+           "result": rex, "orders": summary["orders"],
+           "narrative": rex.get("narrative", "")})
+
+    return summary
+'''
+
+FILES['Биржа/tester_express.py'] = r'''# studio/modules/trading/tester_express.py
 # ─────────────────────────────────────────────────────────────
 # ЭКСПРЕСС-ТЕСТЕР — живой Совет на истории (CSV), без MT5
 # TESTER_EXPRESS_V1 · 2026-06-18
@@ -658,3 +908,53 @@ if __name__ == "__main__":
 # TESTER_EXPRESS_CARTRIDGE_V1 — маркер идемпотентности
 
 # TESTER_EXPRESS_SOUL_IGNORE_V1 — маркер идемпотентности
+'''
+
+
+def main():
+    written = []
+    for rel_path, content in FILES.items():
+        target = REPO_ROOT / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        existed = target.exists()
+        target.write_text(content, encoding="utf-8")
+        written.append((rel_path, "обновлён" if existed else "создан"))
+
+    # ── удаление корневого дубля ui_torg.py (с бэкапом) ──
+    root_ui = REPO_ROOT / "ui_torg.py"
+    dup_note = ""
+    if root_ui.exists():
+        archive = REPO_ROOT / "_ARCHIVE"
+        archive.mkdir(parents=True, exist_ok=True)
+        backup = archive / "ui_torg_ROOT_DUP_backup.py"
+        shutil.copy2(root_ui, backup)
+        root_ui.unlink()
+        dup_note = (f"корневой ui_torg.py УДАЛЁН (бэкап: "
+                    f"_ARCHIVE/ui_torg_ROOT_DUP_backup.py)")
+    else:
+        dup_note = "корневой ui_torg.py уже отсутствует (ничего не делаю)"
+
+    print("=" * 62)
+    print("ENGINE_ONE_DOOR_V1 -- патч применён")
+    print("=" * 62)
+    for rel_path, status in written:
+        print(f"  [{status:8}] {rel_path}")
+    print(f"  [дубль   ] {dup_note}")
+    print()
+    print("Теперь тестер и будущий боевой путь зовут ОДНУ дверь Совета")
+    print("(council.wake_council). Прогони тестер -- поведение то же, но")
+    print("лестница уже не копия, а единый источник.")
+    print()
+    print("Следующий заход (отдельно):")
+    print("  -- переключить Биржа/ui_torg.py (кабинет) на wake_council")
+    print("     через on_event (сохранив пузырьки/аватары/notify)")
+    print("  -- решить судьбу hooks.run_live_council() (боевой путь)")
+    print("  -- охват памяти конторы (общий котёл + метка цеха)")
+
+
+if __name__ == "__main__":
+    if not (REPO_ROOT / "GRONDHEIM_CITY").exists() or not (REPO_ROOT / "Биржа").exists():
+        print("ВНИМАНИЕ: рядом со скриптом нет GRONDHEIM_CITY/ и Биржа/.")
+        print("    Запусти патч из корня репозитория Grondheim-Ecosystem.")
+        sys.exit(1)
+    main()
