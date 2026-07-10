@@ -685,130 +685,49 @@ _HEAVY_R = 2.0
 
 def _arkhiv_to_city(record: dict):
     """
-    Рука кладущая. Кладёт ТЯЖЁЛУЮ закрытую сделку в память города
-    от имени Архивариуса. Лёгкое (|pnl_r|<2R) — игнор (рутина).
+    РУКА КЛАДУЩАЯ — не построена в этом городе.
 
-    НИКОГДА не роняет торговый цикл: любая беда с Оле → тихий выход.
+    В старом мире (-2) тяжёлая сделка (|pnl_r|>=2R) уходила в
+    городскую память через Олю (studio.memory_tools.remember).
+    В Грондхейме городская память (Оля) решением 03.07 пока НЕ
+    строится ("каждый держит свой архив сам" — Летопись §4а).
+    Честный no-op, не притворяется рабочей трубой, не зовёт то,
+    чего на диске нет. Когда городская память будет решена
+    строиться — сюда ляжет новый вызов, не заглушка.
     """
-    pnl_r = record.get("pnl_r")
-    if pnl_r is None:
-        return
-    if abs(pnl_r) < _HEAVY_R:
-        return  # рутина — живёт в Атласе цеха, в город не идёт
-
-    trader = record.get("trader", "?")
-    symbol = record.get("symbol", "?")
-    tf     = record.get("timeframe", "?")
-    reason = record.get("close_reason", "?")
-    closed = record.get("closed_at", "")
-
-    # Урок или образец — по знаку
-    if pnl_r <= -_HEAVY_R:
-        mtype = "warning"
-        title = f"Крупный убыток: {trader} {symbol} {tf} ({pnl_r}R)"
-        event = (f"{trader} закрыт по {reason} с {pnl_r}R на {symbol} {tf} "
-                 f"({closed}). Дорого оплаченная информация.")
-        loss = (f"Город забудет, что эта картинка на {symbol} {tf} стоила "
-                f"{pnl_r}R убытка. Урок придётся оплачивать заново.")
-    else:  # pnl_r >= +2R
-        mtype = "inspiration"
-        title = f"Крупная удача: {trader} {symbol} {tf} (+{pnl_r}R)"
-        event = (f"{trader} взял +{pnl_r}R по {reason} на {symbol} {tf} "
-                 f"({closed}). Редкий крупный ход — образец.")
-        loss = (f"Город забудет, что на {symbol} {tf} такая картинка дала "
-                f"+{pnl_r}R. Потеряем образец крупного хода.")
-
-    try:
-        from studio.memory_tools import remember  # type: ignore[import]  # HOOKS_TYPING_V1: намеренно — см. except ниже
-        remember(
-            title=title,
-            event=event,
-            significance=f"Крупный результат {pnl_r}R — за порогом рутины.",
-            loss_if_forgotten=loss,
-            memory_type=mtype,
-            storage="chronicles",
-            source="A05_ARKHIV·trading",
-        )
-        print(f"[ARKHIV] 🏛 Урок в память города: {title}")
-    except Exception as e:
-        print(f"[ARKHIV] ⚠️  Оле недоступна ({e}) — урок остался в Атласе цеха")
+    return
 
 
 def _judge_iskra_by_result(pos: dict, pnl_r):
-    """ISKRA_FAIR_JUDGEMENT_V1: справедливый суд Искры по ДЕЛУ.
-    Точка Искры повела сделку в плюс → good_work (была права).
-    В минус → bad_work (накосячила). Ноль/нет метки → суда нет
-    (пустышку и старые позиции не наказываем). Мягко (0.3).
-    Никогда не роняет торговый цикл: беда с ДНК → тихий выход."""
-    if pnl_r is None:
-        return
-    # судим ТОЛЬКО позиции с меткой Искры — старые без метки не трогаем
-    if pos.get("iskra_zero_point") is None:
-        return
-    try:
-        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]  # HOOKS_TYPING_V1: намеренно — см. except ниже
-        # ENGINE_ONE_DOOR_V1 · ПЕРЕРАСПРЕДЕЛЕНИЕ ОТВЕТСТВЕННОСТИ.
-        # Искра — КОМПАС: показывает разворот, но НЕ принимает решение
-        # о входе (сторона/цена/стоп/против ветра — это рука трейдера).
-        # За МИНУС её больше не наказываем: чаще виноват вход, не компас.
-        # Оставляем РАДОСТЬ за верный компас (плюс). Ответственность за
-        # минус переложена на трейдера (_judge_trader_by_result).
-        if pnl_r > 0:
-            sync_to_dna("A01_ISKRA", "good_work", intensity=0.3, dept="trading")
-            print(f"[ISKRA] ⚖️  компас повёл в +{pnl_r}R → good_work")
-        # pnl_r <= 0 → Искру НЕ наказываем (компас не отвечает за выстрел)
-    except Exception as e:
-        print(f"[ISKRA] ⚠️  суд по результату не сработал ({e})")
+    """
+    СУД ИСКРЫ — не построена в этом городе.
+
+    В старом мире (-2) плюсовая сделка сдвигала ДНК Искры через
+    studio.grondheim_memory.sync_to_dna. Это и есть тот самый
+    маятник состояния, который Чертёж Единицы (Гл.4.2) прямо
+    называет НЕ-опытом: "качание состояния, не вывод — обучение
+    первого уровня, без понимания". Нога Опыта Стола Трейдера
+    (Чертёж, Гл.5.2/9 — "долг: амнезия у штурвала") строится
+    отдельно, по-новому, не восстановлением этого маятника.
+    Честный no-op — не зовёт то, чего на диске больше нет.
+    """
+    return
 
 def _judge_trader_by_result(pos: dict, pnl_r):
-    """ENGINE_ONE_DOOR_V1: СУД ТРЕЙДЕРА по результату закрытой сделки.
+    """
+    СУД ТРЕЙДЕРА — не построена в этом городе.
 
-    Перераспределение ответственности: Искра — компас (показывает),
-    трейдер — рука (решает войти). Кто решает, тот и отвечает.
-
-    Правило (слово Шефа): наказываем за МИНУС ПРОТИВ ВЕТРА, не за
-    всякий минус. Вошёл против глобального тренда (§12 Котина) и
-    схватил убыток → bad_work (его дерзость, его плата). Вошёл ПО
-    ветру и не повезло → честная плата ремесла, НЕ наказываем.
-    Плюс → good_work (верное решение, заслужил).
-
-    entry_bias — ветер на баре входа (запомнен в позицию при открытии).
-    direction LONG ↔ ветер BEAR = против. SHORT ↔ ветер BULL = против.
-    Ветра нет (NONE/None) → штиль, наказания за минус нет.
-    Никогда не роняет торговый цикл: беда с ДНК → тихий выход."""
-    if pnl_r is None or pnl_r == 0:
-        return
-    trader = pos.get("trader")
-    if not trader:
-        return
-    _AID = {"BRUT": "A06_BRUT", "AVANTURIST": "A07_AVANTURIST",
-            "KONSERVATOR": "A08_KONSERVATOR"}
-    aid = _AID.get(str(trader).upper())
-    if not aid:
-        return
-
-    direction = pos.get("direction", "LONG")
-    bias = pos.get("entry_bias")  # ветер входа: BULL | BEAR | NONE | None
-
-    against_wind = (
-        (direction == "LONG"  and bias == "BEAR") or
-        (direction == "SHORT" and bias == "BULL")
-    )
-
-    try:
-        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]  # HOOKS_TYPING_V1: намеренно — см. except ниже
-        if pnl_r > 0:
-            sync_to_dna(aid, "good_work", intensity=0.3, dept="trading")
-            print(f"[TRADER] ⚖️  {trader} взял +{pnl_r}R → good_work")
-        elif pnl_r < 0 and against_wind:
-            sync_to_dna(aid, "bad_work", intensity=0.3, dept="trading")
-            print(f"[TRADER] ⚖️  {trader} {direction} ПРОТИВ ветра ({bias}) "
-                  f"→ {pnl_r}R → bad_work (нарушил §12)")
-        else:
-            print(f"[TRADER] ⚖️  {trader} {pnl_r}R по ветру/штиль "
-                  f"(bias={bias}) — честный минус, без наказания")
-    except Exception as e:
-        print(f"[TRADER] ⚠️  суд трейдера не сработал ({e})")
+    Логика "минус против ветра → накажи, минус по ветру → прости"
+    (§12 Котина) остаётся ВЕРНОЙ идеей — но раньше она сразу дёргала
+    ДНК через studio.grondheim_memory.sync_to_dna, чего в этом
+    городе больше нет физически. Это ровно нога "Опыт" Стола
+    Трейдера (Чертёж Единицы, Гл.5.2 — "стол на двух ногах, инвалид"),
+    и её нужно строить заново, не восстановлением мёртвого импорта.
+    Честный no-op — записи pnl.jsonl эта функция не трогает, факт
+    сделки остаётся в журнале в любом случае (_settle_positions уже
+    записал его выше).
+    """
+    return
 
 
 
@@ -1205,3 +1124,5 @@ def run_live_council(bars: list, symbol: str, timeframe: str,
 # HOOKS_TYPING_V2 — маркер идемпотентности
 
 # MEMORY_PATHS_V1 — маркер идемпотентности
+
+# BIRZHA_CLEAN_MEMORY_V2 — маркер идемпотентности
