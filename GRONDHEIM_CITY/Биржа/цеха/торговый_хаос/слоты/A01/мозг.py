@@ -394,16 +394,30 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
     # Спуск ленивый: на идеале сверху не шагаем вниз вовсе.
     _start_tf = _start_timeframe(symbol, timeframe)
     _top_form = _read_form_on(symbol, _start_tf)
-    _compass  = _compass_from(_top_form)
-    if _compass is None:
-        # Нет компаса (нет дивера-с-якорем) — Искре нечего ловить.
-        _descent = {"found": False, "timeframe": None,
-                    "zero_point": None, "compass": None, "start_tf": _start_tf}
+
+    # ISKRA_WORKING_TF_FIRST_V1 (слово Шефа): рабочий ТФ — ПРЯМОЙ и
+    # ГЛАВНЫЙ источник сигнала. Если на нём самом уже есть B/D/B точка
+    # (bdb_dir из wave_form, то же окно 100-140, что и Сито 1) — это
+    # находка, БЕЗ всякого обязательного макро-компаса. Раньше макро-
+    # компас (дивер+горб-царь+пересечение нуля) был ВОРОТАМИ перед
+    # рабочим ТФ — лишний, более редкий фильтр поверх уже пройденного
+    # сита. Теперь это ЗАПАСНОЙ путь — доуточнение, не ворота.
+    _working_bdb = _top_form.get("bdb_dir")
+    if _working_bdb is not None:
+        _descent = {"found": True, "timeframe": _start_tf,
+                    "zero_point": _top_form.get("bdb_price"),
+                    "compass": _working_bdb, "start_tf": _start_tf}
     else:
-        _res = _descend(symbol, _start_tf, _compass, _top_form)
-        _descent = {"found": _res["found"], "timeframe": _res["timeframe"],
-                    "zero_point": _res["zero_point"], "compass": _compass,
-                    "start_tf": _start_tf}
+        _compass = _compass_from(_top_form)
+        if _compass is None:
+            # Нет компаса (нет дивера-с-якорем) — Искре нечего ловить.
+            _descent = {"found": False, "timeframe": None,
+                        "zero_point": None, "compass": None, "start_tf": _start_tf}
+        else:
+            _res = _descend(symbol, _start_tf, _compass, _top_form)
+            _descent = {"found": _res["found"], "timeframe": _res["timeframe"],
+                        "zero_point": _res["zero_point"], "compass": _compass,
+                        "start_tf": _start_tf}
     md["v2_descent"] = _descent
     print(f"[ISKRA] 🪜 Спуск: компас={_descent['compass']} "
           f"старт={_descent['start_tf']} "
@@ -548,3 +562,5 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
         "raw": response,   # на случай если парсинг частичный — для отладки
         "descent": md.get("v2_descent", {"found": False}),  # COUNCIL_BY_DESCENT_V1 факт спуска
     }
+
+# ISKRA_WORKING_TF_FIRST_V1 — маркер идемпотентности

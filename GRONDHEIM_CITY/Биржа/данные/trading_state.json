@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "updated": "2026-07-11T02:38:41.931930",
+  "iskra": {
+    "t1_status": "DETECTED",
+    "zero_point_price": 1195.6,
+    "history_dna": "pivot_MIN:2018.08.20_ao=-39.4415_price=1182.6",
+    "trend_direction": "BEAR",
+    "found_timeframe": null
+  },
+  "positions": [],
+  "feed": {
+    "mode": "tester",
+    "symbol": "XAUUSD"
+  },
+  "brut": {
+    "verdict": "REJECTED",
+    "reason": "Нет пробоя валидного фрактала за пастью",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "avan": {
+    "verdict": "REJECTED",
+    "reason": "Бычья дивергенция и разворотный бар на дне — модуль Авантюриста собран для лонга, но глобальный BEAR запрещает вход против тренда. Шорт не по модулю: нет медвежьей дивергенции и разворотного бара на вершине.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "cons": {
+    "verdict": "REJECTED",
+    "reason": "Нет Разворотного Бара на откате волны 2 с опорой и разрядкой AO к нулю. Сейчас бар бычий — жду структуру.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "morj": {
+    "morj_status": "AWAKE",
+    "wave_1_validated": false,
+    "tension_peak": true,
+    "history_dna": "",
+    "scale_timeframe": "D1",
+    "inherited_dir": "BEAR",
+    "alligator_state": {
+      "sleeping": false,
+      "opening": false,
+      "mature": true,
+      "bars_open": 192
+    }
+  },
+  "panic": {
+    "panic_phase": "DISBELIEF",
+    "crowd_sentiment": "Дохлый отскок, я бы шортил — не верим в рост",
+    "action_for_traders": "NEUTRAL",
+    "history_dna": "",
+    "scale_timeframe": "D1"
+  },
+  "hans": {
+    "fractal_valid": true,
+    "fractal_side": "SHORT",
+    "fractal_price": 1183.18,
+    "absorption_ratio": 0.2,
+    "scale_timeframe": "D1",
+    "history_dna": ""
+  }
+}

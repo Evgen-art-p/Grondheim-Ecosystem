@@ -32,6 +32,7 @@ run_iskra/run_morj/...) НЕ ПЕРЕДЕЛЫВАЛИ — она приходи�
 """
 import sys
 import json
+import queue
 from pathlib import Path
 from datetime import datetime, timezone
 import asyncio
@@ -1129,7 +1130,21 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         update_chat_display()
         ui.notify(f"▶ Тестер: {symbol} {tf}", type="info")
 
+        # BIRZHA_UI_THREAD_SAFE_V1: потокобезопасная очередь событий.
+        # _on_progress зовётся ИЗ ФОНОВОГО ПОТОКА (run_in_executor) —
+        # слот-контекст NiceGUI туда не копируется, поэтому там нельзя
+        # трогать ui.* НИКАК. Колбэк только кладёт событие в очередь;
+        # разбор и вся отрисовка — в _apply_progress_event(), которую
+        # зовёт ГЛАВНЫЙ поток (см. цикл дренажа ниже).
+        _evt_queue: "queue.Queue" = queue.Queue()
+
         def _on_progress(msg):
+            _evt_queue.put(msg)
+
+        def _apply_progress_event(msg):
+            """Разбор событий тестера — та же логика, что раньше жила
+            прямо в _on_progress, просто теперь исполняется на главном
+            потоке (слот-контекст этого клиента жив, ui.* работает)."""
             if isinstance(msg, dict) and msg.get("type") == "report":
                 aid = msg.get("agent")
                 narrative = msg.get("narrative", "")
@@ -1217,7 +1232,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
         try:
             from tester_express import run_tester
-            await asyncio.get_event_loop().run_in_executor(
+            loop = asyncio.get_event_loop()
+            _tester_future = loop.run_in_executor(
                 None,
                 lambda: run_tester(
                     csv_path=path, symbol=symbol, timeframe=tf,
@@ -1225,6 +1241,28 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     should_stop=_should_stop,
                 )
             )
+            # Дренаж очереди на ГЛАВНОМ потоке, пока фоновый прогон
+            # крутится — здесь слот-контекст этого клиента жив.
+            while not _tester_future.done():
+                drained_any = False
+                while True:
+                    try:
+                        _msg = _evt_queue.get_nowait()
+                    except queue.Empty:
+                        break
+                    drained_any = True
+                    _apply_progress_event(_msg)
+                if not drained_any:
+                    await asyncio.sleep(0.05)
+            await _tester_future
+            # Добор хвоста: событие могло прийти между последней
+            # проверкой .done() и фактическим завершением потока.
+            while True:
+                try:
+                    _msg = _evt_queue.get_nowait()
+                except queue.Empty:
+                    break
+                _apply_progress_event(_msg)
         except Exception as e:
             ui.notify(f"Тестер упал: {e}", type="negative")
             state["chat_history"].append({
@@ -1686,3 +1724,5 @@ if __name__ in {"__main__", "__mp_main__"}:
     ui.run(title="Совет Биржи · Грондхейм", port=8104, reload=False)
 
 # UI_TORG_TYPING_V1 — маркер идемпотентности
+
+# BIRZHA_UI_THREAD_SAFE_V1 — маркер идемпотентности

@@ -468,7 +468,11 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
         candidates = []
         for i in range(warmup, total):
             end = i + 1
-            start = max(0, end - 300)
+            start = max(0, end - 120)   # ISKRA_WORKING_TF_FIRST_V1: канон
+            # Шефа — 100-140 баров, тот же масштаб, что и read_ao_wave_form.
+            # Было 300 — рассинхрон окна с повторной проверкой Искры прятал
+            # реальные точки на ровном месте (разный "горб-царь" в разных
+            # по ширине окнах одного и того же явления).
             window = bars_all[start:end]
             md = build_market_data(window, symbol=symbol,
                                    timeframe=timeframe, point=point)
@@ -765,3 +769,5 @@ if __name__ == "__main__":
 # TESTER_EXPRESS_CARTRIDGE_V1 — маркер идемпотентности
 
 # TESTER_EXPRESS_SOUL_IGNORE_V1 — маркер идемпотентности
+
+# ISKRA_WORKING_TF_FIRST_V1 — маркер идемпотентности
