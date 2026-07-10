@@ -1,67 +1,21 @@
 {
   "version": 1,
-  "updated": "2026-07-10T13:38:44.752916",
+  "updated": "2026-07-10T14:12:58.880423",
   "iskra": {
-    "t1_status": "DETECTED",
-    "zero_point_price": 1252.55,
-    "history_dna": "DETECTED BULL zero_point=1252.55 ao=-9.79 at 2016.10.11 12:00",
+    "t1_status": "NOT_FOUND",
+    "zero_point_price": null,
+    "history_dna": "MIN_20260327_AO=-533.24_L=4375.38; MAX_20260302_AO=243.76_H=5419.26; MIN_20260220_AO=131.52_L=4981.58",
     "trend_direction": "BEAR",
     "found_timeframe": null
   },
-  "positions": [
-    {
-      "trader": "BRUT",
-      "magic": 100001,
-      "direction": "SHORT",
-      "entry": 1255.49,
-      "stop": 1264.86,
-      "tp": null,
-      "lot": 1,
-      "status": "OPEN",
-      "mode": "PAPER",
-      "opened_at": "2016.10.11 12:00",
-      "pnl": null,
-      "iskra_zero_point": 1252.55,
-      "symbol": "XAUUSD"
-    }
-  ],
+  "positions": [],
   "feed": {
     "mode": "tester",
     "symbol": "XAUUSD"
   },
-  "brut": {
-    "verdict": "APPROVED",
-    "reason": "Пробой короткого фрактала за пастью, тренд BEAR, Искра подтверждает импульс вниз",
-    "direction": "SHORT",
-    "entry": 1255.49,
-    "stop": 1264.86,
-    "lot": 1,
-    "action": "ENTER",
-    "new_stop": null,
-    "add_lot": null
-  },
-  "avan": {
-    "verdict": "REJECTED",
-    "reason": "Разворотный бар не сформирован — close 1255.4 выше точки ноль 1252.55, моментум не сменился",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
-    "new_stop": null,
-    "add_lot": null
-  },
-  "cons": {
-    "verdict": "REJECTED",
-    "reason": "Нет отката волны 2 с опорой — нет точки входа Консерватора",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
-    "new_stop": null,
-    "add_lot": null
-  },
+  "brut": {},
+  "avan": {},
+  "cons": {},
   "morj": {
     "morj_status": "AWAKE",
     "wave_1_validated": false,

@@ -1053,247 +1053,223 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             await run_market()
 
     async def run_market():
+        # ── ЕДИНАЯ ДВЕРЬ СОВЕТА (ENGINE_ONE_DOOR_V1) ──
+        # Раньше здесь была ручная лестница вызовов агентов — вторая
+        # копия той, что жила в tester_express.py. Это был маскарад:
+        # две лестницы расходятся. Теперь кабинет зовёт ТУ ЖЕ дверь
+        # council.wake_council, что и тестер. Порядок, ворота по
+        # спуску, обработка сбоев — одно место правды (council.py).
+        #
+        # ВОРОТА: раньше кабинет сам проверял t1 in (DETECTED,
+        # CONFIRMED), чтобы решить, будить ли остальных. Это была
+        # СТАРАЯ логика — тестер уже давно живёт по ЗАКОНУ СПУСКА
+        # (COUNCIL_BY_DESCENT_V1): спуск нашёл точку = ФАКТ, Совет
+        # собирается сам, t1_status — голос Искры, не замок. Теперь
+        # кабинет тоже по этому закону (summary["idle"] из wake_council).
+        #
+        # ПОТОК: весь прогон — один run_in_executor (тот же приём,
+        # что уже работает в run_tester_session/_on_progress). Колбэк
+        # on_event мутирует state и дёргает update_* синхронно —
+        # проверенный паттерн этого кабинета, не новый риск.
         if state["running"]:
             ui.notify("Прогон уже идёт...", type="warning")
             return
         state["running"] = True
         ui.notify("📡 Поднимаю контур, бужу Искру...", type="info")
-        try:
-            _brain = _slot_brain("торговый_хаос", "A01")
-            if _brain is None:
-                raise RuntimeError("мозг A01 ещё не в слоте")
-            result = await asyncio.get_event_loop().run_in_executor(
-                None, lambda b=_brain: b.run_iskra(symbol="XAUUSD", timeframe="H4"))  # UI_TORG_TYPING_V1
-        except Exception as e:
-            state["running"] = False
-            ui.notify(f"Сбой прогона: {e}", type="negative")
-            return
-        state["running"] = False
 
-        if not result.get("ok"):
-            err = result.get("error", "неизвестная ошибка")
-            state["chat_history"].append({
-                "role": "assistant", "agent": "A01", "content": f"⚠️ {err}"})
-            update_chat_display()
-            ui.notify(err, type="negative", timeout=6000)
-            return
+        import council
 
-        state["active_agent"] = "A01"
-        state["iskra_signal"] = result.get("signal", {})
-        state["iskra_stats"]  = result.get("stats", {})
-        state["market"]       = result.get("market", {})
-        state["reports"]["A01"] = result.get("narrative", "") or result.get("raw", "")
-        state["iskra_last_run"] = {
-            "narrative": result.get("narrative", ""),
-            "signal":    result.get("signal", {}),
-            "market":    result.get("market", {}),
-        }
+        def _on_event(ev):
+            etype = ev.get("type")
 
-        update_avatar()
-        update_vitals()
-        update_avatar_states()
-        update_stats_panel()
-        sig = state["iskra_signal"]
-        update_viewer(
-            f"# ✴️ {_agent_label(roster,'A01')} (A01)\n\n"
-            f"**Статус:** {sig.get('t1_status','—')}  ·  "
-            f"**Дивергенция:** {sig.get('divergence','—')}\n\n"
-            f"---\n\n{result.get('narrative','') or '*(нет текста)*'}"
-        )
-        state["chat_history"].append({
-            "role": "assistant", "agent": "A01",
-            "content": f"✴️ Отработала рынок — статус {sig.get('t1_status','—')}. Отчёт справа."})
-        update_chat_display()
-        ui.notify(f"✴️ Искра: {sig.get('t1_status','—')}", type="positive")
+            if etype == "council_idle":
+                # Спуск не нашёл точку — Искра уже отработала (ниже),
+                # дальше никого не будим. Финальный notify — после
+                # wake_council вернёт summary.
+                return
 
-        t1 = sig.get("t1_status", "NOT_FOUND")
-        if t1 in ("DETECTED", "CONFIRMED"):
-            ui.notify("📣 Есть сигнал — бужу Моржа...", type="info")
-            try:
-                _brain = _slot_brain("торговый_хаос", "A02")
-                if _brain is None:
-                    raise RuntimeError("мозг A02 ещё не в слоте")
-                mr: dict = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda b=_brain: b.run_morj(symbol="XAUUSD", timeframe="H4"))  # UI_TORG_TYPING_V1
-            except Exception as e:
-                ui.notify(f"Морж не проснулся: {e}", type="negative")
-                mr = {"ok": False}
-            if mr.get("ok"):
-                msig = mr.get("signal", {})
-                rb   = mr.get("rubber_band", {})
-                state["reports"]["A02"] = mr.get("narrative", "") or mr.get("raw", "")
-                state["morj_signal"] = msig
-                state["morj_stats"]  = mr.get("stats", {})
+            if etype != "agent":
+                return
+
+            aid = ev.get("id")
+            r = ev.get("result", {}) or {}
+            narrative = ev.get("narrative", "") or r.get("raw", "")
+
+            # ── A01 ИСКРА ──
+            if aid == "A01":
+                if not r.get("ok"):
+                    err = r.get("error", "неизвестная ошибка")
+                    state["chat_history"].append({
+                        "role": "assistant", "agent": "A01", "content": f"⚠️ {err}"})
+                    update_chat_display()
+                    ui.notify(err, type="negative", timeout=6000)
+                    return
+                state["active_agent"] = "A01"
+                state["iskra_signal"] = r.get("signal", {})
+                state["iskra_stats"]  = r.get("stats", {})
+                state["market"]       = r.get("market", {})
+                state["reports"]["A01"] = r.get("narrative", "") or r.get("raw", "")
+                state["iskra_last_run"] = {
+                    "narrative": r.get("narrative", ""),
+                    "signal":    r.get("signal", {}),
+                    "market":    r.get("market", {}),
+                }
+                update_avatar()
+                update_vitals()
+                update_avatar_states()
+                update_stats_panel()
+                sig = state["iskra_signal"]
+                update_viewer(
+                    f"# ✴️ {_agent_label(roster,'A01')} (A01)\n\n"
+                    f"**Статус:** {sig.get('t1_status','—')}  ·  "
+                    f"**Дивергенция:** {sig.get('divergence','—')}\n\n"
+                    f"---\n\n{r.get('narrative','') or '*(нет текста)*'}"
+                )
+                state["chat_history"].append({
+                    "role": "assistant", "agent": "A01",
+                    "content": f"✴️ Отработала рынок — статус {sig.get('t1_status','—')}. Отчёт справа."})
+                update_chat_display()
+                ui.notify(f"✴️ Искра: {sig.get('t1_status','—')}", type="positive")
+                return
+
+            # ── ошибка любого из остальных агентов ──
+            if not r.get("ok"):
+                _names = {"A02": ("🦭", "Морж"), "A03": ("😱", "Паникёр"),
+                          "A04": ("🎯", "Ганс"), "A05": ("📚", "Архивариус"),
+                          "A06": ("🪨", _agent_label(roster, "A06")),
+                          "A07": ("⚡", _agent_label(roster, "A07")),
+                          "A08": ("🛡", _agent_label(roster, "A08")),
+                          "A09": ("📋", "Исполнитель")}
+                icon, nm = _names.get(aid, ("•", aid))
+                ui.notify(f"{icon} {nm} смолчал (нет данных или сбой)", type="warning")
+                return
+
+            sig = r.get("signal", {}) or {}
+
+            # ── A02 МОРЖ ──
+            if aid == "A02":
+                rb = r.get("rubber_band", {})
+                state["reports"]["A02"] = narrative
+                state["morj_signal"] = sig
+                state["morj_stats"]  = r.get("stats", {})
                 state["morj_rubber"] = rb
-                state["morj_market"] = mr.get("market", {})
+                state["morj_market"] = r.get("market", {})
                 state["morj_last_run"] = {
-                    "narrative":   mr.get("narrative", ""),
-                    "signal":      msig,
-                    "market":      mr.get("market", {}),
+                    "narrative":   r.get("narrative", ""),
+                    "signal":      sig,
+                    "market":      r.get("market", {}),
                     "rubber_band": rb,
-                    "iskra_status": mr.get("iskra_status", t1),
+                    "iskra_status": r.get("iskra_status", state.get("iskra_signal", {}).get("t1_status")),
                 }
                 state["chat_history"].append({
                     "role": "assistant", "agent": "A02",
-                    "content": (f"🦭 Посмотрел. Пасть: {msig.get('morj_status','—')}, резинка "
-                                f"{'натянута' if msig.get('tension_peak') else 'вяло'}. Отчёт справа.")})
+                    "content": (f"🦭 Посмотрел. Пасть: {sig.get('morj_status','—')}, резинка "
+                                f"{'натянута' if sig.get('tension_peak') else 'вяло'}. Отчёт справа.")})
                 update_chat_display()
                 update_avatar_states()
-                ui.notify(f"🦭 Морж: {msig.get('morj_status','—')}", type="positive")
-            else:
-                ui.notify("🦭 Морж смолчал (нет данных или сбой)", type="warning")
+                ui.notify(f"🦭 Морж: {sig.get('morj_status','—')}", type="positive")
 
-            ui.notify("😱 Бужу Паникёра — мерит толпу...", type="info")
-            try:
-                _brain = _slot_brain("торговый_хаос", "A03")
-                if _brain is None:
-                    raise RuntimeError("мозг A03 ещё не в слоте")
-                pr: dict = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda b=_brain: b.run_panikyor(symbol="XAUUSD", timeframe="H4"))  # UI_TORG_TYPING_V1
-            except Exception as e:
-                ui.notify(f"Паникёр не проснулся: {e}", type="negative")
-                pr = {"ok": False}
-            if pr.get("ok"):
-                psig = pr.get("signal", {})
-                state["reports"]["A03"] = pr.get("narrative", "") or pr.get("raw", "")
-                state["panic_signal"] = psig
-                state["panic_stats"]  = pr.get("stats", {})
-                state["panic_market"] = pr.get("market", {})
+            # ── A03 ПАНИКЁР ──
+            elif aid == "A03":
+                state["reports"]["A03"] = narrative
+                state["panic_signal"] = sig
+                state["panic_stats"]  = r.get("stats", {})
+                state["panic_market"] = r.get("market", {})
                 state["panic_last_run"] = {
-                    "narrative": pr.get("narrative", ""), "signal": psig, "market": pr.get("market", {})}
+                    "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
                 state["chat_history"].append({
                     "role": "assistant", "agent": "A03",
-                    "content": (f"😱 Толпа: {psig.get('panic_phase','—')}. "
-                                f"{psig.get('crowd_sentiment','')} Отчёт справа.")})
+                    "content": (f"😱 Толпа: {sig.get('panic_phase','—')}. "
+                                f"{sig.get('crowd_sentiment','')} Отчёт справа.")})
                 update_chat_display()
                 update_avatar_states()
-                ui.notify(f"😱 Паникёр: {psig.get('panic_phase','—')}", type="positive")
-            else:
-                ui.notify("😱 Паникёр смолчал (нет данных или сбой)", type="warning")
+                ui.notify(f"😱 Паникёр: {sig.get('panic_phase','—')}", type="positive")
 
-            ui.notify("🎯 Бужу Ганса — ищет фрактал...", type="info")
-            try:
-                _brain = _slot_brain("торговый_хаос", "A04")
-                if _brain is None:
-                    raise RuntimeError("мозг A04 ещё не в слоте")
-                hr: dict = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda b=_brain: b.run_hans(symbol="XAUUSD", timeframe="H4"))  # UI_TORG_TYPING_V1
-            except Exception as e:
-                ui.notify(f"Ганс не проснулся: {e}", type="negative")
-                hr = {"ok": False}
-            if hr.get("ok"):
-                hsig = hr.get("signal", {})
-                state["reports"]["A04"] = hr.get("narrative", "") or hr.get("raw", "")
-                state["hans_signal"] = hsig
-                state["hans_stats"]  = hr.get("stats", {})
-                state["hans_market"] = hr.get("market", {})
+            # ── A04 ГАНС ──
+            elif aid == "A04":
+                state["reports"]["A04"] = narrative
+                state["hans_signal"] = sig
+                state["hans_stats"]  = r.get("stats", {})
+                state["hans_market"] = r.get("market", {})
                 state["hans_last_run"] = {
-                    "narrative": hr.get("narrative", ""), "signal": hsig, "market": hr.get("market", {})}
-                valid = hsig.get("fractal_valid")
-                prey = (f"добыча {hsig.get('fractal_side','—')} @ {hsig.get('fractal_price','—')}"
+                    "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
+                valid = sig.get("fractal_valid")
+                prey = (f"добыча {sig.get('fractal_side','—')} @ {sig.get('fractal_price','—')}"
                         if valid else "добычи нет")
                 state["chat_history"].append({
                     "role": "assistant", "agent": "A04", "content": f"🎯 Фрактал: {prey}. Отчёт справа."})
                 update_chat_display()
                 update_avatar_states()
                 ui.notify(f"🎯 Ганс: {'фрактал вне Красной' if valid else 'пусто'}", type="positive")
-            else:
-                ui.notify("🎯 Ганс смолчал (нет данных или сбой)", type="warning")
 
-            ui.notify("📚 Бужу Архивариуса — листает Атлас...", type="info")
-            try:
-                _brain = _slot_brain("контора", "архивариус")
-                if _brain is None:
-                    raise RuntimeError("мозг архивариуса ещё не в слоте")
-                ar: dict = await asyncio.get_event_loop().run_in_executor(None, lambda b=_brain: b.run_arkhiv())  # UI_TORG_TYPING_V1
-            except Exception as e:
-                ui.notify(f"Архивариус не проснулся: {e}", type="negative")
-                ar = {"ok": False}
-            if ar.get("ok"):
-                asig = ar.get("signal", {})
-                state["reports"]["A05"] = ar.get("narrative", "") or ar.get("raw", "")
-                state["arkhiv_signal"] = asig
-                state["arkhiv_stats"]  = ar.get("stats", {})
-                state["arkhiv_digest"] = ar.get("digest", {})
+            # ── A05 АРХИВАРИУС ──
+            elif aid == "A05":
+                state["reports"]["A05"] = narrative
+                state["arkhiv_signal"] = sig
+                state["arkhiv_stats"]  = r.get("stats", {})
+                state["arkhiv_digest"] = r.get("digest", {})
                 state["arkhiv_last_run"] = {
-                    "narrative": ar.get("narrative", ""), "signal": asig, "signature": ar.get("signature", {})}
-                conf = asig.get("arkhiv_confidence", "—")
-                n_ = asig.get("sample_size", "—")
+                    "narrative": r.get("narrative", ""), "signal": sig, "signature": r.get("signature", {})}
+                conf = sig.get("arkhiv_confidence", "—")
+                n_ = sig.get("sample_size", "—")
                 state["chat_history"].append({
                     "role": "assistant", "agent": "A05",
                     "content": (f"📚 Похожих случаев в Атласе: {n_}. Уверенность: {conf}. Отчёт справа.")})
                 update_chat_display()
                 update_avatar_states()
                 ui.notify(f"📚 Архивариус: {conf} ({n_} случаев)", type="positive")
-            else:
-                ui.notify("📚 Архивариус смолчал (нет данных или сбой)", type="warning")
 
-            for tr in (
-                {"id": "A06", "icon": "🪨", "mod": "brut_live", "run": "run_brut", "pre": "brut", "last": "brut_last_run"},
-                {"id": "A07", "icon": "🎲", "mod": "avan_live", "run": "run_avan", "pre": "avan", "last": "avan_last_run"},
-                {"id": "A08", "icon": "⚖️", "mod": "cons_live", "run": "run_cons", "pre": "cons", "last": "cons_last_run"},
-            ):
-                _nm = _agent_label(roster, tr["id"])
-                ui.notify(f"{tr['icon']} Бужу — {_nm} садится за стол...", type="info")
-                try:
-                    _brain = _slot_brain("торговый_хаос", tr["id"])
-                    if _brain is None:
-                        raise RuntimeError(f"мозг {tr['id']} ещё не в слоте")
-                    _run = getattr(_brain, tr["run"])
-                    rt = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda _r=_run: _r(symbol="XAUUSD", timeframe="H4"))
-                except Exception as e:
-                    ui.notify(f"{tr['icon']} {_nm} не сел: {e}", type="negative")
-                    continue
-                if not rt.get("ok"):
-                    ui.notify(f"{tr['icon']} {_nm}: {rt.get('error','сбой')}", type="warning")
-                    continue
-                tsig = rt.get("signal", {})
-                pre  = tr["pre"]
-                state["reports"][tr["id"]] = rt.get("narrative", "") or rt.get("raw", "")
-                state[f"{pre}_signal"] = tsig
-                state[f"{pre}_stats"]  = rt.get("stats", {})
-                state[tr["last"]] = {
-                    "narrative": rt.get("narrative", ""), "signal": tsig, "market": rt.get("market", {})}
-                verdict = tsig.get(f"{pre}_verdict", "—")
+            # ── A06/A07/A08 ТРЕЙДЕРЫ ──
+            elif aid in ("A06", "A07", "A08"):
+                pre = {"A06": "brut", "A07": "avan", "A08": "cons"}[aid]
+                icon = {"A06": "🪨", "A07": "⚡", "A08": "🛡"}[aid]
+                _nm = _agent_label(roster, aid)
+                state["reports"][aid] = narrative
+                state[f"{pre}_signal"] = sig
+                state[f"{pre}_stats"]  = r.get("stats", {})
+                _last_key = {"A06": "brut_last_run", "A07": "avan_last_run", "A08": "cons_last_run"}[aid]
+                state[_last_key] = {
+                    "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
+                verdict = sig.get(f"{pre}_verdict", "—")
                 if verdict == "APPROVED":
-                    line = (f"{tr['icon']} {_nm}: ВХОД {tsig.get(f'{pre}_direction','')} · "
-                            f"вход {tsig.get(f'{pre}_entry','—')} · стоп {tsig.get(f'{pre}_stop','—')} · "
-                            f"лот {tsig.get(f'{pre}_lot','—')}. Отчёт справа.")
-                    ui.notify(f"{tr['icon']} {_nm}: ВХОД {tsig.get(f'{pre}_direction','')}", type="positive")
+                    line = (f"{icon} {_nm}: ВХОД {sig.get(f'{pre}_direction','')} · "
+                            f"вход {sig.get(f'{pre}_entry','—')} · стоп {sig.get(f'{pre}_stop','—')} · "
+                            f"лот {sig.get(f'{pre}_lot','—')}. Отчёт справа.")
+                    ui.notify(f"{icon} {_nm}: ВХОД {sig.get(f'{pre}_direction','')}", type="positive")
                 else:
-                    line = f"{tr['icon']} {_nm}: пас ({tsig.get(f'{pre}_reason','—')}). Отчёт справа."
-                    ui.notify(f"{tr['icon']} {_nm}: пас", type="info")
-                state["chat_history"].append({"role": "assistant", "agent": tr["id"], "content": line})
+                    line = f"{icon} {_nm}: пас ({sig.get(f'{pre}_reason','—')}). Отчёт справа."
+                    ui.notify(f"{icon} {_nm}: пас", type="info")
+                state["chat_history"].append({"role": "assistant", "agent": aid, "content": line})
                 update_chat_display()
                 update_avatar_states()
 
-            ui.notify("📋 Исполнитель замыкает петлю...", type="info")
-            try:
-                _brain = _slot_brain("контора", "исполнитель")
-                if _brain is None:
-                    raise RuntimeError("мозг исполнителя ещё не в слоте")
-                rex = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _brain.run_executor(symbol="XAUUSD", timeframe="H4"))
-            except Exception as e:
-                rex = {"ok": False, "error": str(e)}
-            if rex.get("ok"):
-                esig = rex.get("signal", {})
-                fdna = esig.get("final_dna", {})
+            # ── A09 ИСПОЛНИТЕЛЬ ──
+            elif aid == "A09":
+                fdna = sig.get("final_dna", {})
                 sent = fdna.get("orders_sent", "—")
                 tsk  = fdna.get("task_score", "—")
-                state["reports"]["A09"] = rex.get("narrative", "") + "\n\n— Летопись: " + esig.get("history_dna", "")
-                state["executor_signal"] = esig
-                state["executor_stats"]  = rex.get("stats", {})
+                state["reports"]["A09"] = r.get("narrative", "") + "\n\n— Летопись: " + sig.get("history_dna", "")
+                state["executor_signal"] = sig
+                state["executor_stats"]  = r.get("stats", {})
                 state["executor_last_run"] = {
-                    "narrative": rex.get("narrative", ""), "signal": esig, "market": rex.get("market", {})}
-                line = f"📋 Исполнитель: ордеров {sent} из 3 · task_score {tsk}. {esig.get('history_dna','')}"
+                    "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
+                line = f"📋 Исполнитель: ордеров {sent} из 3 · task_score {tsk}. {sig.get('history_dna','')}"
                 ui.notify(f"📋 Исполнитель: {sent} из 3", type="positive")
                 state["chat_history"].append({"role": "assistant", "agent": "A09", "content": line})
                 update_chat_display()
                 update_avatar_states()
-            else:
-                ui.notify(f"📋 Исполнитель: сбой — {rex.get('error','?')}", type="warning")
+
+        try:
+            summary = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: council.wake_council("XAUUSD", "H4", on_event=_on_event))
+        except Exception as e:
+            state["running"] = False
+            ui.notify(f"Сбой прогона: {e}", type="negative")
+            return
+        state["running"] = False
+
+        if summary.get("idle"):
+            ui.notify("📣 Спуск не нашёл точку — Совет не собирается", type="info")
 
     def update_avatar_states():
         for aid, el in avatars_ref["elements"].items():
