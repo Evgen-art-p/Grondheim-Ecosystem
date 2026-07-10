@@ -49,16 +49,16 @@ def _slot_brain(ceh_id: str, slot: str):
     return mod
 
 # ── Путь к Атласу Ошибок ──────────────────────────────────
-ATLAS_PATH = Path("economy/data/atlas_trading.jsonl")
+ATLAS_PATH = _REPO / "GRONDHEIM_CITY" / "Биржа" / "данные" / "atlas_trading.jsonl"
 
 # ── Рабочая память цеха (Спринт 43) ──────────────────────
 # Закрывает две дыры:
 #   1. Состояние Искры между прогонами (t1_status — машина состояний)
 #   2. Открытые позиции между прогонами (что закрывать по exit_bell)
-STATE_PATH = Path("studio/modules/trading/state/trading_state.json")
+STATE_PATH = _REPO / "GRONDHEIM_CITY" / "Биржа" / "данные" / "trading_state.json"
 
 # Журнал PnL сделок (НЕ billing_ledger — тот про LLM-расходы)
-PNL_PATH = Path("economy/data/trading_pnl.jsonl")
+PNL_PATH = _REPO / "GRONDHEIM_CITY" / "Биржа" / "данные" / "trading_pnl.jsonl"
 
 # Magic numbers — константа КОДА (реальный MT5-мост возьмёт отсюда,
 # не из памяти LLM). Промт A09 дублирует таблицу для летописи.
@@ -1203,3 +1203,5 @@ def run_live_council(bars: list, symbol: str, timeframe: str,
 # HOOKS_TYPING_V1 — маркер идемпотентности
 
 # HOOKS_TYPING_V2 — маркер идемпотентности
+
+# MEMORY_PATHS_V1 — маркер идемпотентности
