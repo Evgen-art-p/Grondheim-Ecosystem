@@ -927,6 +927,184 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         state["stop_requested"] = True
         ui.notify("⏸ СТОП — останавливаю на следующем кандидате...", type="info")
 
+    def _apply_agent_result(aid, r, narrative):
+        """
+        Раскладывает результат ОДНОГО агента по state кабинета: аватары,
+        пузырьки чата, вьюер отчёта, *_last_run (рабочая память для чата
+        с агентом по клику на пузырёк).
+
+        ОБЩАЯ функция для ОБОИХ путей пробуждения Совета -- РЫНОК
+        (run_market) и ТЕСТЕР (run_tester_session). Раньше тестер эту
+        память не писал вовсе: state[*_last_run] оставался пуст после
+        тестового прогона, и чат с агентом сразу после ТЕСТЕРА честно,
+        но неверно по сути отвечал "рынок не запускали" -- хотя агент
+        только что отработал через ту же дверь (council.wake_council).
+        Теперь оба пути кладут память сюда же -- один источник правды.
+        """
+        # ── A01 ИСКРА ──
+        if aid == "A01":
+            if not r.get("ok"):
+                err = r.get("error", "неизвестная ошибка")
+                state["chat_history"].append({
+                    "role": "assistant", "agent": "A01", "content": f"⚠️ {err}"})
+                update_chat_display()
+                ui.notify(err, type="negative", timeout=6000)
+                return
+            state["active_agent"] = "A01"
+            state["iskra_signal"] = r.get("signal", {})
+            state["iskra_stats"]  = r.get("stats", {})
+            state["market"]       = r.get("market", {})
+            state["reports"]["A01"] = r.get("narrative", "") or r.get("raw", "")
+            state["iskra_last_run"] = {
+                "narrative": r.get("narrative", ""),
+                "signal":    r.get("signal", {}),
+                "market":    r.get("market", {}),
+            }
+            update_avatar()
+            update_vitals()
+            update_avatar_states()
+            update_stats_panel()
+            sig = state["iskra_signal"]
+            update_viewer(
+                f"# ✴️ {_agent_label(roster,'A01')} (A01)\n\n"
+                f"**Статус:** {sig.get('t1_status','—')}  ·  "
+                f"**Дивергенция:** {sig.get('divergence','—')}\n\n"
+                f"---\n\n{r.get('narrative','') or '*(нет текста)*'}"
+            )
+            state["chat_history"].append({
+                "role": "assistant", "agent": "A01",
+                "content": f"✴️ Отработала рынок — статус {sig.get('t1_status','—')}. Отчёт справа."})
+            update_chat_display()
+            ui.notify(f"✴️ Искра: {sig.get('t1_status','—')}", type="positive")
+            return
+
+        # ── ошибка любого из остальных агентов ──
+        if not r.get("ok"):
+            _names = {"A02": ("🦭", "Морж"), "A03": ("😱", "Паникёр"),
+                      "A04": ("🎯", "Ганс"), "A05": ("📚", "Архивариус"),
+                      "A06": ("🪨", _agent_label(roster, "A06")),
+                      "A07": ("⚡", _agent_label(roster, "A07")),
+                      "A08": ("🛡", _agent_label(roster, "A08")),
+                      "A09": ("📋", "Исполнитель")}
+            icon, nm = _names.get(aid, ("•", aid))
+            ui.notify(f"{icon} {nm} смолчал (нет данных или сбой)", type="warning")
+            return
+
+        sig = r.get("signal", {}) or {}
+
+        # ── A02 МОРЖ ──
+        if aid == "A02":
+            rb = r.get("rubber_band", {})
+            state["reports"]["A02"] = narrative
+            state["morj_signal"] = sig
+            state["morj_stats"]  = r.get("stats", {})
+            state["morj_rubber"] = rb
+            state["morj_market"] = r.get("market", {})
+            state["morj_last_run"] = {
+                "narrative":   r.get("narrative", ""),
+                "signal":      sig,
+                "market":      r.get("market", {}),
+                "rubber_band": rb,
+                "iskra_status": r.get("iskra_status", state.get("iskra_signal", {}).get("t1_status")),
+            }
+            state["chat_history"].append({
+                "role": "assistant", "agent": "A02",
+                "content": (f"🦭 Посмотрел. Пасть: {sig.get('morj_status','—')}, резинка "
+                            f"{'натянута' if sig.get('tension_peak') else 'вяло'}. Отчёт справа.")})
+            update_chat_display()
+            update_avatar_states()
+            ui.notify(f"🦭 Морж: {sig.get('morj_status','—')}", type="positive")
+
+        # ── A03 ПАНИКЁР ──
+        elif aid == "A03":
+            state["reports"]["A03"] = narrative
+            state["panic_signal"] = sig
+            state["panic_stats"]  = r.get("stats", {})
+            state["panic_market"] = r.get("market", {})
+            state["panic_last_run"] = {
+                "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
+            state["chat_history"].append({
+                "role": "assistant", "agent": "A03",
+                "content": (f"😱 Толпа: {sig.get('panic_phase','—')}. "
+                            f"{sig.get('crowd_sentiment','')} Отчёт справа.")})
+            update_chat_display()
+            update_avatar_states()
+            ui.notify(f"😱 Паникёр: {sig.get('panic_phase','—')}", type="positive")
+
+        # ── A04 ГАНС ──
+        elif aid == "A04":
+            state["reports"]["A04"] = narrative
+            state["hans_signal"] = sig
+            state["hans_stats"]  = r.get("stats", {})
+            state["hans_market"] = r.get("market", {})
+            state["hans_last_run"] = {
+                "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
+            valid = sig.get("fractal_valid")
+            prey = (f"добыча {sig.get('fractal_side','—')} @ {sig.get('fractal_price','—')}"
+                    if valid else "добычи нет")
+            state["chat_history"].append({
+                "role": "assistant", "agent": "A04", "content": f"🎯 Фрактал: {prey}. Отчёт справа."})
+            update_chat_display()
+            update_avatar_states()
+            ui.notify(f"🎯 Ганс: {'фрактал вне Красной' if valid else 'пусто'}", type="positive")
+
+        # ── A05 АРХИВАРИУС ──
+        elif aid == "A05":
+            state["reports"]["A05"] = narrative
+            state["arkhiv_signal"] = sig
+            state["arkhiv_stats"]  = r.get("stats", {})
+            state["arkhiv_digest"] = r.get("digest", {})
+            state["arkhiv_last_run"] = {
+                "narrative": r.get("narrative", ""), "signal": sig, "signature": r.get("signature", {})}
+            conf = sig.get("arkhiv_confidence", "—")
+            n_ = sig.get("sample_size", "—")
+            state["chat_history"].append({
+                "role": "assistant", "agent": "A05",
+                "content": (f"📚 Похожих случаев в Атласе: {n_}. Уверенность: {conf}. Отчёт справа.")})
+            update_chat_display()
+            update_avatar_states()
+            ui.notify(f"📚 Архивариус: {conf} ({n_} случаев)", type="positive")
+
+        # ── A06/A07/A08 ТРЕЙДЕРЫ ──
+        elif aid in ("A06", "A07", "A08"):
+            pre = {"A06": "brut", "A07": "avan", "A08": "cons"}[aid]
+            icon = {"A06": "🪨", "A07": "⚡", "A08": "🛡"}[aid]
+            _nm = _agent_label(roster, aid)
+            state["reports"][aid] = narrative
+            state[f"{pre}_signal"] = sig
+            state[f"{pre}_stats"]  = r.get("stats", {})
+            _last_key = {"A06": "brut_last_run", "A07": "avan_last_run", "A08": "cons_last_run"}[aid]
+            state[_last_key] = {
+                "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
+            verdict = sig.get(f"{pre}_verdict", "—")
+            if verdict == "APPROVED":
+                line = (f"{icon} {_nm}: ВХОД {sig.get(f'{pre}_direction','')} · "
+                        f"вход {sig.get(f'{pre}_entry','—')} · стоп {sig.get(f'{pre}_stop','—')} · "
+                        f"лот {sig.get(f'{pre}_lot','—')}. Отчёт справа.")
+                ui.notify(f"{icon} {_nm}: ВХОД {sig.get(f'{pre}_direction','')}", type="positive")
+            else:
+                line = f"{icon} {_nm}: пас ({sig.get(f'{pre}_reason','—')}). Отчёт справа."
+                ui.notify(f"{icon} {_nm}: пас", type="info")
+            state["chat_history"].append({"role": "assistant", "agent": aid, "content": line})
+            update_chat_display()
+            update_avatar_states()
+
+        # ── A09 ИСПОЛНИТЕЛЬ ──
+        elif aid == "A09":
+            fdna = sig.get("final_dna", {})
+            sent = fdna.get("orders_sent", "—")
+            tsk  = fdna.get("task_score", "—")
+            state["reports"]["A09"] = r.get("narrative", "") + "\n\n— Летопись: " + sig.get("history_dna", "")
+            state["executor_signal"] = sig
+            state["executor_stats"]  = r.get("stats", {})
+            state["executor_last_run"] = {
+                "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
+            line = f"📋 Исполнитель: ордеров {sent} из 3 · task_score {tsk}. {sig.get('history_dna','')}"
+            ui.notify(f"📋 Исполнитель: {sent} из 3", type="positive")
+            state["chat_history"].append({"role": "assistant", "agent": "A09", "content": line})
+            update_chat_display()
+            update_avatar_states()
+
     async def run_tester_session():
         assets = state.get("loaded_assets", [])
         ai = state.get("active_asset")
@@ -955,6 +1133,26 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             if isinstance(msg, dict) and msg.get("type") == "report":
                 aid = msg.get("agent")
                 narrative = msg.get("narrative", "")
+                result = msg.get("result")
+                if aid and narrative and result is not None:
+                    # ENGINE_ONE_DOOR_V1 (память чата): result присутствует —
+                    # тестер теперь несёт ПОЛНЫЙ словарь run_* агента, не
+                    # только голос. Зовём ТУ ЖЕ функцию, что и РЫНОК —
+                    # заполнит *_last_run, чтобы чат с агентом после
+                    # ТЕСТЕРА знал, что тот только что видел, а не отвечал
+                    # честно, но неверно "рынок не запускали".
+                    if aid == "A01":
+                        state["reports"] = {}
+                        state["active_agent"] = None
+                        try:
+                            update_avatar_states()
+                        except Exception:
+                            pass
+                    try:
+                        _apply_agent_result(aid, result, narrative)
+                    except Exception as e:
+                        print(f"[TORG·TESTER] _apply_agent_result сбой ({aid}): {e}")
+                    return
                 if aid and narrative:
                     if aid == "A01":
                         state["reports"] = {}
@@ -1095,169 +1293,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             r = ev.get("result", {}) or {}
             narrative = ev.get("narrative", "") or r.get("raw", "")
 
-            # ── A01 ИСКРА ──
-            if aid == "A01":
-                if not r.get("ok"):
-                    err = r.get("error", "неизвестная ошибка")
-                    state["chat_history"].append({
-                        "role": "assistant", "agent": "A01", "content": f"⚠️ {err}"})
-                    update_chat_display()
-                    ui.notify(err, type="negative", timeout=6000)
-                    return
-                state["active_agent"] = "A01"
-                state["iskra_signal"] = r.get("signal", {})
-                state["iskra_stats"]  = r.get("stats", {})
-                state["market"]       = r.get("market", {})
-                state["reports"]["A01"] = r.get("narrative", "") or r.get("raw", "")
-                state["iskra_last_run"] = {
-                    "narrative": r.get("narrative", ""),
-                    "signal":    r.get("signal", {}),
-                    "market":    r.get("market", {}),
-                }
-                update_avatar()
-                update_vitals()
-                update_avatar_states()
-                update_stats_panel()
-                sig = state["iskra_signal"]
-                update_viewer(
-                    f"# ✴️ {_agent_label(roster,'A01')} (A01)\n\n"
-                    f"**Статус:** {sig.get('t1_status','—')}  ·  "
-                    f"**Дивергенция:** {sig.get('divergence','—')}\n\n"
-                    f"---\n\n{r.get('narrative','') or '*(нет текста)*'}"
-                )
-                state["chat_history"].append({
-                    "role": "assistant", "agent": "A01",
-                    "content": f"✴️ Отработала рынок — статус {sig.get('t1_status','—')}. Отчёт справа."})
-                update_chat_display()
-                ui.notify(f"✴️ Искра: {sig.get('t1_status','—')}", type="positive")
-                return
+            _apply_agent_result(aid, r, narrative)
 
-            # ── ошибка любого из остальных агентов ──
-            if not r.get("ok"):
-                _names = {"A02": ("🦭", "Морж"), "A03": ("😱", "Паникёр"),
-                          "A04": ("🎯", "Ганс"), "A05": ("📚", "Архивариус"),
-                          "A06": ("🪨", _agent_label(roster, "A06")),
-                          "A07": ("⚡", _agent_label(roster, "A07")),
-                          "A08": ("🛡", _agent_label(roster, "A08")),
-                          "A09": ("📋", "Исполнитель")}
-                icon, nm = _names.get(aid, ("•", aid))
-                ui.notify(f"{icon} {nm} смолчал (нет данных или сбой)", type="warning")
-                return
-
-            sig = r.get("signal", {}) or {}
-
-            # ── A02 МОРЖ ──
-            if aid == "A02":
-                rb = r.get("rubber_band", {})
-                state["reports"]["A02"] = narrative
-                state["morj_signal"] = sig
-                state["morj_stats"]  = r.get("stats", {})
-                state["morj_rubber"] = rb
-                state["morj_market"] = r.get("market", {})
-                state["morj_last_run"] = {
-                    "narrative":   r.get("narrative", ""),
-                    "signal":      sig,
-                    "market":      r.get("market", {}),
-                    "rubber_band": rb,
-                    "iskra_status": r.get("iskra_status", state.get("iskra_signal", {}).get("t1_status")),
-                }
-                state["chat_history"].append({
-                    "role": "assistant", "agent": "A02",
-                    "content": (f"🦭 Посмотрел. Пасть: {sig.get('morj_status','—')}, резинка "
-                                f"{'натянута' if sig.get('tension_peak') else 'вяло'}. Отчёт справа.")})
-                update_chat_display()
-                update_avatar_states()
-                ui.notify(f"🦭 Морж: {sig.get('morj_status','—')}", type="positive")
-
-            # ── A03 ПАНИКЁР ──
-            elif aid == "A03":
-                state["reports"]["A03"] = narrative
-                state["panic_signal"] = sig
-                state["panic_stats"]  = r.get("stats", {})
-                state["panic_market"] = r.get("market", {})
-                state["panic_last_run"] = {
-                    "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
-                state["chat_history"].append({
-                    "role": "assistant", "agent": "A03",
-                    "content": (f"😱 Толпа: {sig.get('panic_phase','—')}. "
-                                f"{sig.get('crowd_sentiment','')} Отчёт справа.")})
-                update_chat_display()
-                update_avatar_states()
-                ui.notify(f"😱 Паникёр: {sig.get('panic_phase','—')}", type="positive")
-
-            # ── A04 ГАНС ──
-            elif aid == "A04":
-                state["reports"]["A04"] = narrative
-                state["hans_signal"] = sig
-                state["hans_stats"]  = r.get("stats", {})
-                state["hans_market"] = r.get("market", {})
-                state["hans_last_run"] = {
-                    "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
-                valid = sig.get("fractal_valid")
-                prey = (f"добыча {sig.get('fractal_side','—')} @ {sig.get('fractal_price','—')}"
-                        if valid else "добычи нет")
-                state["chat_history"].append({
-                    "role": "assistant", "agent": "A04", "content": f"🎯 Фрактал: {prey}. Отчёт справа."})
-                update_chat_display()
-                update_avatar_states()
-                ui.notify(f"🎯 Ганс: {'фрактал вне Красной' if valid else 'пусто'}", type="positive")
-
-            # ── A05 АРХИВАРИУС ──
-            elif aid == "A05":
-                state["reports"]["A05"] = narrative
-                state["arkhiv_signal"] = sig
-                state["arkhiv_stats"]  = r.get("stats", {})
-                state["arkhiv_digest"] = r.get("digest", {})
-                state["arkhiv_last_run"] = {
-                    "narrative": r.get("narrative", ""), "signal": sig, "signature": r.get("signature", {})}
-                conf = sig.get("arkhiv_confidence", "—")
-                n_ = sig.get("sample_size", "—")
-                state["chat_history"].append({
-                    "role": "assistant", "agent": "A05",
-                    "content": (f"📚 Похожих случаев в Атласе: {n_}. Уверенность: {conf}. Отчёт справа.")})
-                update_chat_display()
-                update_avatar_states()
-                ui.notify(f"📚 Архивариус: {conf} ({n_} случаев)", type="positive")
-
-            # ── A06/A07/A08 ТРЕЙДЕРЫ ──
-            elif aid in ("A06", "A07", "A08"):
-                pre = {"A06": "brut", "A07": "avan", "A08": "cons"}[aid]
-                icon = {"A06": "🪨", "A07": "⚡", "A08": "🛡"}[aid]
-                _nm = _agent_label(roster, aid)
-                state["reports"][aid] = narrative
-                state[f"{pre}_signal"] = sig
-                state[f"{pre}_stats"]  = r.get("stats", {})
-                _last_key = {"A06": "brut_last_run", "A07": "avan_last_run", "A08": "cons_last_run"}[aid]
-                state[_last_key] = {
-                    "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
-                verdict = sig.get(f"{pre}_verdict", "—")
-                if verdict == "APPROVED":
-                    line = (f"{icon} {_nm}: ВХОД {sig.get(f'{pre}_direction','')} · "
-                            f"вход {sig.get(f'{pre}_entry','—')} · стоп {sig.get(f'{pre}_stop','—')} · "
-                            f"лот {sig.get(f'{pre}_lot','—')}. Отчёт справа.")
-                    ui.notify(f"{icon} {_nm}: ВХОД {sig.get(f'{pre}_direction','')}", type="positive")
-                else:
-                    line = f"{icon} {_nm}: пас ({sig.get(f'{pre}_reason','—')}). Отчёт справа."
-                    ui.notify(f"{icon} {_nm}: пас", type="info")
-                state["chat_history"].append({"role": "assistant", "agent": aid, "content": line})
-                update_chat_display()
-                update_avatar_states()
-
-            # ── A09 ИСПОЛНИТЕЛЬ ──
-            elif aid == "A09":
-                fdna = sig.get("final_dna", {})
-                sent = fdna.get("orders_sent", "—")
-                tsk  = fdna.get("task_score", "—")
-                state["reports"]["A09"] = r.get("narrative", "") + "\n\n— Летопись: " + sig.get("history_dna", "")
-                state["executor_signal"] = sig
-                state["executor_stats"]  = r.get("stats", {})
-                state["executor_last_run"] = {
-                    "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
-                line = f"📋 Исполнитель: ордеров {sent} из 3 · task_score {tsk}. {sig.get('history_dna','')}"
-                ui.notify(f"📋 Исполнитель: {sent} из 3", type="positive")
-                state["chat_history"].append({"role": "assistant", "agent": "A09", "content": line})
-                update_chat_display()
-                update_avatar_states()
 
         try:
             summary = await asyncio.get_event_loop().run_in_executor(

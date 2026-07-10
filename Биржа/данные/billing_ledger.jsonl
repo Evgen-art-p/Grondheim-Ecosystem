@@ -29,3 +29,6 @@
 {"ts": "2026-07-10T14:11:58.946759", "agent_id": "A01_ISKRA", "slot_id": "trading", "model": "deepseek/deepseek-v4-pro", "prompt_tokens": 9005, "completion_tokens": 1197, "call_type": "chat", "knowledge_source": "internal"}
 {"ts": "2026-07-10T14:12:36.242926", "agent_id": "A01_ISKRA", "slot_id": "trading", "model": "deepseek/deepseek-v4-pro", "prompt_tokens": 9025, "completion_tokens": 1725, "call_type": "chat", "knowledge_source": "internal"}
 {"ts": "2026-07-10T14:12:58.877422", "agent_id": "A01_ISKRA", "slot_id": "trading", "model": "deepseek/deepseek-v4-pro", "prompt_tokens": 9025, "completion_tokens": 550, "call_type": "chat", "knowledge_source": "internal"}
+{"ts": "2026-07-10T14:24:36.911584", "agent_id": "A01_ISKRA", "slot_id": "trading", "model": "deepseek/deepseek-v4-pro", "prompt_tokens": 4348, "completion_tokens": 107, "call_type": "chat", "knowledge_source": "internal"}
+{"ts": "2026-07-10T14:26:01.771756", "agent_id": "A01_ISKRA", "slot_id": "trading", "model": "deepseek/deepseek-v4-pro", "prompt_tokens": 4480, "completion_tokens": 298, "call_type": "chat", "knowledge_source": "internal"}
+{"ts": "2026-07-10T14:32:20.812054", "agent_id": "A01_ISKRA", "slot_id": "trading", "model": "deepseek/deepseek-v4-pro", "prompt_tokens": 4586, "completion_tokens": 172, "call_type": "chat", "knowledge_source": "internal"}

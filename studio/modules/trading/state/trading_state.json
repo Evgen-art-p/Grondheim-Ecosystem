@@ -1,12 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-10T14:12:58.880423",
+  "updated": "2026-07-10T14:38:18.806175",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
-    "history_dna": "MIN_20260327_AO=-533.24_L=4375.38; MAX_20260302_AO=243.76_H=5419.26; MIN_20260220_AO=131.52_L=4981.58",
-    "trend_direction": "BEAR",
-    "found_timeframe": null
+    "history_dna": ""
   },
   "positions": [],
   "feed": {

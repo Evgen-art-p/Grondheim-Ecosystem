@@ -203,13 +203,25 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                 return False
         return False
 
-    def _emit_report(agent, narrative, status=""):  # TESTER_REPORTS_V1
-        """Структурный отчёт агента наружу — биржа разложит по аватарам."""
+    def _emit_report(agent, narrative, status="", result=None):  # TESTER_REPORTS_V1
+        """
+        Структурный отчёт агента наружу — биржа разложит по аватарам.
+
+        result (опционально) — ПОЛНЫЙ словарь run_* агента (signal,
+        market, stats, ...). Раньше сюда шёл только narrative/status —
+        кабинет не мог восстановить *_last_run после ТЕСТЕРА, и чат
+        с агентом сразу после тестового прогона честно, но неверно по
+        сути отвечал "рынок не запускали". Теперь result прокидывается
+        и в кабинете идёт в ту же _apply_agent_result, что использует
+        и РЫНОК — один источник правды для памяти чата.
+        """
         if on_progress and narrative:
             try:
-                on_progress({"type": "report", "agent": agent,
-                             "narrative": str(narrative).strip(),
-                             "status": status})
+                msg = {"type": "report", "agent": agent,
+                       "narrative": str(narrative).strip(), "status": status}
+                if result is not None:
+                    msg["result"] = result
+                on_progress(msg)
             except Exception:
                 pass
 
@@ -474,27 +486,27 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     out("🎯 " + "─" * 60)
                     out("")
                     out(f"  ✴️ ИСКРА:\n     {narrative}")
-                    _emit_report("A01", narrative, _t1)   # TESTER_REPORTS_V1
+                    _emit_report("A01", narrative, _t1, result=r)   # TESTER_REPORTS_V1
                     out("")
                 elif aid == "A02":
                     out(f"  🦭 МОРЖ:\n     {narrative}")
-                    _emit_report("A02", narrative)
+                    _emit_report("A02", narrative, result=r)
                     out("")
                 elif aid == "A03":
                     out(f"  😱 ПАНИКЁР:\n     {narrative}")
-                    _emit_report("A03", narrative)
+                    _emit_report("A03", narrative, result=r)
                     out("")
                 elif aid == "A04":
                     out(f"  🎯 ГАНС:\n     {narrative}")
-                    _emit_report("A04", narrative)
+                    _emit_report("A04", narrative, result=r)
                     out("")
                 elif aid == "A05":
                     out(f"  📚 АРХИВАРИУС:\n     {narrative}")
-                    _emit_report("A05", narrative)
+                    _emit_report("A05", narrative, result=r)
                     out("")
                 elif aid == "A06":
                     out(f"  🪨 БРУТ:\n     {narrative}")
-                    _emit_report("A06", narrative)
+                    _emit_report("A06", narrative, result=r)
                     bs = r.get("signal", {}) or {}
                     v = bs.get("brut_verdict", "—")
                     if v == "APPROVED":
@@ -510,7 +522,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     out("")
                 elif aid == "A07":
                     out(f"  ⚡ АВАНТЮРИСТ:\n     {narrative}")
-                    _emit_report("A07", narrative)
+                    _emit_report("A07", narrative, result=r)
                     avs = r.get("signal", {}) or {}
                     vv = avs.get("avan_verdict", "—")
                     if vv == "APPROVED":
@@ -523,7 +535,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     out("")
                 elif aid == "A08":
                     out(f"  🛡 КОНСЕРВАТОР:\n     {narrative}")
-                    _emit_report("A08", narrative)
+                    _emit_report("A08", narrative, result=r)
                     cos = r.get("signal", {}) or {}
                     vc = cos.get("cons_verdict", "—")
                     if vc == "APPROVED":
@@ -542,7 +554,8 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                         f"task_score {fdna.get('task_score','—')}")
                     _emit_report("A09",
                         esig.get("history_dna", "") or
-                        f"ордеров {fdna.get('orders_sent','—')} из 3")
+                        f"ордеров {fdna.get('orders_sent','—')} из 3",
+                        result=r)
                     if esig.get("history_dna"):
                         out(f"     └─ летопись: {esig.get('history_dna','').strip()}")
                     out("")
