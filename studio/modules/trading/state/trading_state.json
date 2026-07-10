@@ -1,18 +1,94 @@
 {
   "version": 1,
-  "updated": "2026-07-09T22:12:42.042302",
+  "updated": "2026-07-10T13:38:44.752916",
   "iskra": {
-    "t1_status": "NOT_FOUND",
-    "zero_point_price": null,
-    "history_dna": "BEAR_DIV_20250806_0800_ao41.32_high3378.58",
-    "trend_direction": "BULL",
+    "t1_status": "DETECTED",
+    "zero_point_price": 1252.55,
+    "history_dna": "DETECTED BULL zero_point=1252.55 ao=-9.79 at 2016.10.11 12:00",
+    "trend_direction": "BEAR",
     "found_timeframe": null
   },
-  "positions": [],
+  "positions": [
+    {
+      "trader": "BRUT",
+      "magic": 100001,
+      "direction": "SHORT",
+      "entry": 1255.49,
+      "stop": 1264.86,
+      "tp": null,
+      "lot": 1,
+      "status": "OPEN",
+      "mode": "PAPER",
+      "opened_at": "2016.10.11 12:00",
+      "pnl": null,
+      "iskra_zero_point": 1252.55,
+      "symbol": "XAUUSD"
+    }
+  ],
   "feed": {
-    "mode": "tester"
+    "mode": "tester",
+    "symbol": "XAUUSD"
   },
-  "brut": {},
-  "avan": {},
-  "cons": {}
+  "brut": {
+    "verdict": "APPROVED",
+    "reason": "Пробой короткого фрактала за пастью, тренд BEAR, Искра подтверждает импульс вниз",
+    "direction": "SHORT",
+    "entry": 1255.49,
+    "stop": 1264.86,
+    "lot": 1,
+    "action": "ENTER",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "avan": {
+    "verdict": "REJECTED",
+    "reason": "Разворотный бар не сформирован — close 1255.4 выше точки ноль 1252.55, моментум не сменился",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "cons": {
+    "verdict": "REJECTED",
+    "reason": "Нет отката волны 2 с опорой — нет точки входа Консерватора",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "morj": {
+    "morj_status": "AWAKE",
+    "wave_1_validated": false,
+    "tension_peak": false,
+    "history_dna": "",
+    "scale_timeframe": "H4",
+    "inherited_dir": "BEAR",
+    "alligator_state": {
+      "sleeping": false,
+      "opening": false,
+      "mature": true,
+      "bars_open": 220
+    }
+  },
+  "panic": {
+    "panic_phase": "TENSION",
+    "crowd_sentiment": "Объёмы бешеные, цена стоит как вкопанная — сейчас рванёт!!!",
+    "action_for_traders": "HIGH_SKEPTICISM",
+    "history_dna": "",
+    "scale_timeframe": "H4"
+  },
+  "hans": {
+    "fractal_valid": true,
+    "fractal_side": "SHORT",
+    "fractal_price": 1255.5,
+    "absorption_ratio": 0.85,
+    "scale_timeframe": "H4",
+    "history_dna": ""
+  }
 }
