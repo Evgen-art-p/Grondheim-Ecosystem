@@ -154,39 +154,6 @@ class Dvizhok:
             "натура":         self.p.get("DNA_Static", {}),
         }
 
-    # ── ЯКОРЯ: разделитель бывает ДВУХ видов ────────────────────────
-    # Форма рождения писала литеральные два символа «\\» + «n», а не
-    # перевод строки (проверено на паспорте Ильи 12.07). Читаем ОБА,
-    # пишем ТЕМ ЖЕ, каким паспорт написан — иначе сломаем вид другим
-    # читателям (кабинет, ui_zhitel). # DVIZHOK_YAKORYA_YADRO_V1
-    _YAKOR_LIT = "\\n"      # литерал: обратный слэш + n
-
-    def _yakorya_razdelitel(self, raw: str) -> str:
-        """Каким разделителем ЖИВЁТ этот паспорт. Литерал — если он есть."""
-        if self._YAKOR_LIT in (raw or ""):
-            return self._YAKOR_LIT
-        return "\n"
-
-    def _yakorya_spisok(self, raw: str) -> list:
-        """Якоря списком. Режет и по литералу, и по настоящему переводу."""
-        s = (raw or "").replace(self._YAKOR_LIT, "\n")
-        return [ln.strip() for ln in s.split("\n") if ln.strip()]
-
-    def yadro(self) -> str:
-        """ЯДРО живёт в РОЛИ (маске), не в Роде (Чертёж §1.5) — паспорт
-        его не носит и носить не должен. Маска лежит в доме жителя,
-        движок дотянется сам. Паспорт — фоллбэк. # DVIZHOK_YAKORYA_YADRO_V1"""
-        try:
-            mp = self.dom / "маски" / "работа" / "mask.json"
-            if mp.exists():
-                m = json.loads(mp.read_text(encoding="utf-8"))
-                cp = (m.get("Core_Phrase") or "").strip()
-                if cp:
-                    return cp
-        except Exception:
-            pass
-        return self.p.get("Core_Phrase", "") or ""
-
     def nakryt_stol_chisto(self) -> dict:
         """Стол БЕЗ дыхания: чистое чтение личности из паспорта — ноль
         записи в память, ноль vdoh_result. Для читающего конца, который
@@ -198,7 +165,7 @@ class Dvizhok:
         return {
             "кто_я":        self.p.get("Official_Name"),
             "заряд":        round(self.charge, 3),
-            "ядро":         self.yadro(),   # DVIZHOK_YAKORYA_YADRO_V1: ядро из маски (Роль), не из Рода
+            "ядро":         self.p.get("Core_Phrase", ""),
             "история":      self.p.get("Hidden_History", ""),
             "чувство":      self.p.get("Sensory_Response", ""),
             "якоря":        self.p.get("Anchor_Points", ""),
@@ -220,8 +187,7 @@ class Dvizhok:
         if not vyvod:
             return {"дописано": False, "причина": "пустой вывод"}
         raw = self.p.get("Anchor_Points", "") or ""
-        sep = self._yakorya_razdelitel(raw)   # DVIZHOK_YAKORYA_YADRO_V1
-        lines = self._yakorya_spisok(raw)
+        lines = [ln for ln in raw.split("\n") if ln.strip()]
         if vyvod in lines:
             return {"дописано": False, "причина": "уже среди якорей",
                     "всего": len(lines)}
@@ -245,7 +211,7 @@ class Dvizhok:
                         }, ensure_ascii=False) + "\n")
             except Exception:
                 pass   # архив не должен ронять запись опыта
-        self.p["Anchor_Points"] = sep.join(lines)   # DVIZHOK_YAKORYA_YADRO_V1: пишем ТЕМ ЖЕ разделителем
+        self.p["Anchor_Points"] = "\n".join(lines)
         self.passport_path.write_text(
             json.dumps(self.p, ensure_ascii=False, indent=2),
             encoding="utf-8")
