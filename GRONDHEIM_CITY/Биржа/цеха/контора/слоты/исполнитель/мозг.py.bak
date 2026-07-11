@@ -111,30 +111,11 @@ def _read_traders() -> dict:
 # CLOSE не считает PnL — ставит флаг, _settle закроет единой физикой.
 # ════════════════════════════════════════════════════════════
 
-# EXECUTOR_PYRAMID_STOP_DISCIPLINE_V1
-def _stop_tightens(direction: str, old_stop, new_stop) -> bool:
-    """
-    Трейлинг-стоп (первоисточник Уильямса) — только в защитную сторону.
-    LONG: новый стоп не ниже старого. SHORT: новый стоп не выше старого.
-    Старого стопа нет (первое выставление) — пропускаем как валидное.
-    """
-    if old_stop is None or new_stop is None:
-        return True
-    if (direction or "").upper() == "LONG":
-        return new_stop >= old_stop
-    return new_stop <= old_stop  # SHORT
-
-
 def _manage_positions_from_table(traders: dict) -> list:
     """
     Для каждого трейдера с открытой позицией исполняет его действие
     ведения над trading_state["positions"]. Возвращает список изменений
     (для летописи). Открытие (ENTER) — не здесь, это рука открывающая.
-
-    EXECUTOR_PYRAMID_STOP_DISCIPLINE_V1: стоп двигается только по канону трейлинга
-    (никогда не ослабляется), долив идёт формой реверсивной пирамиды
-    (со второго — не крупнее предыдущего), долив со стопом в одном
-    ходу подтягивает и то, и другое разом.
     """
     from hooks import load_trading_state, save_trading_state
     tstate = load_trading_state()
@@ -160,11 +141,6 @@ def _manage_positions_from_table(traders: dict) -> list:
             if ns is None:
                 continue
             old = pos.get("stop")
-            if not _stop_tightens(pos.get("direction"), old, ns):
-                changed.append({"trader": TRADER_NAME[key], "action": "MOVE_STOP_REJECTED",
-                                "from": old, "attempted": ns,
-                                "why": "ослабляет стоп — против канона трейлинга"})
-                continue
             pos["stop"] = ns
             dirty = True
             changed.append({"trader": TRADER_NAME[key], "action": "MOVE_STOP",
@@ -174,34 +150,13 @@ def _manage_positions_from_table(traders: dict) -> list:
             al = v.get("add_lot")
             if al is None or al <= 0:
                 continue
-            prior_pyramids = pos.get("pyramids", 0)
-            last_add = pos.get("last_add_lot")
-            if prior_pyramids >= 1 and last_add is not None and al > last_add:
-                changed.append({"trader": TRADER_NAME[key], "action": "ADD_REJECTED",
-                                "attempted": al, "last_add_lot": last_add,
-                                "why": "долив крупнее предыдущего — против формы "
-                                       "реверсивной пирамиды (Уильямс)"})
-                continue
             old_lot = pos.get("lot") or 0
             pos["lot"] = round(old_lot + al, 4)
-            pos["pyramids"] = prior_pyramids + 1
-            pos["last_add_lot"] = al
+            pos.setdefault("pyramids", 0)
+            pos["pyramids"] += 1
             dirty = True
-            add_change = {"trader": TRADER_NAME[key], "action": "ADD",
-                          "add_lot": al, "lot_now": pos["lot"]}
-            # золотое правило пирамидинга: долив без подтяжки стопа не
-            # бывает — если трейдер тем же ходом назвал new_stop, тянем
-            # его сюда же, той же проверкой монотонности.
-            ns = v.get("new_stop")
-            if ns is not None:
-                old_stop = pos.get("stop")
-                if _stop_tightens(pos.get("direction"), old_stop, ns):
-                    pos["stop"] = ns
-                    add_change["stop_from"] = old_stop
-                    add_change["stop_to"] = ns
-                else:
-                    add_change["stop_move_rejected"] = ns
-            changed.append(add_change)
+            changed.append({"trader": TRADER_NAME[key], "action": "ADD",
+                            "add_lot": al, "lot_now": pos["lot"]})
 
         elif action == "CLOSE":
             pos["manual_close"] = True

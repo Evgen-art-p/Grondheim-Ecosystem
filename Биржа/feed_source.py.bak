@@ -116,35 +116,17 @@ def _bars_from_terminal(symbol: str, tf: str, count: int) -> Tuple[list, Optiona
     return _fetch(mt5, symbol, tf, count)
 
 
-# FEED_SOURCE_FOLDER_CACHE_V1: кэш полного разбора CSV по абсолютному пути.
-# Исторические файлы статичны в рамках одного прогона процесса —
-# читаем с диска ОДИН РАЗ, дальше режем хвост из памяти. Без этого
-# build_market_data (через global_anchor.global_trend, §12 Котина)
-# на КАЖДЫЙ бар сита-1 заново читал и парсил старший этаж целиком —
-# на H1 (94 566 баров) это превращало прогон в час+ без единого
-# срабатывания (сито-1 не успевало закончить сканирование истории).
-_FOLDER_BARS_CACHE: dict = {}
-
-
 def _bars_from_folder(symbol: str, tf: str, count: int) -> Tuple[list, Optional[float]]:
     """
     КРАН ТЕСТ: папка test_data. Читает CSV нужного этажа, отдаёт
     последние count баров + point из таблички (терминала-то нет).
     MT5 НЕ трогаем — вот вся суть герметичности.
-
-    FEED_SOURCE_FOLDER_CACHE_V1: полный разбор файла кэшируется по абсолютному
-    пути — читаем с диска один раз за весь прогон, а не на каждый
-    вызов (см. докстроку патча). Хвост (count) режется из кэша.
     """
     from williams_core import read_mt5_csv
     p = _find_csv(symbol, tf)
     if p is None:
         return [], None
-    key = str(p.resolve())
-    bars = _FOLDER_BARS_CACHE.get(key)
-    if bars is None:
-        bars = read_mt5_csv(str(p))
-        _FOLDER_BARS_CACHE[key] = bars or []
+    bars = read_mt5_csv(str(p))
     if not bars:
         return [], None
     point = _test_point(symbol)

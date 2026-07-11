@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updated": "2026-07-11T14:44:17.822934",
+  "updated": "2026-07-11T18:39:26.348795",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1603.46,
-    "history_dna": "BULL_DETECTED_H4_1603.46",
-    "trend_direction": null,
+    "zero_point_price": 1425.51,
+    "history_dna": "BULL_DETECTED_H1_1425.51",
+    "trend_direction": "BULL",
     "found_timeframe": null
   },
   "positions": [],
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Пасть спит (Морж SLEEPING, alligator_sleeping: true), импульса нет, пробоя фрактала SHORT 1591.29 нет. Боковик — не моя охота.",
+    "reason": "Морж SLEEPING — пасть закрыта, пробоя фрактала LONG 1428.25 нет (high 1427.30 ниже), вход не по канону Брута",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -26,7 +26,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "Аллигатор спит, Морж спит, приседающего нет — только одна пуля из пяти. В пасти не охочусь.",
+    "reason": "Нет приседающего и смены моментума — из пяти пуль только дивергенция и далёкий фрактал, дно не оформлено",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -37,7 +37,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет глобального тренда, Аллигатор спит, разворотный бар волны 2 отсутствует",
+    "reason": "Аллигатор спит, опора в пасти не подтверждена, разрядки AO нет — вход преждевременен.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -51,8 +51,8 @@
     "wave_1_validated": false,
     "tension_peak": false,
     "history_dna": "",
-    "scale_timeframe": "H4",
-    "inherited_dir": null,
+    "scale_timeframe": "H1",
+    "inherited_dir": "BULL",
     "alligator_state": {
       "sleeping": true,
       "opening": false,
@@ -61,18 +61,18 @@
     }
   },
   "panic": {
-    "panic_phase": "GREED",
-    "crowd_sentiment": "Народ подтягивается, объём прёт — сейчас рванём вверх, я чую!",
+    "panic_phase": "TENSION",
+    "crowd_sentiment": "Объёмы бешеные, а цена стоит! Щас рванёт!!!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "H4"
+    "scale_timeframe": "H1"
   },
   "hans": {
     "fractal_valid": true,
-    "fractal_side": "SHORT",
-    "fractal_price": 1591.29,
-    "absorption_ratio": 0.6,
-    "scale_timeframe": "H4",
+    "fractal_side": "LONG",
+    "fractal_price": 1428.25,
+    "absorption_ratio": 0.85,
+    "scale_timeframe": "H1",
     "history_dna": ""
   }
 }
