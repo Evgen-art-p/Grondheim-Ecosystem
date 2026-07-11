@@ -1720,9 +1720,16 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             ui.label("ловить:").style("color:rgba(255,255,255,0.45);font-size:11px;")
                         toolbar_refs["bars_input"] = ui.element("div").style("display:none;align-items:center;")
                         with toolbar_refs["bars_input"]:
-                            _bi = ui.number(value=1, min=1, max=999, format="%d").props("dense borderless").style(
+                            def _on_bars_change(e):   # TORG_BARS_ONCHANGE_V1
+                                try:
+                                    state["bars_to_live"] = int(e.value or 1)
+                                except (TypeError, ValueError):
+                                    state["bars_to_live"] = 1
+                            _bi = ui.number(
+                                value=1, min=1, max=999, format="%d",
+                                on_change=_on_bars_change,   # штатный API NiceGUI, не сырое quasar-событие
+                            ).props("dense borderless").style(
                                 "width:60px;font-family:JetBrains Mono;font-size:12px;color:rgba(0,204,255,0.9);")
-                            _bi.on("update:model-value", lambda e: state.update({"bars_to_live": int(e.args or 1)}))
                         toolbar_refs["stop_btn"] = ui.element("div").style(
                             "display:none;align-items:center;padding:6px 14px;border-radius:7px;"
                             "font-size:12px;font-weight:700;cursor:pointer;"
@@ -1788,3 +1795,5 @@ if __name__ in {"__main__", "__mp_main__"}:
 # BIRZHA_MARKET_THREAD_SAFE_V1 — маркер идемпотентности
 
 # AGENT_LIVE_SWITCH_V1 — маркер идемпотентности
+
+# TORG_BARS_ONCHANGE_V1 — маркер идемпотентности

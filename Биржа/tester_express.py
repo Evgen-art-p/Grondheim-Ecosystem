@@ -519,6 +519,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                 out(f"⏸ СТОП по команде Шефа — прошёл {scanned} из {len(candidates)} кандидатов.")
                 break
             state["cursor"] = i
+            bd = bars_all[i].get("date", "?")   # TESTER_ISKRA_BD_FIX_V1: было undefined
             scanned += 1
             _emit(f"кандидат {idx+1}/{len(candidates)} · бар {i}")
 
@@ -558,7 +559,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     _found_flag["found"] = False
                     _d = ev.get("descent", {}) or {}
                     _msg = (f"кандидат {idx+1}/{len(candidates)} ({bd}, {side}): "
-                            f"спуск не нашёл точку (компас={_d.get('compass')})")
+                            f"спуск не нашёл точку (компас={_d.get('compass')})")  # TESTER_ISKRA_BD_FIX_V1
                     print("  " + _msg + " — пропускаю")
                     _emit({"type": "progress", "text": _msg})   # TESTER_TO_CABINET_V1
                     return
@@ -580,7 +581,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     _t1 = (r.get("signal", {}) or {}).get("t1_status", "NOT_FOUND")
                     out("")
                     out("🎯 " + "─" * 60)
-                    out(f"🎯 бар {i} ({bd}) — ИСКРА: {_t1}")
+                    out(f"🎯 бар {i} ({bd}) — ИСКРА: {_t1}")  # TESTER_ISKRA_BD_FIX_V1
                     out("🎯 " + "─" * 60)
                     out("")
                     out(f"  ✴️ ИСКРА:\n     {narrative}")
@@ -771,3 +772,5 @@ if __name__ == "__main__":
 # TESTER_EXPRESS_SOUL_IGNORE_V1 — маркер идемпотентности
 
 # ISKRA_WORKING_TF_FIRST_V1 — маркер идемпотентности
+
+# TESTER_ISKRA_BD_FIX_V1 — маркер идемпотентности
