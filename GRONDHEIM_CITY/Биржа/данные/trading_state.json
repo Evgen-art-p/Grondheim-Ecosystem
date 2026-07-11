@@ -1,37 +1,21 @@
 {
   "version": 1,
-  "updated": "2026-07-11T03:11:58.885507",
+  "updated": "2026-07-11T03:24:20.698091",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1195.6,
-    "history_dna": "D1 MIN pivot ao=-39.44 at price 1195.6 on 2018.09.03",
-    "trend_direction": "BEAR",
+    "zero_point_price": 1852.69,
+    "history_dna": "BULL_DESCENT: found on D1, zero_point=1852.69, date=2020.11.19",
+    "trend_direction": "BULL",
     "found_timeframe": null
   },
-  "positions": [
-    {
-      "trader": "AVANTURIST",
-      "magic": 100002,
-      "direction": "LONG",
-      "entry": 1203.85,
-      "stop": 1195.59,
-      "tp": null,
-      "lot": 0.1,
-      "status": "OPEN",
-      "mode": "PAPER",
-      "opened_at": "2018.09.03",
-      "pnl": null,
-      "iskra_zero_point": 1195.6,
-      "symbol": "XAUUSD"
-    }
-  ],
+  "positions": [],
   "feed": {
     "mode": "tester",
     "symbol": "XAUUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Нет пробоя фрактала SHORT за пастью — цена выше Зубов, структура не активирована",
+    "reason": "Грязный пробой — фрактал 1961.88 пробит, но цена закрылась под ним. Жду свежий непробитый фрактал.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -42,10 +26,10 @@
   },
   "avan": {
     "verdict": "APPROVED",
-    "reason": "Разворотный Бар на дне: дивергенция, касание целевой зоны (1195.6), смена моментума (бычье закрытие), фрактал есть. Якорь BEAR игнорирую — это конец волны C, а не коррекция.",
+    "reason": "четыре пули из пяти: дивергенция, целевая зона, фрактал на дне, смена моментума. приседающего нет, но это не стоп. якорь BULL подтверждает направление. паникёр GREED — наоборот.",
     "direction": "LONG",
-    "entry": 1203.85,
-    "stop": 1195.59,
+    "entry": 1976.54,
+    "stop": 1909.78,
     "lot": 0.1,
     "action": "ENTER",
     "new_stop": null,
@@ -53,7 +37,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет Разворотного Бара в сторону тренда на откате, нет подтверждённой опоры, отсутствует разрядка AO к нулю — условия позднего входа не выполнены.",
+    "reason": "Нет Разворотного Бара: текущий бар медвежий, закрытие ниже открытия, откат волны 2 не завершён бычьим разворотом с опорой в пасти",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -65,29 +49,29 @@
   "morj": {
     "morj_status": "AWAKE",
     "wave_1_validated": false,
-    "tension_peak": true,
+    "tension_peak": false,
     "history_dna": "",
     "scale_timeframe": "D1",
-    "inherited_dir": "BEAR",
+    "inherited_dir": "BULL",
     "alligator_state": {
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 192
+      "bars_open": 268
     }
   },
   "panic": {
-    "panic_phase": "ASLEEP",
-    "crowd_sentiment": "Ничего не происходит, можно не смотреть, всё равно никуда не пойдёт",
-    "action_for_traders": "NEUTRAL",
+    "panic_phase": "PANIC",
+    "crowd_sentiment": "Разворот — обман! Медвежий тренд жив, всё летит к чёрту, закрывай лонги!",
+    "action_for_traders": "GREEN_LIGHT_IF_GANS",
     "history_dna": "",
     "scale_timeframe": "D1"
   },
   "hans": {
     "fractal_valid": true,
-    "fractal_side": "SHORT",
-    "fractal_price": 1183.18,
-    "absorption_ratio": 0.2,
+    "fractal_side": "LONG",
+    "fractal_price": 1961.88,
+    "absorption_ratio": 0.6,
     "scale_timeframe": "D1",
     "history_dna": ""
   }

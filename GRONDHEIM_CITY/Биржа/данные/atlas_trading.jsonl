@@ -1,0 +1,2 @@
+{"ts": "2026-07-11T03:18:05.707784", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -8.26, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "D1"}}
+{"ts": "2026-07-11T03:22:09.590935", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "EXIT_BELL", "pnl": -12.2, "pnl_r": -0.1827, "symbol": "XAUUSD", "timeframe": "D1"}}

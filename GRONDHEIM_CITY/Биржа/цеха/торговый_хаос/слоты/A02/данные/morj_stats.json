@@ -1,8 +1,8 @@
 {
-  "runs": 6,
-  "awake": 6,
+  "runs": 9,
+  "awake": 9,
   "sleeping": 0,
   "validated": 0,
-  "vetoed": 6,
-  "tension_peaks": 2
+  "vetoed": 9,
+  "tension_peaks": 4
 }
