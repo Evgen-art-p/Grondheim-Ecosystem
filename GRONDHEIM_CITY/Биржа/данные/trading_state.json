@@ -1,37 +1,21 @@
 {
   "version": 1,
-  "updated": "2026-07-11T03:30:18.201518",
+  "updated": "2026-07-11T14:44:17.822934",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1825.13,
-    "history_dna": "BULL_DESCENT: found on D1, zero_point=1825.13, date=2022.06.10",
+    "zero_point_price": 1603.46,
+    "history_dna": "BULL_DETECTED_H4_1603.46",
     "trend_direction": null,
     "found_timeframe": null
   },
-  "positions": [
-    {
-      "trader": "AVANTURIST",
-      "magic": 100002,
-      "direction": "LONG",
-      "entry": 1876.01,
-      "stop": 1825.12,
-      "tp": null,
-      "lot": 0.1,
-      "status": "OPEN",
-      "mode": "PAPER",
-      "opened_at": "2022.06.10",
-      "pnl": null,
-      "iskra_zero_point": 1825.13,
-      "symbol": "XAUUSD"
-    }
-  ],
+  "positions": [],
   "feed": {
     "mode": "tester",
     "symbol": "XAUUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "close below fractal",
+    "reason": "Пасть спит (Морж SLEEPING, alligator_sleeping: true), импульса нет, пробоя фрактала SHORT 1591.29 нет. Боковик — не моя охота.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -41,19 +25,19 @@
     "add_lot": null
   },
   "avan": {
-    "verdict": "APPROVED",
-    "reason": "дно волны C: дивергенция, точка ноль, фрактал внизу, мощный бычий момент",
-    "direction": "LONG",
-    "entry": 1876.01,
-    "stop": 1825.12,
-    "lot": 0.1,
-    "action": "ENTER",
+    "verdict": "REJECTED",
+    "reason": "Аллигатор спит, Морж спит, приседающего нет — только одна пуля из пяти. В пасти не охочусь.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Глобальный тренд не определён; Искра лишь DETECTED, разрядка AO к нулю не подтверждена; волна 1 не валидирована (Морж). Вероятное начало импульса вверх, но не откат волны 2 — Разворотный Бар моего модуля отсутствует.",
+    "reason": "Нет глобального тренда, Аллигатор спит, разворотный бар волны 2 отсутствует",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -63,32 +47,32 @@
     "add_lot": null
   },
   "morj": {
-    "morj_status": "AWAKE",
+    "morj_status": "SLEEPING",
     "wave_1_validated": false,
-    "tension_peak": true,
+    "tension_peak": false,
     "history_dna": "",
-    "scale_timeframe": "D1",
+    "scale_timeframe": "H4",
     "inherited_dir": null,
     "alligator_state": {
-      "sleeping": false,
+      "sleeping": true,
       "opening": false,
-      "mature": true,
-      "bars_open": 287
+      "mature": false,
+      "bars_open": 0
     }
   },
   "panic": {
     "panic_phase": "GREED",
-    "crowd_sentiment": "РАЗВОРОТ! Все берут! Сейчас ещё выше улетит! Кто не внутри — тот лох!",
+    "crowd_sentiment": "Народ подтягивается, объём прёт — сейчас рванём вверх, я чую!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "D1"
+    "scale_timeframe": "H4"
   },
   "hans": {
     "fractal_valid": true,
-    "fractal_side": null,
-    "fractal_price": null,
+    "fractal_side": "SHORT",
+    "fractal_price": 1591.29,
     "absorption_ratio": 0.6,
-    "scale_timeframe": "D1",
+    "scale_timeframe": "H4",
     "history_dna": ""
   }
 }
