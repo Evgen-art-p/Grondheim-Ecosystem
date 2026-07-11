@@ -536,6 +536,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         "bars_to_live": 1,
         "stop_requested": False,
         "tester_running": False,
+        "learn": False,          # TORG_LEARN_SWITCH_V1: учебный прогон (якоря растут)
         "morj_last_run": None,
         "panic_last_run": None,
         "hans_last_run": None,
@@ -900,7 +901,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         except Exception as _e:
             print(f"[TORG] feed_source не подключён: {_e}")
         is_tester = (mode == "tester")
-        for key in ("bars_input", "stop_btn", "bars_label"):
+        for key in ("bars_input", "stop_btn", "bars_label",
+                    "learn_btn"):   # TORG_LEARN_SWITCH_V1
+
             el = toolbar_refs.get(key)
             if el:
                 el.style(f"display: {'flex' if is_tester else 'none'}")
@@ -927,6 +930,36 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
         state["stop_requested"] = True
         ui.notify("⏸ СТОП — останавливаю на следующем кандидате...", type="info")
+
+    def toggle_learn():
+        """TORG_LEARN_SWITCH_V1: УЧИТЬ — писать ли выводы из сделок в живых жителей.
+
+        Выкл (умолчание) — стерильно: смотрим, не калеча. Трейдер всё равно
+        сидит за столом СОБОЙ (читающий конец души работает всегда), но
+        паспорта не трогаются: якоря не растут, заряд не едет.
+        Вкл — учебный прогон: рынок судит, вывод оседает в носителя.
+        """
+        if state.get("tester_running"):
+            ui.notify("Идёт прогон — переключай до старта", type="warning")
+            return
+        state["learn"] = not state.get("learn", False)
+        on = state["learn"]
+        el = toolbar_refs.get("learn_btn")
+        if el:
+            el.style(
+                "display:flex;align-items:center;padding:6px 14px;border-radius:7px;"
+                "font-size:12px;font-weight:700;cursor:pointer;" + (
+                    "background:rgba(189,0,255,0.15);color:#bd88ff;"
+                    "border:1px solid rgba(189,0,255,0.45);"
+                    if on else
+                    "background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.45);"
+                    "border:1px solid rgba(255,255,255,0.08);"
+                ))
+        ui.notify(
+            "🎓 УЧИТЬ включено: якоря жителей будут расти, заряд качаться"
+            if on else
+            "🧪 УЧИТЬ выключено: стерильно — паспорта жителей не трогаем",
+            type="warning" if on else "info")
 
     def _apply_agent_result(aid, r, narrative):
         """
@@ -1148,9 +1181,12 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         path   = hist.get("path", "")
         n      = int(state.get("bars_to_live", 1) or 1)
 
+        _uch = ("🎓 УЧЕБНЫЙ (якоря жителей растут)" if state.get("learn")
+                else "🧪 стерильный (паспорта не трогаем)")   # TORG_LEARN_SWITCH_V1
         state["chat_history"].append({
             "role": "assistant", "agent": "SYSTEM",
-            "content": f"▶ ТЕСТЕР: гоню {symbol} {tf} · ловлю {n} срабатываний. СТОП — прервать."})
+            "content": f"▶ ТЕСТЕР: гоню {symbol} {tf} · ловлю {n} срабатываний · "
+                       f"{_uch}. СТОП — прервать."})
         update_chat_display()
         ui.notify(f"▶ Тестер: {symbol} {tf}", type="info")
 
@@ -1263,6 +1299,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     csv_path=path, symbol=symbol, timeframe=tf,
                     n_signals=n, on_progress=_on_progress,
                     should_stop=_should_stop,
+                    learn=state.get("learn", False),   # TORG_LEARN_SWITCH_V1
                 )
             )
             # Дренаж очереди на ГЛАВНОМ потоке, пока фоновый прогон
@@ -1741,6 +1778,15 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         toolbar_refs["stop_btn"].on("click", lambda: request_stop())
                         with toolbar_refs["stop_btn"]:
                             ui.html("⏸ СТОП")
+                        # TORG_LEARN_SWITCH_V1: рубильник учёбы — рядом со СТОП
+                        toolbar_refs["learn_btn"] = ui.element("div").style(
+                            "display:none;align-items:center;padding:6px 14px;border-radius:7px;"
+                            "font-size:12px;font-weight:700;cursor:pointer;"
+                            "background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.45);"
+                            "border:1px solid rgba(255,255,255,0.08);")
+                        toolbar_refs["learn_btn"].on("click", lambda: toggle_learn())
+                        with toolbar_refs["learn_btn"]:
+                            ui.html("🎓 УЧИТЬ")
                     with ui.element("div").style("display:flex; gap:6px; align-items:center; justify-content:center;"):
                         ui.label("📊 БИРЖА · СОВЕТ").style(
                             "color:rgba(0,204,255,0.7); font-weight:800; font-size:0.8rem; letter-spacing:0.08em;")

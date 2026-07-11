@@ -300,12 +300,11 @@ def chat_with_avan(question: str, last_run: Optional[dict] = None,
         )
 
     system = prompt + work_ctx
-    try:   # AVAN_NOSITEL_V1: в разговоре тоже ОН, не роль
-        from nositel import dusha_slota
-        _n = dusha_slota(_CEH, _SLOT)
-        if _n and _n["душа"]:
-            system = (prompt + "\n\n=== КТО ТЫ (душа носителя) ===\n"
-                      + _n["душа"] + "\n\n" + work_ctx)
+    try:
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
+        soul = format_soul_for_agent("A07_AVANTURIST", dept="trading")
+        if soul:
+            system = prompt + "\n\n=== ТВОЁ СОСТОЯНИЕ (душа) ===\n" + soul + "\n\n" + work_ctx
     except Exception:
         pass
 
@@ -327,21 +326,7 @@ def chat_with_avan(question: str, last_run: Optional[dict] = None,
 # КАМЕНЬ 1: СВОЯ ОТКРЫТАЯ ПОЗИЦИЯ — ФАКТ на стол (не приказ)  # TRADER_SEES_POSITION_V1
 # ════════════════════════════════════════════════════════════
 
-# AVAN_NOSITEL_V1: магик — из МАСКИ носителя (Закон Пары), не константой.
-# Копий магика было ПЯТЬ (дом, этот файл, hooks, промт A09, лор) — так они
-# и разъезжаются. Правда одна: маски/работа/mask.json жителя.
-_CEH  = _CEH_DIR.name      # 'торговый_хаос'
-_SLOT = _SLOT_DIR.name     # 'A07'
-
-
-def _my_magic():
-    """Магик ТОГО, кто сидит в этом слоте. Нет носителя → None."""
-    try:
-        from nositel import magic_slota
-        return magic_slota(_CEH, _SLOT)
-    except Exception as e:
-        print(f"[AVAN] ⚠️  магик из маски не прочитан ({e})")
-        return None
+_MY_MAGIC = 100002   # паспорт трейдера (как у Исполнителя)
 
 
 def _my_open_position(md: dict) -> dict:
@@ -356,11 +341,8 @@ def _my_open_position(md: dict) -> dict:
         return None
 
     mine = None
-    _magic = _my_magic()   # AVAN_NOSITEL_V1
-    if _magic is None:
-        return None        # без магика свою позицию не опознать — честно
     for p in positions:
-        if p.get("magic") == _magic and p.get("status") == "OPEN":
+        if p.get("magic") == _MY_MAGIC and p.get("status") == "OPEN":
             mine = p
             break
     if not mine:
@@ -430,20 +412,12 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
                 "narrative": "", "signal": {}, "diary_entry": {},
                 "stats": _load_stats(), "market": {}, "table": table}
 
-    # AVAN_NOSITEL_V1: ДУША — от НОСИТЕЛЯ, не от трупа роли из -2.
-    # Было: format_soul_for_agent('A07_AVANTURIST') из снесённой studio/ →
-    # импорт падал всегда, soul='' , торговал 'Авантюрист-вообще'.
-    # Стало: за столом сидит ИЛЬЯ — его род, натура и ЕГО ЯКОРЯ (опыт).
     soul = ""
     try:
-        from nositel import dusha_slota
-        _n = dusha_slota(_CEH, _SLOT)
-        if _n:
-            soul = _n["душа"]
-            print(f"[AVAN] 🧬 За столом: {_n['носитель']['имя']} "
-                  f"(magic {_n['magic']})")
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
+        soul = format_soul_for_agent("A07_AVANTURIST", dept="trading")
     except Exception as e:
-        print(f"[AVAN] ⚠️  Носитель не поднялся ({e}) — работаю без души")
+        print(f"[AVAN] ⚠️  Душа не загрузилась ({e}) — работаю без неё")
 
     prompt    = PROMPT_PATH.read_text(encoding="utf-8") if PROMPT_PATH.exists() else ""
     knowledge = KNOWLEDGE.read_text(encoding="utf-8") if KNOWLEDGE.exists() else ""
