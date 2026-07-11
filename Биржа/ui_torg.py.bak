@@ -1726,14 +1726,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                                 except (TypeError, ValueError):
                                     state["bars_to_live"] = 1
                             _bi = ui.number(
-                                value=1, min=1, max=999,
+                                value=1, min=1, max=999, format="%d",
                                 on_change=_on_bars_change,   # штатный API NiceGUI, не сырое quasar-событие
-                            ).props(  # CATCH_FIELD_VISIBLE_V1: видимая коробка + гарантированная отрисовка числа
-                                'dense outlined '
-                                'input-style="color:rgba(0,204,255,0.95);'
-                                'font-family:JetBrains Mono;font-size:13px;'
-                                'text-align:center;padding:0 2px;"'
-                            ).style("width:78px;")
+                            ).props("dense borderless").style(
+                                "width:60px;font-family:JetBrains Mono;font-size:12px;color:rgba(0,204,255,0.9);")
                         toolbar_refs["stop_btn"] = ui.element("div").style(
                             "display:none;align-items:center;padding:6px 14px;border-radius:7px;"
                             "font-size:12px;font-weight:700;cursor:pointer;"

@@ -1,7 +1,7 @@
 {
-  "runs": 8,
-  "approved": 3,
+  "runs": 10,
+  "approved": 5,
   "rejected": 5,
-  "long": 3,
+  "long": 5,
   "short": 0
 }

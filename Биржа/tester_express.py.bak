@@ -1,68 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-patch_ladder_multifloor_v1.py
------------------------------------------------------------
-LADDER_MULTIFLOOR_V1 -- тестер спускается по НАСТОЯЩЕЙ лесенке.
-
-ВОПРОС ШЕФА: "может, все котировки загрузить по таймфреймам на золоте?
-точней лесенка работать будет?" -- ДА. Проверено.
-
-ДИАГНОЗ (до патча): тестер был заперт на ОДНОМ этаже -- том единственном
-CSV, что передан в --csv. mt5_feed._fetch/pull_bars ИГНОРИРОВАЛИ
-запрошенный tf_name и всегда отдавали срез ЕДИНСТВЕННОГО файла;
-step_down всегда возвращал None. Спуск Искры физически не мог
-опуститься глубже загруженного файла, даже когда по канону должен был.
-
-Отдельно уже существовал Биржа/feed_source.py (_find_csv,
-_bars_from_folder) -- умеет находить файл под любой этаж в test_data/,
-но использовался только для "хвоста" файла (последние N баров) --
-годится для живого прогона всего файла подряд, но не для честного
-"дай этаж на ЭТУ историческую дату" внутри бэктеста (иначе -- забегание
-вперёд по времени).
-
-ЧТО МЕНЯЕТСЯ (Биржа/tester_express.py):
-  1. При старте прогона грузятся ВСЕ найденные в test_data/ этажи
-     лесенки символа (_TF_LADDER: MN1..M5) -- через _find_csv из
-     feed_source.py (переиспользована, не продублирована).
-  2. Новая _bars_as_of(tf_name, cutoff_date, count) -- честный срез
-     этажа НЕ ПОЗЖЕ текущей исторической даты. Даты MT5 сравниваются
-     как строки (формат фикс-ширины = лексикографический порядок
-     совпадает с хронологическим) -- забегание вперёд невозможно.
-  3. _fake_fetch/_fake_pull теперь СМОТРЯТ на запрошенный tf_name и
-     берут ЕГО этаж (раньше -- игнорировали, всегда отдавали главный).
-  4. step_down (_multi_step_down) спускается по настоящей лесенке,
-     но ЧЕСТНО: этаж существует для спуска, только если а) файл на
-     него нашёлся И б) этот файл покрывает текущую историческую дату.
-     M5/M15/M30/M10 короче историей (экспорт MT5 ограничен ~100k
-     баров) -- на старых датах спуск честно останавливается там, где
-     данные кончились, не выдумывает более глубокие этажи.
-
-ПРОВЕРЕНО (см. отчёт в чате) -- НА РЕАЛЬНЫХ 11 файлах test_data/:
-  - Полная цепочка MN1->W1->D1->H12->H8->H4->H1->M30->M15->M10->M5 на
-    свежей дате (2026.05.01) доходит до самого дна.
-  - На старой дате (2015.03.10) честно останавливается на H1 -- M30
-    и глубже физически не существовали в экспорте на этот момент.
-  - На промежуточной (2023.01.15) останавливается на M15 -- M10
-    появляется в файле только с 2023.08.
-  - Ни один срез не содержит бара с датой позже cutoff (без
-    забегания вперёд) -- проверено на D1/H1 отдельно.
-  - Текущий формирующийся бар старшего этажа (дата без времени,
-    совпадает с cutoff) корректно ВКЛЮЧАЕТСЯ -- как в живом терминале.
-
-Идемпотентно: безопасно запускать повторно.
-
-Запуск из КОРНЯ репозитория (после фаз 1/2/3 -- ENGINE_ONE_DOOR_V1 --
-и патча компаса, если применялись):
-    python patch_ladder_multifloor_v1.py
-"""
-
-import sys
-from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parent
-TARGET = REPO_ROOT / "Биржа" / "tester_express.py"
-
-NEW_CONTENT = r'''# studio/modules/trading/tester_express.py
+# studio/modules/trading/tester_express.py
 # ─────────────────────────────────────────────────────────────
 # ЭКСПРЕСС-ТЕСТЕР — живой Совет на истории (CSV), без MT5
 # TESTER_EXPRESS_V1 · 2026-06-18
@@ -348,6 +284,15 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                 _floors[_tf] = _b
     print(f"[TESTER] 🪜 этажи лесенки в наличии: {sorted(_floors.keys())}")
 
+    # PERF_LADDER_DATES_CACHE_V1: список дат КАЖДОГО этажа считаем
+    # ОДИН РАЗ здесь, не на каждый вызов _bars_as_of. Раньше пересборка
+    # (list comprehension по 100 000 строк для M5/M15/M30/M10) шла на
+    # КАЖДЫЙ вызов — а вызовов тысячи (каждый кандидат сита × каждый
+    # шаг спуска по лестнице). Итог — тестер практически завис.
+    # bisect не может работать напрямую по списку словарей, поэтому
+    # держим отдельный параллельный список дат-строк на этаж.
+    _floor_dates: dict = {tf: [b["date"] for b in bs] for tf, bs in _floors.items()}
+
     def _bars_as_of(tf_name: str, cutoff_date: str, count: int):
         """
         Честный срез этажа tf_name НЕ ПОЗЖЕ cutoff_date — без забегания
@@ -359,11 +304,14 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
         не закрылась). Этаж не покрывает эту дату (M5/M15 короче
         историей) → честно пусто — лесенка/step_down поймут это как
         честную вакансию этажа, не как ошибку.
+
+        Даты берём из ГОТОВОГО кэша (_floor_dates), не пересобираем.
         """
-        floor = _floors.get((tf_name or timeframe).upper())
+        key = (tf_name or timeframe).upper()
+        floor = _floors.get(key)
         if not floor:
             return [], None
-        dates = [b["date"] for b in floor]
+        dates = _floor_dates[key]
         idx = bisect.bisect_right(dates, cutoff_date)
         if idx == 0:
             return [], None
@@ -520,7 +468,11 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
         candidates = []
         for i in range(warmup, total):
             end = i + 1
-            start = max(0, end - 300)
+            start = max(0, end - 120)   # ISKRA_WORKING_TF_FIRST_V1: канон
+            # Шефа — 100-140 баров, тот же масштаб, что и read_ao_wave_form.
+            # Было 300 — рассинхрон окна с повторной проверкой Искры прятал
+            # реальные точки на ровном месте (разный "горб-царь" в разных
+            # по ширине окнах одного и того же явления).
             window = bars_all[start:end]
             md = build_market_data(window, symbol=symbol,
                                    timeframe=timeframe, point=point)
@@ -567,6 +519,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                 out(f"⏸ СТОП по команде Шефа — прошёл {scanned} из {len(candidates)} кандидатов.")
                 break
             state["cursor"] = i
+            bd = bars_all[i].get("date", "?")   # TESTER_ISKRA_BD_FIX_V1: было undefined
             scanned += 1
             _emit(f"кандидат {idx+1}/{len(candidates)} · бар {i}")
 
@@ -606,7 +559,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     _found_flag["found"] = False
                     _d = ev.get("descent", {}) or {}
                     _msg = (f"кандидат {idx+1}/{len(candidates)} ({bd}, {side}): "
-                            f"спуск не нашёл точку (компас={_d.get('compass')})")
+                            f"спуск не нашёл точку (компас={_d.get('compass')})")  # TESTER_ISKRA_BD_FIX_V1
                     print("  " + _msg + " — пропускаю")
                     _emit({"type": "progress", "text": _msg})   # TESTER_TO_CABINET_V1
                     return
@@ -628,7 +581,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     _t1 = (r.get("signal", {}) or {}).get("t1_status", "NOT_FOUND")
                     out("")
                     out("🎯 " + "─" * 60)
-                    out(f"🎯 бар {i} ({bd}) — ИСКРА: {_t1}")
+                    out(f"🎯 бар {i} ({bd}) — ИСКРА: {_t1}")  # TESTER_ISKRA_BD_FIX_V1
                     out("🎯 " + "─" * 60)
                     out("")
                     out(f"  ✴️ ИСКРА:\n     {narrative}")
@@ -817,32 +770,7 @@ if __name__ == "__main__":
 # TESTER_EXPRESS_CARTRIDGE_V1 — маркер идемпотентности
 
 # TESTER_EXPRESS_SOUL_IGNORE_V1 — маркер идемпотентности
-'''
 
+# ISKRA_WORKING_TF_FIRST_V1 — маркер идемпотентности
 
-def main():
-    if not TARGET.exists():
-        print(f"ВНИМАНИЕ: {TARGET} не найден -- патчи фаз 1/2/3 применены?")
-        sys.exit(1)
-    TARGET.write_text(NEW_CONTENT, encoding="utf-8")
-    print("=" * 62)
-    print("LADDER_MULTIFLOOR_V1 -- патч применён")
-    print("=" * 62)
-    print("  [обновлён] Биржа/tester_express.py")
-    print()
-    print("При старте тестера увидишь строку вида:")
-    print('  [TESTER] 🪜 этажи лесенки в наличии: [...]')
-    print("-- список этажей, для которых нашлись файлы в test_data/.")
-    print()
-    print("Спуск Искры теперь честно опускается по реальным историческим")
-    print("барам каждого найденного этажа вместо потолка одного файла.")
-    print("На старых датах глубина спуска может быть меньше (M5/M15/M30")
-    print("короче историей) -- это честная граница экспорта MT5, не баг.")
-
-
-if __name__ == "__main__":
-    if not (REPO_ROOT / "GRONDHEIM_CITY").exists() or not (REPO_ROOT / "Биржа").exists():
-        print("ВНИМАНИЕ: рядом со скриптом нет GRONDHEIM_CITY/ и Биржа/.")
-        print("    Запусти патч из корня репозитория Grondheim-Ecosystem.")
-        sys.exit(1)
-    main()
+# TESTER_ISKRA_BD_FIX_V1 — маркер идемпотентности

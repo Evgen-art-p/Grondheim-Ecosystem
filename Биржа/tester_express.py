@@ -171,7 +171,8 @@ def _read_last_closures(n=10):
     settle уже записал туда pnl_r, closed_at, reason."""
     from pathlib import Path as _P
     import json as _j
-    p = _P('economy/data/trading_pnl.jsonl')
+    from hooks import PNL_PATH   # TESTER_PNL_PATH_FROM_HOOKS_V1: читаем ТОТ ЖЕ файл, что пишет settle
+    p = _P(PNL_PATH)
     if not p.exists():
         return []
     try:

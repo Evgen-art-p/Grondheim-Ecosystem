@@ -1,21 +1,37 @@
 {
   "version": 1,
-  "updated": "2026-07-11T03:24:20.698091",
+  "updated": "2026-07-11T03:30:18.201518",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1852.69,
-    "history_dna": "BULL_DESCENT: found on D1, zero_point=1852.69, date=2020.11.19",
-    "trend_direction": "BULL",
+    "zero_point_price": 1825.13,
+    "history_dna": "BULL_DESCENT: found on D1, zero_point=1825.13, date=2022.06.10",
+    "trend_direction": null,
     "found_timeframe": null
   },
-  "positions": [],
+  "positions": [
+    {
+      "trader": "AVANTURIST",
+      "magic": 100002,
+      "direction": "LONG",
+      "entry": 1876.01,
+      "stop": 1825.12,
+      "tp": null,
+      "lot": 0.1,
+      "status": "OPEN",
+      "mode": "PAPER",
+      "opened_at": "2022.06.10",
+      "pnl": null,
+      "iskra_zero_point": 1825.13,
+      "symbol": "XAUUSD"
+    }
+  ],
   "feed": {
     "mode": "tester",
     "symbol": "XAUUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Грязный пробой — фрактал 1961.88 пробит, но цена закрылась под ним. Жду свежий непробитый фрактал.",
+    "reason": "close below fractal",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -26,10 +42,10 @@
   },
   "avan": {
     "verdict": "APPROVED",
-    "reason": "четыре пули из пяти: дивергенция, целевая зона, фрактал на дне, смена моментума. приседающего нет, но это не стоп. якорь BULL подтверждает направление. паникёр GREED — наоборот.",
+    "reason": "дно волны C: дивергенция, точка ноль, фрактал внизу, мощный бычий момент",
     "direction": "LONG",
-    "entry": 1976.54,
-    "stop": 1909.78,
+    "entry": 1876.01,
+    "stop": 1825.12,
     "lot": 0.1,
     "action": "ENTER",
     "new_stop": null,
@@ -37,7 +53,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет Разворотного Бара: текущий бар медвежий, закрытие ниже открытия, откат волны 2 не завершён бычьим разворотом с опорой в пасти",
+    "reason": "Глобальный тренд не определён; Искра лишь DETECTED, разрядка AO к нулю не подтверждена; волна 1 не валидирована (Морж). Вероятное начало импульса вверх, но не откат волны 2 — Разворотный Бар моего модуля отсутствует.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -49,28 +65,28 @@
   "morj": {
     "morj_status": "AWAKE",
     "wave_1_validated": false,
-    "tension_peak": false,
+    "tension_peak": true,
     "history_dna": "",
     "scale_timeframe": "D1",
-    "inherited_dir": "BULL",
+    "inherited_dir": null,
     "alligator_state": {
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 268
+      "bars_open": 287
     }
   },
   "panic": {
-    "panic_phase": "PANIC",
-    "crowd_sentiment": "Разворот — обман! Медвежий тренд жив, всё летит к чёрту, закрывай лонги!",
-    "action_for_traders": "GREEN_LIGHT_IF_GANS",
+    "panic_phase": "GREED",
+    "crowd_sentiment": "РАЗВОРОТ! Все берут! Сейчас ещё выше улетит! Кто не внутри — тот лох!",
+    "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
     "scale_timeframe": "D1"
   },
   "hans": {
     "fractal_valid": true,
-    "fractal_side": "LONG",
-    "fractal_price": 1961.88,
+    "fractal_side": null,
+    "fractal_price": null,
     "absorption_ratio": 0.6,
     "scale_timeframe": "D1",
     "history_dna": ""
