@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updated": "2026-07-11T18:39:26.348795",
+  "updated": "2026-07-12T01:39:21.243112",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1425.51,
-    "history_dna": "BULL_DETECTED_H1_1425.51",
-    "trend_direction": "BULL",
+    "zero_point_price": 1558.28,
+    "history_dna": "pivot MIN ao=-12.69 date=2012.05.30 16:00 low=1533.21",
+    "trend_direction": "BEAR",
     "found_timeframe": null
   },
   "positions": [],
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Морж SLEEPING — пасть закрыта, пробоя фрактала LONG 1428.25 нет (high 1427.30 ниже), вход не по канону Брута",
+    "reason": "нет пробоя фрактала SHORT",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -26,7 +26,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "Нет приседающего и смены моментума — из пяти пуль только дивергенция и далёкий фрактал, дно не оформлено",
+    "reason": "Нет приседающего и медвежьего разворотного бара. Пять пуль не сошлись.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -37,7 +37,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Аллигатор спит, опора в пасти не подтверждена, разрядки AO нет — вход преждевременен.",
+    "reason": "Нет опоры на откате волны 2: закрытие выше Teeth при медвежьем тренде. Жду Разворотный Бар с закрытием ниже красной линии",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -47,32 +47,32 @@
     "add_lot": null
   },
   "morj": {
-    "morj_status": "SLEEPING",
+    "morj_status": "AWAKE",
     "wave_1_validated": false,
     "tension_peak": false,
     "history_dna": "",
-    "scale_timeframe": "H1",
-    "inherited_dir": "BULL",
+    "scale_timeframe": "H4",
+    "inherited_dir": "BEAR",
     "alligator_state": {
-      "sleeping": true,
+      "sleeping": false,
       "opening": false,
-      "mature": false,
-      "bars_open": 0
+      "mature": true,
+      "bars_open": 252
     }
   },
   "panic": {
-    "panic_phase": "TENSION",
-    "crowd_sentiment": "Объёмы бешеные, а цена стоит! Щас рванёт!!!",
+    "panic_phase": "GREED",
+    "crowd_sentiment": "Всё, разворот! Успеваем запрыгнуть, пока не улетело!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "H1"
+    "scale_timeframe": "H4"
   },
   "hans": {
     "fractal_valid": true,
-    "fractal_side": "LONG",
-    "fractal_price": 1428.25,
-    "absorption_ratio": 0.85,
-    "scale_timeframe": "H1",
+    "fractal_side": "SHORT",
+    "fractal_price": 1533.21,
+    "absorption_ratio": 0.6,
+    "scale_timeframe": "H4",
     "history_dna": ""
   }
 }
