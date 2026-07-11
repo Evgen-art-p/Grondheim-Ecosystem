@@ -62,7 +62,7 @@ STATS_PATH   = STATE_DIR / "arkhiv_stats.json"
 # (этот файл) должны смотреть в одно и то же место. Правка охвата
 # (общий котёл контора/журналы/ + метка цеха) — отдельный заход,
 # см. БИРЖА.md §3 и §7б («нить, что торчит наружу»).
-ATLAS_PATH   = Path(__file__).resolve().parents[4] / "данные" / "atlas_trading.jsonl"   # ARKHIV_ATLAS_PATH_ABS_V1: тот же файл, что пишет hooks._write_atlas
+ATLAS_PATH   = Path("economy/data/atlas_trading.jsonl")
 
 # Грани лица момента — сумма голосов сенсоров (CHAIN_CONTRACT v1.7).
 SIGNATURE_KEYS = ("t1_status", "morj_status", "panic_phase", "fractal_valid")
