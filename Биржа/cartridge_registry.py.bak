@@ -108,7 +108,6 @@ def _scan_zhiteli_maski():
             "цех": (mask.get("Workshop_ID") or "").strip(),
             "слот": (mask.get("Turbo_Role") or "").strip(),
             "core_phrase": mask.get("Core_Phrase", ""),
-            "magic": mask.get("magic"),   # MAGIC_IN_MASK_V1: обратный мостик
         })
     return out
 
@@ -127,29 +126,6 @@ def resolve_para(ceh_id: str, slot: str, kvartal: str = "Биржа"):
         if z["цех"] == ceh_id and z["слот"] == slot:
             return z
     return None  # вакансия есть, носителя нет — слот пуст, честно
-
-
-def resolve_by_magic(magic):
-    """ОБРАТНЫЙ мостик: magic закрытой позиции → носитель.
-    Близнец resolve_para, тот же скан масок — magic живёт В МАСКЕ
-    (Закон Пары), отдельного реестра магиков нет. Честный None:
-    магик не найден ни в одной активной маске. Приводит к int, чтобы
-    100002 и "100002" резолвились одинаково. # MAGIC_IN_MASK_V1
-    """
-    try:
-        m = int(magic)
-    except (TypeError, ValueError):
-        return None
-    for z in _scan_zhiteli_maski():
-        zm = z.get("magic")
-        if zm is None:
-            continue
-        try:
-            if int(zm) == m:
-                return z
-        except (TypeError, ValueError):
-            continue
-    return None
 
 
 def list_nositeli(ceh_id: str, kvartal: str = "Биржа") -> list:
@@ -194,6 +170,4 @@ if __name__ == "__main__":
             print(f"     {row['слот']:>4} {row['роль']:<22} {who}")
     print(f"несуществующий цех → {get_ceh('нет_такого')}")
     print(f"несуществующий слот → {resolve_para('торговый_хаос', 'A99')}")
-    _by_magic = resolve_by_magic(100002)
-    print(f"magic 100002 → {(_by_magic or {}).get('имя') or '— не найден —'}")
     print("═══ конец самопроверки ═══")

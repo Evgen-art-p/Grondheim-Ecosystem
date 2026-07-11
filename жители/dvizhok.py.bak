@@ -154,69 +154,6 @@ class Dvizhok:
             "натура":         self.p.get("DNA_Static", {}),
         }
 
-    def nakryt_stol_chisto(self) -> dict:
-        """Стол БЕЗ дыхания: чистое чтение личности из паспорта — ноль
-        записи в память, ноль vdoh_result. Для читающего конца, который
-        зовётся часто (на каждый бар/взгляд): vydoh_stol туда нельзя, он
-        пишет событие на каждый вызов. Те же поля личности, что vydoh_stol,
-        минус побочка. Заряд отдаём на ЧТЕНИЕ (в __init__ уже загружен,
-        диск не трогаем). # DVIZHOK_STOL_CHISTO_VYVOD_V1
-        """
-        return {
-            "кто_я":        self.p.get("Official_Name"),
-            "заряд":        round(self.charge, 3),
-            "ядро":         self.p.get("Core_Phrase", ""),
-            "история":      self.p.get("Hidden_History", ""),
-            "чувство":      self.p.get("Sensory_Response", ""),
-            "якоря":        self.p.get("Anchor_Points", ""),
-            "скрытый_вкус": self.p.get("Hidden_Taste", ""),
-            "тянет_к":      self.p.get("Pull_Vector", ""),
-            "дом":          self.p.get("домашний_промпт", ""),
-            "натура":       self.p.get("DNA_Static", {}),
-        }
-
-    def dopisat_vyvod(self, vyvod: str, limit: int = 10) -> dict:
-        """Дописывает ВЫВОД из сделки в Anchor_Points — нога Опыта
-        (Чертёж §5.2/4.6.4). Опыт живёт рядом с Родом, рукой самого
-        жителя (в паспорт пишет только его движок). Лимит якорей — limit
-        (Чертёж: 7-10); переполнение — старейшее в archive, не в
-        забвение. Дубликат вывода строку не плодит. Возвращает что стало.
-        # DVIZHOK_STOL_CHISTO_VYVOD_V1
-        """
-        vyvod = (vyvod or "").strip()
-        if not vyvod:
-            return {"дописано": False, "причина": "пустой вывод"}
-        raw = self.p.get("Anchor_Points", "") or ""
-        lines = [ln for ln in raw.split("\n") if ln.strip()]
-        if vyvod in lines:
-            return {"дописано": False, "причина": "уже среди якорей",
-                    "всего": len(lines)}
-        lines.append(vyvod)
-        ushlo = []
-        if len(lines) > limit:
-            ushlo = lines[:len(lines) - limit]
-            lines = lines[len(lines) - limit:]
-            # старейшие якоря не в забвение — в архив жителя
-            try:
-                (self.dom / "archive").mkdir(parents=True, exist_ok=True)
-                ap = self.dom / "archive" / "archive.jsonl"
-                with open(ap, "a", encoding="utf-8") as f:
-                    for old in ushlo:
-                        f.write(json.dumps({
-                            "ts": datetime.now(timezone.utc)
-                                  .isoformat(timespec="seconds"),
-                            "слой": "archive",
-                            "факт": old,
-                            "причина": "якорь вытеснен (лимит опыта)",
-                        }, ensure_ascii=False) + "\n")
-            except Exception:
-                pass   # архив не должен ронять запись опыта
-        self.p["Anchor_Points"] = "\n".join(lines)
-        self.passport_path.write_text(
-            json.dumps(self.p, ensure_ascii=False, indent=2),
-            encoding="utf-8")
-        return {"дописано": True, "всего": len(lines), "вытеснено": len(ushlo)}
-
     def vspomnit(self, zapros: str, limit: int = 6) -> str:
         """PATCH_ZHITEL_VSPOMINAET: житель САМ решил вспомнить (MEMORY_REQUEST).
         Текстовый поиск по своим слоям: sensory + resonance + archive.
