@@ -1,21 +1,37 @@
 {
   "version": 1,
-  "updated": "2026-07-11T02:38:41.931930",
+  "updated": "2026-07-11T03:01:35.201438",
   "iskra": {
     "t1_status": "DETECTED",
     "zero_point_price": 1195.6,
-    "history_dna": "pivot_MIN:2018.08.20_ao=-39.4415_price=1182.6",
+    "history_dna": "D1 MIN pivot ao=-39.44 at price 1195.6 on 2018.09.03",
     "trend_direction": "BEAR",
     "found_timeframe": null
   },
-  "positions": [],
+  "positions": [
+    {
+      "trader": "AVANTURIST",
+      "magic": 100002,
+      "direction": "LONG",
+      "entry": 1203.85,
+      "stop": 1195.59,
+      "tp": null,
+      "lot": 0.1,
+      "status": "OPEN",
+      "mode": "PAPER",
+      "opened_at": "2018.09.03",
+      "pnl": null,
+      "iskra_zero_point": 1195.6,
+      "symbol": "XAUUSD"
+    }
+  ],
   "feed": {
     "mode": "tester",
     "symbol": "XAUUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Нет пробоя валидного фрактала за пастью",
+    "reason": "Нет пробоя фрактала SHORT за пастью — цена выше Зубов, структура не активирована",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -25,19 +41,19 @@
     "add_lot": null
   },
   "avan": {
-    "verdict": "REJECTED",
-    "reason": "Бычья дивергенция и разворотный бар на дне — модуль Авантюриста собран для лонга, но глобальный BEAR запрещает вход против тренда. Шорт не по модулю: нет медвежьей дивергенции и разворотного бара на вершине.",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
+    "verdict": "APPROVED",
+    "reason": "Разворотный Бар на дне: дивергенция, касание целевой зоны (1195.6), смена моментума (бычье закрытие), фрактал есть. Якорь BEAR игнорирую — это конец волны C, а не коррекция.",
+    "direction": "LONG",
+    "entry": 1203.85,
+    "stop": 1195.59,
+    "lot": 0.1,
+    "action": "ENTER",
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет Разворотного Бара на откате волны 2 с опорой и разрядкой AO к нулю. Сейчас бар бычий — жду структуру.",
+    "reason": "Нет Разворотного Бара в сторону тренда на откате, нет подтверждённой опоры, отсутствует разрядка AO к нулю — условия позднего входа не выполнены.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -61,8 +77,8 @@
     }
   },
   "panic": {
-    "panic_phase": "DISBELIEF",
-    "crowd_sentiment": "Дохлый отскок, я бы шортил — не верим в рост",
+    "panic_phase": "ASLEEP",
+    "crowd_sentiment": "Ничего не происходит, можно не смотреть, всё равно никуда не пойдёт",
     "action_for_traders": "NEUTRAL",
     "history_dna": "",
     "scale_timeframe": "D1"

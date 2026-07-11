@@ -1008,6 +1008,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 "rubber_band": rb,
                 "iskra_status": r.get("iskra_status", state.get("iskra_signal", {}).get("t1_status")),
             }
+            state["active_agent"] = "A02"   # AGENT_LIVE_SWITCH_V1
+            update_avatar()
+            update_vitals()
+            update_viewer(f"# 🦭 {_agent_label(roster,'A02')} (A02)\n\n{narrative or '*(нет текста)*'}")
             state["chat_history"].append({
                 "role": "assistant", "agent": "A02",
                 "content": (f"🦭 Посмотрел. Пасть: {sig.get('morj_status','—')}, резинка "
@@ -1024,6 +1028,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             state["panic_market"] = r.get("market", {})
             state["panic_last_run"] = {
                 "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
+            state["active_agent"] = "A03"   # AGENT_LIVE_SWITCH_V1
+            update_avatar()
+            update_vitals()
+            update_viewer(f"# 😱 {_agent_label(roster,'A03')} (A03)\n\n{narrative or '*(нет текста)*'}")
             state["chat_history"].append({
                 "role": "assistant", "agent": "A03",
                 "content": (f"😱 Толпа: {sig.get('panic_phase','—')}. "
@@ -1043,6 +1051,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             valid = sig.get("fractal_valid")
             prey = (f"добыча {sig.get('fractal_side','—')} @ {sig.get('fractal_price','—')}"
                     if valid else "добычи нет")
+            state["active_agent"] = "A04"   # AGENT_LIVE_SWITCH_V1
+            update_avatar()
+            update_vitals()
+            update_viewer(f"# 🎯 {_agent_label(roster,'A04')} (A04)\n\n{narrative or '*(нет текста)*'}")
             state["chat_history"].append({
                 "role": "assistant", "agent": "A04", "content": f"🎯 Фрактал: {prey}. Отчёт справа."})
             update_chat_display()
@@ -1059,6 +1071,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 "narrative": r.get("narrative", ""), "signal": sig, "signature": r.get("signature", {})}
             conf = sig.get("arkhiv_confidence", "—")
             n_ = sig.get("sample_size", "—")
+            state["active_agent"] = "A05"   # AGENT_LIVE_SWITCH_V1
+            update_avatar()
+            update_vitals()
+            update_viewer(f"# 📚 {_agent_label(roster,'A05')} (A05)\n\n{narrative or '*(нет текста)*'}")
             state["chat_history"].append({
                 "role": "assistant", "agent": "A05",
                 "content": (f"📚 Похожих случаев в Атласе: {n_}. Уверенность: {conf}. Отчёт справа.")})
@@ -1086,6 +1102,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             else:
                 line = f"{icon} {_nm}: пас ({sig.get(f'{pre}_reason','—')}). Отчёт справа."
                 ui.notify(f"{icon} {_nm}: пас", type="info")
+            state["active_agent"] = aid   # AGENT_LIVE_SWITCH_V1
+            update_avatar()
+            update_vitals()
+            update_viewer(f"# {icon} {_nm} ({aid})\n\n{narrative or '*(нет текста)*'}")
             state["chat_history"].append({"role": "assistant", "agent": aid, "content": line})
             update_chat_display()
             update_avatar_states()
@@ -1100,6 +1120,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             state["executor_stats"]  = r.get("stats", {})
             state["executor_last_run"] = {
                 "narrative": r.get("narrative", ""), "signal": sig, "market": r.get("market", {})}
+            state["active_agent"] = "A09"   # AGENT_LIVE_SWITCH_V1
+            update_avatar()
+            update_vitals()
+            update_viewer(f"# 📋 {_agent_label(roster,'A09')} (A09)\n\n{state['reports']['A09']}")
             line = f"📋 Исполнитель: ордеров {sent} из 3 · task_score {tsk}. {sig.get('history_dna','')}"
             ui.notify(f"📋 Исполнитель: {sent} из 3", type="positive")
             state["chat_history"].append({"role": "assistant", "agent": "A09", "content": line})
@@ -1303,10 +1327,15 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         # собирается сам, t1_status — голос Искры, не замок. Теперь
         # кабинет тоже по этому закону (summary["idle"] из wake_council).
         #
-        # ПОТОК: весь прогон — один run_in_executor (тот же приём,
-        # что уже работает в run_tester_session/_on_progress). Колбэк
-        # on_event мутирует state и дёргает update_* синхронно —
-        # проверенный паттерн этого кабинета, не новый риск.
+        # BIRZHA_MARKET_THREAD_SAFE_V1: council.wake_council крутится
+        # в фоновом потоке (run_in_executor) — тот же слот-стек NiceGUI
+        # туда не копируется, что уже чинили в run_tester_session.
+        # Колбэк _on_event раньше дёргал _apply_agent_result НАПРЯМУЮ
+        # из фонового потока — "slot stack ... empty", да ещё и
+        # ПРОГЛОЧЕННЫЙ МОЛЧА через try/except в council._emit(). Теперь
+        # _on_event только кладёт событие в очередь; разбор — на
+        # главном потоке (_apply_market_event, дренаж ниже), как в
+        # тестере.
         if state["running"]:
             ui.notify("Прогон уже идёт...", type="warning")
             return
@@ -1314,14 +1343,19 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         ui.notify("📡 Поднимаю контур, бужу Искру...", type="info")
 
         import council
+        import queue as _queue_mod
+
+        _mkt_queue: "_queue_mod.Queue" = _queue_mod.Queue()
 
         def _on_event(ev):
+            _mkt_queue.put(ev)
+
+        def _apply_market_event(ev):
+            """Та же логика, что раньше жила прямо в _on_event — теперь
+            вызывается на главном потоке, где слот-контекст клиента жив."""
             etype = ev.get("type")
 
             if etype == "council_idle":
-                # Спуск не нашёл точку — Искра уже отработала (ниже),
-                # дальше никого не будим. Финальный notify — после
-                # wake_council вернёт summary.
                 return
 
             if etype != "agent":
@@ -1331,12 +1365,36 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             r = ev.get("result", {}) or {}
             narrative = ev.get("narrative", "") or r.get("raw", "")
 
-            _apply_agent_result(aid, r, narrative)
-
+            try:
+                _apply_agent_result(aid, r, narrative)
+            except Exception as e:
+                print(f"[TORG·MARKET] _apply_agent_result сбой ({aid}): {e}")
 
         try:
-            summary = await asyncio.get_event_loop().run_in_executor(
+            loop = asyncio.get_event_loop()
+            _market_future = loop.run_in_executor(
                 None, lambda: council.wake_council("XAUUSD", "H4", on_event=_on_event))
+            # Дренаж очереди на ГЛАВНОМ потоке, пока wake_council крутится.
+            while not _market_future.done():
+                drained_any = False
+                while True:
+                    try:
+                        _ev = _mkt_queue.get_nowait()
+                    except _queue_mod.Empty:
+                        break
+                    drained_any = True
+                    _apply_market_event(_ev)
+                if not drained_any:
+                    await asyncio.sleep(0.05)
+            summary = await _market_future
+            # Добор хвоста очереди — событие могло прийти между
+            # последней проверкой .done() и фактическим концом потока.
+            while True:
+                try:
+                    _ev = _mkt_queue.get_nowait()
+                except _queue_mod.Empty:
+                    break
+                _apply_market_event(_ev)
         except Exception as e:
             state["running"] = False
             ui.notify(f"Сбой прогона: {e}", type="negative")
@@ -1726,3 +1784,7 @@ if __name__ in {"__main__", "__mp_main__"}:
 # UI_TORG_TYPING_V1 — маркер идемпотентности
 
 # BIRZHA_UI_THREAD_SAFE_V1 — маркер идемпотентности
+
+# BIRZHA_MARKET_THREAD_SAFE_V1 — маркер идемпотентности
+
+# AGENT_LIVE_SWITCH_V1 — маркер идемпотентности
