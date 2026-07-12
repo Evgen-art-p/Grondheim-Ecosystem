@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-12T20:39:56.035609",
+  "updated": "2026-07-12T21:06:37.407293",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1160.73,
-    "history_dna": "BULL descent_point: 1160.73 on H4 at 2015.10.27 12:00; last_pivot: MIN ao=-5.66994118 low=1162.33 date=2015.10.26 08:00",
+    "zero_point_price": 1336.62,
+    "history_dna": "MIN ao=-26.51194 price_low=1332.71 price_high=1342.4 date=2010.10.20 12:00",
     "trend_direction": "BULL",
     "found_timeframe": null
   },
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Нет пробоя валидного фрактала LONG 1169.59. Триггер не сработал.",
+    "reason": "нет пробоя фрактала 1349.02 на импульсе",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -26,7 +26,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "без разворотного приседающего — нет входа. Мой якорь.",
+    "reason": "Нет разворотного squat",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -37,7 +37,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет Разворотного Бара на откате, волна 1 не валидирована, рынок не показал бычьего импульса",
+    "reason": "Нет структуры волны 2. Искра показала ТН, импульс от неё есть, но откат к Зубам не завершён Разворотным Баром. Без РБ на опоре вход преждевременный.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -57,12 +57,12 @@
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 228
+      "bars_open": 157
     }
   },
   "panic": {
     "panic_phase": "GREED",
-    "crowd_sentiment": "РАЗВОРОТ! Все берут! Поезд уходит, запрыгиваем!",
+    "crowd_sentiment": "РАЗВОРОТ! Все берут! Надо успеть, пока не улетело!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
     "scale_timeframe": "H4"
@@ -70,7 +70,7 @@
   "hans": {
     "fractal_valid": true,
     "fractal_side": "LONG",
-    "fractal_price": 1169.59,
+    "fractal_price": 1349.02,
     "absorption_ratio": 0.65,
     "scale_timeframe": "H4",
     "history_dna": ""

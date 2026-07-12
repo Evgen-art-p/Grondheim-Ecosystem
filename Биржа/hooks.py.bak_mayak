@@ -754,14 +754,8 @@ def _judge_iskra_by_result(pos: dict, pnl_r):
 
     Упадёт — торговый цикл цел, сделка в журнале записана.
     """
-    # MAYAK_SENSOROV_V1 — ВРЕМЕННЫЙ МАЯЧОК (снять после разбора)
-    print(f"[МАЯК] судья сенсоров вызван: pnl_r={pnl_r}, "
-          f"trader={pos.get('trader')}, dir={pos.get('direction')}")
-    print(f"[МАЯК] ключи позиции: {list(pos.keys())}")
     stol = pos.get("стол_входа") or {}
-    print(f"[МАЯК] стол_входа: {stol}")
     if not stol or pnl_r is None:
-        print("[МАЯК] ⛔ ВЫХОД: слепка нет или pnl_r=None")
         return
     try:
         import sys as _s
@@ -770,8 +764,6 @@ def _judge_iskra_by_result(pos: dict, pnl_r):
         if _b not in _s.path:
             _s.path.insert(0, _b)
         from nositel import SENSOR_SLOTS, sudit_sensora, zapisat_vyvod_pare
-        import nositel as _nmod
-        print(f"[МАЯК] nositel загружен. UCHIT={getattr(_nmod, 'UCHIT', 'НЕТ ПОЛЯ')}")
 
         direction = pos.get("direction")
         bar = pos.get("opened_at") or ""
@@ -787,22 +779,22 @@ def _judge_iskra_by_result(pos: dict, pnl_r):
         except Exception:
             pass
 
-        from nositel import _zval, dyhnut_slovom   # MAYAK_SENSOROV_V1
         for key, slot in SENSOR_SLOTS.items():
             pokazanie = stol.get(key) or {}
-            zval = _zval(key, pokazanie, direction)
             vyvod = sudit_sensora(key, pokazanie, direction, pnl_r, trader, bar)
-            print(f"[МАЯК] {slot} {key}: показание={pokazanie} "
-                  f"звал={zval} вывод={'ЕСТЬ' if vyvod else 'пусто'}")
             if vyvod:
-                r = zapisat_vyvod_pare("торговый_хаос", slot, vyvod, pnl_r=pnl_r)
-                print(f"[МАЯК] {slot} ЗАПИСЬ → {r}")
+                # значимое: вдох уже внутри zapisat_vyvod_pare
+                zapisat_vyvod_pare("торговый_хаос", slot, vyvod, pnl_r=pnl_r)
                 continue
-            if zval:
-                r = dyhnut_slovom("торговый_хаос", slot, pnl_r)
-                print(f"[МАЯК] {slot} ДЫХАНИЕ → {r}")
-            else:
-                print(f"[МАЯК] {slot} молчал — не судим, не дышит")
+            # DYHANIE_SDELKI_V1: вывода нет (рутина) — но если сенсор ЗВАЛ в
+            # эту сделку, исход его задевает: заряд двигается. Молчавший НЕ
+            # дышит — не его сделка, не его боль (то же правило, что в суде).
+            try:
+                from nositel import _zval, dyhnut_slovom
+                if _zval(key, pokazanie, direction):
+                    dyhnut_slovom("торговый_хаос", slot, pnl_r)
+            except Exception:
+                pass
     except Exception as e:
         print(f"[СУД] ⚠️  суд сенсоров не сработал ({e}) — сделка в журнале цела")
     return
