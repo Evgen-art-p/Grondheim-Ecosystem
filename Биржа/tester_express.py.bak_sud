@@ -420,11 +420,6 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
         _nos = None
         print(f'[TESTER] ℹ️  мост к носителю не поднялся ({_e})')
     _orig_vyvod = _nos.zapisat_vyvod if _nos is not None else None
-    if _nos is not None:
-        # SUD_SENSOROV_V2: ОДИН рубильник на всю запись в живых жителей — трейдеры И
-        # сенсоры. Раньше глушился только zapisat_vyvod, и сенсоры писали бы
-        # МИМО стерильности, калеча Веру с Моржом на обычном бэктесте.
-        _nos.UCHIT = bool(learn)
     if _nos is not None and not learn:
         _nos.zapisat_vyvod = (lambda *a, **k:
                               {'дописано': False, 'причина': 'стерильный прогон'})

@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-12T14:47:28.549821",
+  "updated": "2026-07-12T16:38:02.566391",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1336.62,
-    "history_dna": "BULL|MIN|-26.51|1332.71|2010.10.20 12:00",
+    "zero_point_price": 1160.73,
+    "history_dna": "DETECTED BULL H4 zero=1160.73 bar=2015.10.27 12:00 ao_min=-5.67 prev_ao_min=-9.00",
     "trend_direction": "BULL",
     "found_timeframe": null
   },
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "фрактал LONG не пробит — триггер 1349.03 не достигнут, жду импульс",
+    "reason": "Фрактал LONG 1169.59 не пробит — нет триггера",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -25,19 +25,19 @@
     "add_lot": null
   },
   "avan": {
-    "verdict": "REJECTED",
-    "reason": "нет приседающего и смены моментума — только 3 из 5 пуль",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
+    "verdict": "APPROVED",
+    "reason": "дно с дивергенцией, фракталом и сменой моментума; squat отсутствует — осознанный риск",
+    "direction": "LONG",
+    "entry": 1165.24,
+    "stop": 1160.72,
+    "lot": 0.005,
+    "action": "ENTER",
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "нет опоры на Teeth после разворотного бара — закрытие 1345.01 ниже 1346.33",
+    "reason": "Нет отката волны 2: рынок на первом баре после Точки Ноль, Разворотного Бара на опоре не сформировано, цена закрылась ниже Зубов.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -57,12 +57,12 @@
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 157
+      "bars_open": 228
     }
   },
   "panic": {
-    "panic_phase": "GREED",
-    "crowd_sentiment": "РАЗВОРОТ! Все берут, запрыгиваем, а то улетит без нас!",
+    "panic_phase": "TENSION",
+    "crowd_sentiment": "Объёмы бешеные, продавить не могут — сейчас как шарахнет!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
     "scale_timeframe": "H4"
@@ -70,7 +70,7 @@
   "hans": {
     "fractal_valid": true,
     "fractal_side": "LONG",
-    "fractal_price": 1349.02,
+    "fractal_price": 1169.59,
     "absorption_ratio": 0.6,
     "scale_timeframe": "H4",
     "history_dna": ""

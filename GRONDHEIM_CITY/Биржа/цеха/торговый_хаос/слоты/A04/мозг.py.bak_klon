@@ -37,11 +37,6 @@ _CEH_DIR     = _SLOT_DIR.parent.parent                     # торговый_х
 _REPO        = _CEH_DIR.parents[3]                          # корень репо
 _BIRZHA_CODE = _REPO / "Биржа"                              # общий код (движок, llm)
 
-# KLON_DUSHI_V1: пара (цех, слот) — ИЗ ПУТИ мозга, без хардкода личности.
-# Контора не ломается: её слоты зовутся «архивариус»/«исполнитель».
-_CEH  = _CEH_DIR.name
-_SLOT = _SLOT_DIR.name
-
 import sys as _sys
 if str(_BIRZHA_CODE) not in _sys.path:
     _sys.path.insert(0, str(_BIRZHA_CODE))
@@ -269,12 +264,11 @@ def chat_with_hans(question: str, last_run: Optional[dict] = None,
         )
 
     system = prompt + work_ctx
-    try:   # KLON_DUSHI_V1: и в разговоре — ОН, не роль
-        from nositel import dusha_slota
-        _n = dusha_slota(_CEH, _SLOT)
-        if _n and _n["душа"]:
-            system = (prompt + "\n\n=== КТО ТЫ (душа носителя) ===\n"
-                      + _n["душа"] + "\n\n" + work_ctx)
+    try:
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
+        soul = format_soul_for_agent("A04_GANS", dept="trading")
+        if soul:
+            system = prompt + "\n\n=== ТВОЁ СОСТОЯНИЕ (душа) ===\n" + soul + "\n\n" + work_ctx
     except Exception:
         pass
 
@@ -287,7 +281,7 @@ def chat_with_hans(question: str, last_run: Optional[dict] = None,
 
     try:
         return chat(system=system, user=question, history=history,
-                    agent_id="A04_GANS", slot_id="trading", temperature=_my_temp())
+                    agent_id="A04_GANS", slot_id="trading")
     except Exception as e:
         return f"⚠️ Ганс не смог ответить: {e}"
 
@@ -355,18 +349,12 @@ def run_hans(symbol: str = "XAUUSD", timeframe: str = "H4",
     fr_facts = _read_fractal_facts(md, iskra_dir)
 
     # ── 3. Душа города ───────────────────────────────────────
-    # KLON_DUSHI_V1: ДУША — от НОСИТЕЛЯ (маска, Закон Пары), не от трупа из -2.
-    # Было: format_soul_for_agent из снесённой studio/ — падало ВСЕГДА
-    # («No module named studio»), работали голыми. Пара — ИЗ ПУТИ мозга.
     soul = ""
     try:
-        from nositel import dusha_slota
-        _n = dusha_slota(_CEH, _SLOT)
-        if _n:
-            soul = _n["душа"]
-            print(f"[HANS] 🧬 За столом: {_n['носитель']['имя']}")
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
+        soul = format_soul_for_agent("A04_GANS", dept="trading")
     except Exception as e:
-        print(f"[HANS] ⚠️  Носитель не поднялся ({e}) — работаю без души")
+        print(f"[HANS] ⚠️  Душа не загрузилась ({e}) — работаю без неё")
 
     # ── 4. Память Ганса (штатная) ────────────────────────────
     mem = _load_hans_memory()
@@ -434,7 +422,7 @@ def run_hans(symbol: str = "XAUUSD", timeframe: str = "H4",
 
     try:
         response = chat(system=system_full, user=user_msg, knowledge=knowledge,
-                        agent_id="A04_GANS", slot_id="trading", temperature=_my_temp())
+                        agent_id="A04_GANS", slot_id="trading")
     except Exception as e:
         return {"ok": False, "error": f"Ганс не смог выйти на след: {e}",
                 "narrative": "", "signal": {}, "stats": _load_stats(),
@@ -489,15 +477,3 @@ def run_hans(symbol: str = "XAUUSD", timeframe: str = "H4",
         },
         "raw": response,
     }
-
-
-def _my_temp():
-    """KLON_DUSHI_V1: натура и состояние носителя → температура головы.
-    stress_to_temperature() в llm.py была МЁРТВОЙ — никто не передавал
-    temperature, все думали на дефолте. Натура была буквами в промпте.
-    None → дефолт модели (носителя нет — ничего не ломаем)."""
-    try:
-        from nositel import temperatura_slota
-        return temperatura_slota(_CEH, _SLOT)
-    except Exception:
-        return None

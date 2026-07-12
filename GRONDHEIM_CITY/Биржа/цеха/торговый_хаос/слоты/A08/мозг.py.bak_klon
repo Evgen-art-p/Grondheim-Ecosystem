@@ -41,11 +41,6 @@ _CEH_DIR     = _SLOT_DIR.parent.parent                     # торговый_х
 _REPO        = _CEH_DIR.parents[3]                          # корень репо
 _BIRZHA_CODE = _REPO / "Биржа"                              # общий код (движок, llm)
 
-# KLON_DUSHI_V1: пара (цех, слот) — ИЗ ПУТИ мозга, без хардкода личности.
-# Контора не ломается: её слоты зовутся «архивариус»/«исполнитель».
-_CEH  = _CEH_DIR.name
-_SLOT = _SLOT_DIR.name
-
 import sys as _sys
 if str(_BIRZHA_CODE) not in _sys.path:
     _sys.path.insert(0, str(_BIRZHA_CODE))
@@ -306,12 +301,11 @@ def chat_with_cons(question: str, last_run: Optional[dict] = None,
         )
 
     system = prompt + work_ctx
-    try:   # KLON_DUSHI_V1: и в разговоре — ОН, не роль
-        from nositel import dusha_slota
-        _n = dusha_slota(_CEH, _SLOT)
-        if _n and _n["душа"]:
-            system = (prompt + "\n\n=== КТО ТЫ (душа носителя) ===\n"
-                      + _n["душа"] + "\n\n" + work_ctx)
+    try:
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
+        soul = format_soul_for_agent("A08_KONSERVATOR", dept="trading")
+        if soul:
+            system = prompt + "\n\n=== ТВОЁ СОСТОЯНИЕ (душа) ===\n" + soul + "\n\n" + work_ctx
     except Exception:
         pass
 
@@ -324,7 +318,7 @@ def chat_with_cons(question: str, last_run: Optional[dict] = None,
 
     try:
         return chat(system=system, user=question, history=history,
-                    agent_id="A08_KONSERVATOR", slot_id="trading", temperature=_my_temp())
+                    agent_id="A08_KONSERVATOR", slot_id="trading")
     except Exception as e:
         return f"⚠️ Консерватор не смог ответить: {e}"
 
@@ -333,15 +327,7 @@ def chat_with_cons(question: str, last_run: Optional[dict] = None,
 # КАМЕНЬ 1: СВОЯ ОТКРЫТАЯ ПОЗИЦИЯ — ФАКТ на стол (не приказ)  # TRADER_SEES_POSITION_V1
 # ════════════════════════════════════════════════════════════
 
-# KLON_DUSHI_V1: магик — из МАСКИ носителя (Закон Пары), не константой.
-# Было: _MY_MAGIC = 100003 — ещё одна копия правды. Их было пять.
-def _my_magic():
-    """Магик ТОГО, кто сидит в этом слоте. Нет носителя → None."""
-    try:
-        from nositel import magic_slota
-        return magic_slota(_CEH, _SLOT)
-    except Exception:
-        return None
+_MY_MAGIC = 100003   # паспорт трейдера (как у Исполнителя)
 
 
 def _my_open_position(md: dict) -> dict:
@@ -356,11 +342,8 @@ def _my_open_position(md: dict) -> dict:
         return None
 
     mine = None
-    _magic = _my_magic()   # KLON_DUSHI_V1
-    if _magic is None:
-        return None
     for p in positions:
-        if p.get("magic") == _magic and p.get("status") == "OPEN":
+        if p.get("magic") == _MY_MAGIC and p.get("status") == "OPEN":
             mine = p
             break
     if not mine:
@@ -430,18 +413,12 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
                 "narrative": "", "signal": {}, "diary_entry": {},
                 "stats": _load_stats(), "market": {}, "table": table}
 
-    # KLON_DUSHI_V1: ДУША — от НОСИТЕЛЯ (маска, Закон Пары), не от трупа из -2.
-    # Было: format_soul_for_agent из снесённой studio/ — падало ВСЕГДА
-    # («No module named studio»), работали голыми. Пара — ИЗ ПУТИ мозга.
     soul = ""
     try:
-        from nositel import dusha_slota
-        _n = dusha_slota(_CEH, _SLOT)
-        if _n:
-            soul = _n["душа"]
-            print(f"[CONS] 🧬 За столом: {_n['носитель']['имя']}")
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
+        soul = format_soul_for_agent("A08_KONSERVATOR", dept="trading")
     except Exception as e:
-        print(f"[CONS] ⚠️  Носитель не поднялся ({e}) — работаю без души")
+        print(f"[CONS] ⚠️  Душа не загрузилась ({e}) — работаю без неё")
 
     prompt    = PROMPT_PATH.read_text(encoding="utf-8") if PROMPT_PATH.exists() else ""
     knowledge = KNOWLEDGE.read_text(encoding="utf-8") if KNOWLEDGE.exists() else ""
@@ -504,7 +481,7 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
 
     try:
         response = chat(system=system_full, user=user_msg, knowledge=knowledge,
-                        agent_id="A08_KONSERVATOR", slot_id="trading", temperature=_my_temp())
+                        agent_id="A08_KONSERVATOR", slot_id="trading")
     except Exception as e:
         return {"ok": False, "error": f"Консерватор не смог решить: {e}",
                 "narrative": "", "signal": {}, "diary_entry": {},
@@ -535,15 +512,3 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
         "table": table,
         "raw": response,
     }
-
-
-def _my_temp():
-    """KLON_DUSHI_V1: натура и состояние носителя → температура головы.
-    stress_to_temperature() в llm.py была МЁРТВОЙ — никто не передавал
-    temperature, все думали на дефолте. Натура была буквами в промпте.
-    None → дефолт модели (носителя нет — ничего не ломаем)."""
-    try:
-        from nositel import temperatura_slota
-        return temperatura_slota(_CEH, _SLOT)
-    except Exception:
-        return None

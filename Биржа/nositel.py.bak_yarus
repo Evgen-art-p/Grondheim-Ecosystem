@@ -105,17 +105,6 @@ def _sobrat_dushu(stol: dict, s_domom: bool = False) -> str:
             L.append(f"  • {p}")
         L.append("Опыт — твой. Хочешь идти против него — иди, но знай, что идёшь.")
 
-    # YAKORYA_DVA_YARUSA_V1: черновики — видны, но НЕ равны якорям. Гл.4.4
-    # Чертежа: один вывод — не опыт; показываем честно, без притворства.
-    chernoviki = stol.get("черновики") or []
-    if chernoviki:
-        L.append("\nЗАМЕЧАЮ ЗА СОБОЙ (пока не подтвердилось повтором —"
-                 " не готовый вывод, наблюдение):")
-        for d in chernoviki:
-            raz = d.get("раз", 1)
-            hvost = "" if raz < 2 else f" (уже {raz} раз(а) — похоже на закономерность)"
-            L.append(f"  • {d.get('текст','')}{hvost}")
-
     if s_domom and stol.get("дом"):
         L.append(f"\nТвой дом: {stol['дом']}")
 
@@ -277,35 +266,6 @@ def sudit_po_kotinu(direction, entry_bias, pnl_r, close_reason, bar) -> str:
     return ""   # рутина — живёт в pnl.jsonl, в опыт не лезет
 
 
-# ── КЛЮЧИ ПАТТЕРНОВ (YAKORYA_DVA_YARUSA_V1) ──────────────────────────
-# Природа вывода, не его точный текст. dvizhok использует ключ, чтобы
-# копить повторы; сниффинг безопасен — это НАШИ ЖЕ шаблоны, не LLM.
-# Порядок проверки важен: специфичные маркеры раньше общих.
-
-def _klyuch_trader(vyvod: str) -> str:
-    if "удача, а не правота" in vyvod:
-        return "трейдер_плюс_удача_против_ветра"
-    if "редкая ставка, не хлеб" in vyvod:
-        return "трейдер_минус_против_ветра"
-    if "Плата по системе" in vyvod:
-        return "трейдер_минус_по_системе"
-    if "Так это и работает" in vyvod:
-        return "трейдер_плюс_по_ветру"
-    return "трейдер_прочее"
-
-
-def _klyuch_sensora(vyvod: str) -> str:
-    if "МОЯ ОШИБКА" in vyvod:
-        return "сенсор_ошибка"
-    if "ПРОСПАЛ" in vyvod:
-        return "сенсор_проспал"
-    if "Подтвердилось" in vyvod:
-        return "сенсор_подтвердилось"
-    if "молчание было право" in vyvod:
-        return "сенсор_молчание_право"
-    return "сенсор_прочее"
-
-
 def zapisat_vyvod(magic, vyvod: str, pnl_r=None, limit: int = 10) -> dict:
     """ПИШУЩИЙ КОНЕЦ. magic закрытой позиции → носитель → его якоря.
 
@@ -353,9 +313,6 @@ def zapisat_vyvod(magic, vyvod: str, pnl_r=None, limit: int = 10) -> dict:
     try:
         _raw = d.p.get("Anchor_Points", "") or ""
         _est = [x.strip() for x in _raw.replace("\\n", "\n").split("\n") if x.strip()]
-        # YAKORYA_DVA_YARUSA_V1: та же сделка не должна засчитаться как ВТОРОЙ
-        # повтор паттерна — сверяем и черновики, не только устойчивые якоря.
-        _est += [dd.get("текст", "") for dd in (d.p.get("Draft_Anchors") or [])]
         _bar = ""
         if "(" in vyvod and ")" in vyvod:
             _bar = vyvod[vyvod.find("(") + 1:vyvod.find(")")]
@@ -369,19 +326,15 @@ def zapisat_vyvod(magic, vyvod: str, pnl_r=None, limit: int = 10) -> dict:
         pass
 
     try:
-        res = d.dopisat_vyvod(vyvod, limit=limit,
-                              pattern=_klyuch_trader(vyvod))   # YAKORYA_DVA_YARUSA_V1
+        res = d.dopisat_vyvod(vyvod, limit=limit)
     except AttributeError:
         print("[МОСТ] ⚠️  в dvizhok нет dopisat_vyvod — "
               "нужен patch_dvizhok_stol_chisto_vyvod_v1")
         return {"дописано": False, "причина": "нет руки опыта"}
 
-    if res.get("тип") == "черновик":
-        print(f"[МОСТ] 📝 черновик → {n['имя']}: «{vyvod[:60]}...» "
-              f"(раз: {res.get('раз')}/3)")
-    elif res.get("дописано"):
+    if res.get("дописано"):
         print(f"[МОСТ] 🧠 ОПЫТ → {n['имя']}: «{vyvod}» "
-              f"(якорей: {res.get('якорей')})")
+              f"(якорей: {res.get('всего')})")
     return res
 
 
@@ -561,32 +514,11 @@ def zapisat_vyvod_pare(ceh: str, slot: str, vyvod: str,
     except Exception as e:
         print(f"[МОСТ] ⚠️  вдох не прошёл ({e})")
 
-    # YAKORYA_DVA_YARUSA_V1: та же защита от ложного счёта, что у трейдера —
-    # не дать одному и тому же бару засчитаться дважды в раз повтора.
     try:
-        _raw = d.p.get("Anchor_Points", "") or ""
-        _est = [x.strip() for x in _raw.replace("\\n", "\n").split("\n") if x.strip()]
-        _est += [dd.get("текст", "") for dd in (d.p.get("Draft_Anchors") or [])]
-        _bar = ""
-        if "(" in vyvod and ")" in vyvod:
-            _bar = vyvod[vyvod.find("(") + 1:vyvod.find(")")]
-        if _bar:
-            for _e in _est:
-                if _bar in _e:
-                    return {"дописано": False,
-                            "причина": f"этот урок уже есть ({_bar})"}
-    except Exception:
-        pass
-
-    try:
-        res = d.dopisat_vyvod(vyvod, limit=limit,
-                              pattern=_klyuch_sensora(vyvod))   # YAKORYA_DVA_YARUSA_V1
+        res = d.dopisat_vyvod(vyvod, limit=limit)
     except AttributeError:
         return {"дописано": False, "причина": "нет руки опыта"}
 
-    if res.get("тип") == "черновик":
-        print(f"[МОСТ] 📝 черновик → {n['имя']} ({slot}): «{vyvod[:60]}...» "
-              f"(раз: {res.get('раз')}/3)")
-    elif res.get("дописано"):
+    if res.get("дописано"):
         print(f"[МОСТ] 🧠 ОПЫТ → {n['имя']} ({slot}): «{vyvod[:60]}...»")
     return res

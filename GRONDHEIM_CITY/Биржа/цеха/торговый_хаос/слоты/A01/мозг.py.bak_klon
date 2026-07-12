@@ -40,11 +40,6 @@ _CEH_DIR     = _SLOT_DIR.parent.parent                     # торговый_х
 _REPO        = _CEH_DIR.parents[3]                          # корень репо
 _BIRZHA_CODE = _REPO / "Биржа"                              # общий код (движок, llm)
 
-# KLON_DUSHI_V1: пара (цех, слот) — ИЗ ПУТИ мозга, без хардкода личности.
-# Контора не ломается: её слоты зовутся «архивариус»/«исполнитель».
-_CEH  = _CEH_DIR.name
-_SLOT = _SLOT_DIR.name
-
 PROMPT_PATH  = _SLOT_DIR / "промпт.md"
 KNOWLEDGE    = _SLOT_DIR / "знания" / "WILLIAMS_MATH.md"
 # Точность датчика — личный журнал РОЛИ (Ролик §4.4а), едет со слотом.
@@ -226,12 +221,11 @@ def chat_with_iskra(question: str, last_run: Optional[dict] = None,
     system = prompt + work_ctx
 
     # Душа города и в разговоре — настроение красит ответ.
-    try:   # KLON_DUSHI_V1: и в разговоре — ОН, не роль
-        from nositel import dusha_slota
-        _n = dusha_slota(_CEH, _SLOT)
-        if _n and _n["душа"]:
-            system = (prompt + "\n\n=== КТО ТЫ (душа носителя) ===\n"
-                      + _n["душа"] + "\n\n" + work_ctx)
+    try:
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
+        soul = format_soul_for_agent("A01_ISKRA", dept="trading")
+        if soul:
+            system = prompt + "\n\n=== ТВОЁ СОСТОЯНИЕ (душа) ===\n" + soul + "\n\n" + work_ctx
     except Exception:
         pass
 
@@ -250,7 +244,8 @@ def chat_with_iskra(question: str, last_run: Optional[dict] = None,
             user=question,
             history=history,
             agent_id="A01_ISKRA",
-            slot_id="trading", temperature=_my_temp())
+            slot_id="trading",
+        )
     except Exception as e:
         return f"⚠️ Искра не смогла ответить: {e}"
 
@@ -437,18 +432,12 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
     # на streak'е, поругалась на прогулке — это окрасит её голос.
     # Граница: душа красит NARRATIVE (голос), но SIGNAL остаётся
     # фактом движка. Настроение не создаёт дивергенцию из воздуха.
-    # KLON_DUSHI_V1: ДУША — от НОСИТЕЛЯ (маска, Закон Пары), не от трупа из -2.
-    # Было: format_soul_for_agent из снесённой studio/ — падало ВСЕГДА
-    # («No module named studio»), работали голыми. Пара — ИЗ ПУТИ мозга.
     soul = ""
     try:
-        from nositel import dusha_slota
-        _n = dusha_slota(_CEH, _SLOT)
-        if _n:
-            soul = _n["душа"]
-            print(f"[ISKRA] 🧬 За столом: {_n['носитель']['имя']}")
+        from studio.grondheim_memory import format_soul_for_agent  # type: ignore[import]
+        soul = format_soul_for_agent("A01_ISKRA", dept="trading")
     except Exception as e:
-        print(f"[ISKRA] ⚠️  Носитель не поднялся ({e}) — работаю без души")
+        print(f"[ISKRA] ⚠️  Душа не загрузилась ({e}) — работаю без неё")
 
     # Память из ШТАТНОГО trading_state (CHAIN_CONTRACT: prev_*).
     mem = _load_iskra_memory()
@@ -522,7 +511,8 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
             user=user_msg,
             knowledge=knowledge,
             agent_id="A01_ISKRA",
-            slot_id="trading", temperature=_my_temp())
+            slot_id="trading",
+        )
     except Exception as e:
         return {"ok": False, "error": f"Искра не смогла подумать: {e}",
                 "narrative": "", "signal": {}, "stats": _load_stats(),
@@ -574,15 +564,3 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
     }
 
 # ISKRA_WORKING_TF_FIRST_V1 — маркер идемпотентности
-
-
-def _my_temp():
-    """KLON_DUSHI_V1: натура и состояние носителя → температура головы.
-    stress_to_temperature() в llm.py была МЁРТВОЙ — никто не передавал
-    temperature, все думали на дефолте. Натура была буквами в промпте.
-    None → дефолт модели (носителя нет — ничего не ломаем)."""
-    try:
-        from nositel import temperatura_slota
-        return temperatura_slota(_CEH, _SLOT)
-    except Exception:
-        return None

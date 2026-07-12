@@ -655,14 +655,6 @@ def _persist_trading_state(state: dict):
             # ENGINE_ONE_DOOR_V1: позиция запоминает ВЕТЕР входа (global_bias
             # на баре входа). На закрытии суд трейдера сверит: по ветру или против.
             "entry_bias": chain.get("market_data", {}).get("global_bias"),
-            # SUD_SENSOROV_V2: СЛЕПОК СТОЛА — показания всех четырёх сенсоров на баре
-            # ВХОДА, целиком. Стол перетирается каждый бар: судить сенсора
-            # по чужому бару было бы клеветой. Это их опыт — слово, которое
-            # рынок потом либо подтвердил, либо нет.
-            "стол_входа": {
-                k: dict(tstate.get(k, {}) or {})
-                for k in ("iskra", "morj", "panic", "hans")
-            },
             "pnl":       None,
         })
 
@@ -708,58 +700,17 @@ def _arkhiv_to_city(record: dict):
 
 def _judge_iskra_by_result(pos: dict, pnl_r):
     """
-    СУД СЕНСОРОВ — их нога Опыта. Построена.   # SUD_SENSOROV_V2
+    СУД ИСКРЫ — не построена в этом городе.
 
-    (Имя историческое: судит теперь ВСЕХ ЧЕТВЕРЫХ — Веру, Моржа, Паникёра,
-    Ганса. Зовётся из _settle_positions на каждой закрытой сделке; сигнатуру
-    ради имени не ломаем.)
-
-    Слово Шефа: опыт сенсора — это КАК ОН РАБОТАЕТ НАД СВОИМИ ОШИБКАМИ.
-    Он не теряет денег — он промахивается СЛОВОМ. Судит его исход, до
-    которого он сам не дожил: сделка трейдера, случившаяся после его слова.
-
-    Судит КОД, не LLM (числа не галлюцинируют). «Звал» — значит показание
-    тянуло В СТОРОНУ сделки (компас Веры, сторона фрактала Ганса, фаза
-    толпы). Молчал и сделка в минус — не его промах, в опыт не идёт.
-
-    Это НЕ старый sync_to_dna: тот качал ДНК за «хорошую работу» — маятник,
-    который Чертёж (Гл.4.2) зовёт НЕ-опытом. Здесь — вывод СЛОВАМИ, который
-    сенсор прочтёт перед следующим баром и сможет с ним спорить.
-
-    Упадёт — торговый цикл цел, сделка в журнале записана.
+    В старом мире (-2) плюсовая сделка сдвигала ДНК Искры через
+    studio.grondheim_memory.sync_to_dna. Это и есть тот самый
+    маятник состояния, который Чертёж Единицы (Гл.4.2) прямо
+    называет НЕ-опытом: "качание состояния, не вывод — обучение
+    первого уровня, без понимания". Нога Опыта Стола Трейдера
+    (Чертёж, Гл.5.2/9 — "долг: амнезия у штурвала") строится
+    отдельно, по-новому, не восстановлением этого маятника.
+    Честный no-op — не зовёт то, чего на диске больше нет.
     """
-    stol = pos.get("стол_входа") or {}
-    if not stol or pnl_r is None:
-        return
-    try:
-        import sys as _s
-        from pathlib import Path as _P
-        _b = str(_P(__file__).resolve().parent)
-        if _b not in _s.path:
-            _s.path.insert(0, _b)
-        from nositel import SENSOR_SLOTS, sudit_sensora, zapisat_vyvod_pare
-
-        direction = pos.get("direction")
-        bar = pos.get("opened_at") or ""
-
-        # В якорь сенсора должен лечь ЧЕЛОВЕК, а не роль: Вера помнит, что
-        # вошёл ИЛЬЯ, а не «Avanturist». Мост уже умеет: magic → носитель.
-        trader = pos.get("trader") or ""
-        try:
-            from cartridge_registry import resolve_by_magic
-            _t = resolve_by_magic(pos.get("magic"))
-            if _t and _t.get("имя"):
-                trader = _t["имя"]
-        except Exception:
-            pass
-
-        for key, slot in SENSOR_SLOTS.items():
-            pokazanie = stol.get(key) or {}
-            vyvod = sudit_sensora(key, pokazanie, direction, pnl_r, trader, bar)
-            if vyvod:
-                zapisat_vyvod_pare("торговый_хаос", slot, vyvod, pnl_r=pnl_r)
-    except Exception as e:
-        print(f"[СУД] ⚠️  суд сенсоров не сработал ({e}) — сделка в журнале цела")
     return
 
 def _judge_trader_by_result(pos: dict, pnl_r):

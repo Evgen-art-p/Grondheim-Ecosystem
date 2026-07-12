@@ -202,153 +202,54 @@ class Dvizhok:
             "история":      self.p.get("Hidden_History", ""),
             "чувство":      self.p.get("Sensory_Response", ""),
             "якоря":        self.p.get("Anchor_Points", ""),
-            "черновики":    self.p.get("Draft_Anchors", []),   # YAKORYA_DVA_YARUSA_V1
             "скрытый_вкус": self.p.get("Hidden_Taste", ""),
             "тянет_к":      self.p.get("Pull_Vector", ""),
             "дом":          self.p.get("домашний_промпт", ""),
             "натура":       self.p.get("DNA_Static", {}),
         }
 
-    # YAKORYA_DVA_YARUSA_V1: порог повтора для перехода черновик→устойчивый.
-    # То же число, что Путь Зрелости (Чертёж §4.6.2: «3 вердикта судьи»)
-    # — не новый магический порог, тот же самый смысл: отбор трижды.
-    PROMOTE_THRESHOLD = 3
-    DRAFT_CAP = 6   # черновиков живёт не больше — тоже не резиновый склад
-
-    def _archive_zapis(self, fakt: str, prichina: str):
-        """Общий писчик в archive.jsonl — и вытесненные якоря, и
-        вытесненные черновики уходят сюда, не в забвение."""
-        try:
-            (self.dom / "archive").mkdir(parents=True, exist_ok=True)
-            ap = self.dom / "archive" / "archive.jsonl"
-            with open(ap, "a", encoding="utf-8") as f:
-                f.write(json.dumps({
-                    "ts": datetime.now(timezone.utc)
-                          .isoformat(timespec="seconds"),
-                    "слой": "archive",
-                    "факт": fakt,
-                    "причина": prichina,
-                }, ensure_ascii=False) + "\n")
-        except Exception:
-            pass   # архив не должен ронять запись опыта
-
-    def dopisat_vyvod(self, vyvod: str, limit: int = 10,
-                      pattern: str = None) -> dict:
-        """Дописывает ВЫВОД из сделки — нога Опыта (Чертёж §5.2/4.6.4).
-
-        ДВА ЯРУСА (Чертёж §4.4, «единичное событие меняет заряд, не
-        фильтр» — защита от дребезга, решение Шефа 12.07):
-
-          pattern=None (умолчание, старое поведение для любого чужого
-            вызывающего кода) — пишет СРАЗУ в устойчивые якоря, как было.
-
-          pattern="ключ_природы_вывода" — ДВУХЪЯРУСНЫЙ путь:
-            тот же природы вывод встретился впервые → ЧЕРНОВИК (раз=1),
-            стол его видит, но пониженным голосом («замечаю, не
-            подтвердилось»). Встретился РОВНО В ТУ ЖЕ природу ещё раз —
-            раз+=1, текст обновляется свежим. Набрал PROMOTE_THRESHOLD
-            повторов → ПОВЫШЕН: уходит из черновиков, ложится постоянной
-            строкой в Anchor_Points (тот же лимит 7-10, то же архивное
-            вытеснение старейшего, что и раньше).
-
-        Дубликат ТОЧНОГО текста не плодит строку ни в одном ярусе.
-        Классификатор (какой текст → какой pattern) сюда НЕ входит —
-        dvizhok не знает слова «трейдер»; ключ передаёт вызывающий код
-        (Закон Фрактала: один механизм, разные источники).
-        # DVIZHOK_STOL_CHISTO_VYVOD_V1 · YAKORYA_DVA_YARUSA_V1
+    def dopisat_vyvod(self, vyvod: str, limit: int = 10) -> dict:
+        """Дописывает ВЫВОД из сделки в Anchor_Points — нога Опыта
+        (Чертёж §5.2/4.6.4). Опыт живёт рядом с Родом, рукой самого
+        жителя (в паспорт пишет только его движок). Лимит якорей — limit
+        (Чертёж: 7-10); переполнение — старейшее в archive, не в
+        забвение. Дубликат вывода строку не плодит. Возвращает что стало.
+        # DVIZHOK_STOL_CHISTO_VYVOD_V1
         """
         vyvod = (vyvod or "").strip()
         if not vyvod:
             return {"дописано": False, "причина": "пустой вывод"}
-
         raw = self.p.get("Anchor_Points", "") or ""
-        sep = self._yakorya_razdelitel(raw)
+        sep = self._yakorya_razdelitel(raw)   # DVIZHOK_YAKORYA_YADRO_V1
         lines = self._yakorya_spisok(raw)
-
         if vyvod in lines:
-            return {"дописано": False, "причина": "уже среди устойчивых якорей",
+            return {"дописано": False, "причина": "уже среди якорей",
                     "всего": len(lines)}
-
-        # ── СТАРОЕ ПОВЕДЕНИЕ: pattern не передали — пишем сразу ───
-        if pattern is None:
-            lines.append(vyvod)
-            ushlo = []
-            if len(lines) > limit:
-                ushlo = lines[:len(lines) - limit]
-                lines = lines[len(lines) - limit:]
-                for old in ushlo:
-                    self._archive_zapis(old, "якорь вытеснен (лимит опыта)")
-            self.p["Anchor_Points"] = sep.join(lines)
-            self.passport_path.write_text(
-                json.dumps(self.p, ensure_ascii=False, indent=2),
-                encoding="utf-8")
-            return {"дописано": True, "тип": "устойчивый", "всего": len(lines),
-                    "вытеснено": len(ushlo)}
-
-        # ── НОВОЕ: два яруса ────────────────────────────────────
-        drafts = list(self.p.get("Draft_Anchors") or [])
-        for d in drafts:
-            if d.get("текст") == vyvod:
-                return {"дописано": False, "причина": "уже среди черновиков",
-                        "паттерн": pattern, "раз": d.get("раз", 1)}
-
-        found = None
-        for d in drafts:
-            if d.get("паттерн") == pattern:
-                found = d
-                break
-
-        now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        if found is not None:
-            found["раз"] = found.get("раз", 1) + 1
-            found["текст"] = vyvod
-            found["последний_раз"] = now_iso
-            raz = found["раз"]
-        else:
-            found = {"текст": vyvod, "паттерн": pattern, "раз": 1,
-                     "первый_раз": now_iso, "последний_раз": now_iso}
-            drafts.append(found)
-            raz = 1
-
-        promoted = False
+        lines.append(vyvod)
         ushlo = []
-        if raz >= self.PROMOTE_THRESHOLD:
-            drafts = [d for d in drafts if d is not found]
-            lines.append(found["текст"])
-            promoted = True
-            if len(lines) > limit:
-                ushlo = lines[:len(lines) - limit]
-                lines = lines[len(lines) - limit:]
-                for old in ushlo:
-                    self._archive_zapis(old, "якорь вытеснен (лимит опыта)")
-            self.p["Anchor_Points"] = sep.join(lines)
-
-        # ── шапка черновиков: не резиновый склад ─────────────────
-        vytesneno_ch = []
-        if len(drafts) > self.DRAFT_CAP:
-            drafts.sort(key=lambda d: (d.get("раз", 1), d.get("первый_раз", "")))
-            vytesneno_ch = drafts[:len(drafts) - self.DRAFT_CAP]
-            drafts = drafts[len(drafts) - self.DRAFT_CAP:]
-            for d in vytesneno_ch:
-                self._archive_zapis(
-                    d.get("текст", ""),
-                    f"черновик вытеснен, не набрал повтора ({d.get('раз',1)}/"
-                    f"{self.PROMOTE_THRESHOLD})")
-
-        self.p["Draft_Anchors"] = drafts
+        if len(lines) > limit:
+            ushlo = lines[:len(lines) - limit]
+            lines = lines[len(lines) - limit:]
+            # старейшие якоря не в забвение — в архив жителя
+            try:
+                (self.dom / "archive").mkdir(parents=True, exist_ok=True)
+                ap = self.dom / "archive" / "archive.jsonl"
+                with open(ap, "a", encoding="utf-8") as f:
+                    for old in ushlo:
+                        f.write(json.dumps({
+                            "ts": datetime.now(timezone.utc)
+                                  .isoformat(timespec="seconds"),
+                            "слой": "archive",
+                            "факт": old,
+                            "причина": "якорь вытеснен (лимит опыта)",
+                        }, ensure_ascii=False) + "\n")
+            except Exception:
+                pass   # архив не должен ронять запись опыта
+        self.p["Anchor_Points"] = sep.join(lines)   # DVIZHOK_YAKORYA_YADRO_V1: пишем ТЕМ ЖЕ разделителем
         self.passport_path.write_text(
             json.dumps(self.p, ensure_ascii=False, indent=2),
             encoding="utf-8")
-
-        return {
-            "дописано": True,
-            "тип": "устойчивый" if promoted else "черновик",
-            "раз": raz,
-            "якорей": len(self._yakorya_spisok(self.p.get("Anchor_Points", "") or "")),
-            "черновиков": len(drafts),
-            "вытеснено_якорей": len(ushlo),
-            "вытеснено_черновиков": len(vytesneno_ch),
-        }
+        return {"дописано": True, "всего": len(lines), "вытеснено": len(ushlo)}
 
     def vspomnit(self, zapros: str, limit: int = 6) -> str:
         """PATCH_ZHITEL_VSPOMINAET: житель САМ решил вспомнить (MEMORY_REQUEST).
