@@ -57,14 +57,6 @@ PROXY_URL = os.getenv("PROXY_URL", "")
 TAVILY_KEY = os.getenv("TAVILY_KEY", "")
 HTTP_TIMEOUT = 90
 
-# LLM_MAX_TOKENS_V1: ПОТОЛОК ОТВЕТА. Раньше max_tokens не задавался ВООБЩЕ —
-# OpenRouter брал максимум модели (65536 у deepseek-v4-pro) и требовал
-# денег под весь потолок ЗАРАНЕЕ. Прогон падал с 402 «can only afford
-# 11021», хотя реальный ответ агента — 200-600 слов.
-# 4000 — запас ×5 к самому длинному ответу Совета. Мало? Подними в .env:
-#     LLM_MAX_TOKENS=8000
-LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "4000"))
-
 
 # ══ RETRY HELPER ══════════════════════════════════════════════════
 # Ошибка 10054 (Connection Reset) = OpenRouter/прокси сбросил сокет.
@@ -220,7 +212,6 @@ def chat_with_tools(
         payload = {
             "model": OPENROUTER_MODEL,
             "messages": messages,
-            "max_tokens": LLM_MAX_TOKENS,   # LLM_MAX_TOKENS_V1
         }
         if temperature is not None:
             payload["temperature"] = temperature
@@ -309,7 +300,6 @@ def chat_with_tools(
     payload_final = {
         "model": OPENROUTER_MODEL,
         "messages": messages,
-        "max_tokens": LLM_MAX_TOKENS,   # LLM_MAX_TOKENS_V1
     }
     if temperature is not None:
         payload_final["temperature"] = temperature
@@ -373,7 +363,6 @@ def chat(system: str, user: str, knowledge: str = "", history: Optional[list] = 
     payload = {
         "model": OPENROUTER_MODEL,
         "messages": messages,
-        "max_tokens": LLM_MAX_TOKENS,   # LLM_MAX_TOKENS_V1
     }
     if temperature is not None:
         payload["temperature"] = temperature
@@ -384,8 +373,7 @@ def chat(system: str, user: str, knowledge: str = "", history: Optional[list] = 
     # на голову. Честно показываем и тех, кого ещё не подключили.
     _t = (f" | t={temperature}" if temperature is not None
           else " | t=дефолт (натура не подключена)")
-    print(f"[LLM] → {agent_id} | контекст: {_ctx_size} симв | "
-          f"модель: {OPENROUTER_MODEL[:30]}{_t} | потолок: {LLM_MAX_TOKENS}")
+    print(f"[LLM] → {agent_id} | контекст: {_ctx_size} симв | модель: {OPENROUTER_MODEL[:30]}{_t}")
     try:
         r = _post_with_retry(
             "https://openrouter.ai/api/v1/chat/completions",
@@ -517,7 +505,6 @@ def chat_with_images(system: str, user_text: str, images: Optional[list] = None,
     payload = {
         "model": OPENROUTER_MODEL,
         "messages": messages,
-        "max_tokens": LLM_MAX_TOKENS,   # LLM_MAX_TOKENS_V1
     }
     if temperature is not None:
         payload["temperature"] = temperature

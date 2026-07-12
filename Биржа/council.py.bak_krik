@@ -145,23 +145,6 @@ def wake_council(symbol: str, timeframe: str,
     # ворота по спуску (COUNCIL_BY_DESCENT_V1): нашёл точку — Совет
     # собирается. нет — расходимся. Это ФАКТ спуска, не суждение
     # Искры-LLM (её t1_status идёт в Совет как голос, не как замок).
-    # KRIK_ISKRY_V1: различаем ДВА РАЗНЫХ случая, которые раньше
-    # сливались в один и врали Шефу:
-    #   а) Искра УПАЛА (ok=False) — в её аварийном return нет "descent"
-    #      вообще, и ворота читали это как «спуск не нашёл». Ложь:
-    #      спуск отработал, упало позже. Кричим ПОЧЕМУ.
-    #   б) Искра отработала, но спуск честно не нашёл точку — расходимся.
-    if not ri.get("ok"):
-        _err = ri.get("error", "?")
-        print(f"[СОВЕТ] ⛔ ИСКРА УПАЛА: {_err}")
-        print("[СОВЕТ]    Совет не собрался НЕ из-за спуска — из-за сбоя.")
-        _emit({"type": "council_idle",
-               "why": f"Искра упала: {_err}",
-               "descent": {}, "iskra_error": _err})
-        summary["idle"] = True
-        summary["iskra_error"] = _err
-        return summary
-
     descent = ri.get("descent", {}) or {}
     if not descent.get("found"):
         _emit({"type": "council_idle",

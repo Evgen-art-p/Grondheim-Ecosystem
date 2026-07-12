@@ -1,0 +1,73 @@
+⚙️  Сито 1: математика ядра просеивает историю (без модели)...
+⚙️  Сито 1 готово: 33 баров-кандидатов из 24746 · сито строгое (bdb_strong — Точка Ноль).
+
+🎤 Сито 2: бужу живой Совет на 33 кандидатах...
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11347. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11347. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 16419. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11347. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 12234. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 16384 tokens, but can only afford 14752. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11347. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 32768 tokens, but can only afford 11619. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 13777. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 32768 tokens, but can only afford 11619. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 32768 tokens, but can only afford 11619. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 12234. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11347. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11347. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11347. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11926. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+  ✴️ A01: СБОЙ — Искра не смогла подумать: OpenRouter API [402]: This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens, but can only afford 11021. To increase, visit https://openrouter.ai/settings/credits and add more credits
+
+
+⚠️ прошёл все 33 кандидатов сита 1, живая Искра подтвердила 0 (искал 3). Ядро видело разворот, но Искра живьём судит строже — это её право. Честный ответ кухни.
