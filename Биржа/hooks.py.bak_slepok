@@ -655,39 +655,13 @@ def _persist_trading_state(state: dict):
             # ENGINE_ONE_DOOR_V1: позиция запоминает ВЕТЕР входа (global_bias
             # на баре входа). На закрытии суд трейдера сверит: по ветру или против.
             "entry_bias": chain.get("market_data", {}).get("global_bias"),
-            # SUD_SENSOROV_V2 · SLEPOK_IZ_CHAIN_V1: СЛЕПОК СТОЛА — показания
-            # всех четырёх сенсоров на баре ВХОДА. Стол перетирается каждый
-            # бар: судить сенсора по чужому бару было бы клеветой.
-            #
-            # ИСТОЧНИК — chain_data, НЕ tstate. tstate = load_trading_state()
-            # это СТАРЫЙ ФАЙЛ С ДИСКА (в _DEFAULT_STATE есть только "iskra",
-            # ключей morj/panic/hans там нет вовсе) — слепок приезжал пустым,
-            # и судья сенсоров молча выходил на 28 сделках подряд.
-            # chain_data — то, чем Совет ДУМАЛ на этом баре. Ровно оттуда
-            # берут соседи: _log_rejections и _prepare_atlas_digest.
+            # SUD_SENSOROV_V2: СЛЕПОК СТОЛА — показания всех четырёх сенсоров на баре
+            # ВХОДА, целиком. Стол перетирается каждый бар: судить сенсора
+            # по чужому бару было бы клеветой. Это их опыт — слово, которое
+            # рынок потом либо подтвердил, либо нет.
             "стол_входа": {
-                "iskra": {
-                    "t1_status":        chain.get("t1_status"),
-                    "zero_point_price": chain.get("zero_point_price"),
-                    # компас: без него не понять, звала ли Вера В СТОРОНУ
-                    # сделки (BULL зовёт в LONG, но НЕ зовёт в SHORT)
-                    "trend_direction":  (chain.get("market_data", {}) or {})
-                                        .get("global_bias"),
-                },
-                "morj": {
-                    "morj_status":      chain.get("morj_status"),
-                    "wave_1_validated": chain.get("wave_1_validated"),
-                },
-                "panic": {
-                    "panic_phase":      chain.get("panic_phase"),
-                },
-                "hans": {
-                    "fractal_valid":    chain.get("fractal_valid"),
-                    # сторона фрактала — та же логика, что у компаса Веры
-                    "fractal_side":     chain.get("hans_direction")
-                                        or chain.get("fractal_side"),
-                    "fractal_price":    chain.get("fractal_price"),
-                },
+                k: dict(tstate.get(k, {}) or {})
+                for k in ("iskra", "morj", "panic", "hans")
             },
             "pnl":       None,
         })

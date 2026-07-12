@@ -1,8 +1,8 @@
 {
-  "runs": 54,
+  "runs": 64,
   "asleep": 1,
-  "greed": 30,
-  "tension": 11,
+  "greed": 36,
+  "tension": 15,
   "deception": 3,
   "panic": 4,
   "disbelief": 5

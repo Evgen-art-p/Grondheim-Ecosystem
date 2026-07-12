@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-12T19:15:24.337780",
+  "updated": "2026-07-12T20:39:56.035609",
   "iskra": {
     "t1_status": "DETECTED",
     "zero_point_price": 1160.73,
-    "history_dna": "BULL:1160.73 2015.10.27 12:00",
+    "history_dna": "BULL descent_point: 1160.73 on H4 at 2015.10.27 12:00; last_pivot: MIN ao=-5.66994118 low=1162.33 date=2015.10.26 08:00",
     "trend_direction": "BULL",
     "found_timeframe": null
   },
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Фрактал LONG 1169.59 не пробит, пробоя нет",
+    "reason": "Нет пробоя валидного фрактала LONG 1169.59. Триггер не сработал.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -26,7 +26,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "Нет приседающего — мой якорь: без squat не лезу. Пять пуль не собраны.",
+    "reason": "без разворотного приседающего — нет входа. Мой якорь.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -37,7 +37,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет подтверждённой волны 1 (Морж wave_1_validated false) и отката волны 2. Жду структуру.",
+    "reason": "Нет Разворотного Бара на откате, волна 1 не валидирована, рынок не показал бычьего импульса",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -62,7 +62,7 @@
   },
   "panic": {
     "panic_phase": "GREED",
-    "crowd_sentiment": "Разворот! Все берут, сейчас полетим! Я гений, успеваю в поезд!",
+    "crowd_sentiment": "РАЗВОРОТ! Все берут! Поезд уходит, запрыгиваем!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
     "scale_timeframe": "H4"
@@ -71,7 +71,7 @@
     "fractal_valid": true,
     "fractal_side": "LONG",
     "fractal_price": 1169.59,
-    "absorption_ratio": 0.6,
+    "absorption_ratio": 0.65,
     "scale_timeframe": "H4",
     "history_dna": ""
   }

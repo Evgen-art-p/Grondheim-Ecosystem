@@ -45,6 +45,8 @@ PATCHES = [
     ("SUD_SENSOROV_V2",             "Биржа/hooks.py",              "СУД СЕНСОРОВ"),
     ("YAKORYA_DVA_YARUSA_V1",       "жители/dvizhok.py",           "два яруса якорей"),
     ("PRIBORY_TREJDEROV_V1",        "Биржа/ui_torg.py",            "приборы A06-A09"),
+    ("DYHANIE_SDELKI_V1",           "Биржа/hooks.py",              "ДЫХАНИЕ на рутине"),
+    ("SLEPOK_IZ_CHAIN_V1",          "Биржа/hooks.py",              "СЛЕПОК из chain_data"),
 ]
 
 ZHITELI = [
@@ -112,6 +114,35 @@ def main() -> int:
         print(f"{imya:<10} {slot:<12} {zn:>8} {yak:>7} {ch:>5}  {mt}")
         if isinstance(charge, (int, float)) and abs(charge) > 0.0001:
             dvinulis.append((imya, charge, cts))
+
+    # ── 2б. ОТКРЫТЫЕ позиции: несут ли слепок? ───────────────
+    print("\n" + "=" * 74)
+    print("ОТКРЫТЫЕ ПОЗИЦИИ — есть ли в них слепок стола")
+    print("-" * 74)
+    ts = list(ROOT.rglob("trading_state.json"))
+    for f in ts:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        pos = d.get("positions", []) or []
+        if not pos:
+            print("  открытых позиций нет — все закрыты")
+            continue
+        for i, pp_ in enumerate(pos, 1):
+            stol = pp_.get("стол_входа")
+            kto = pp_.get("trader")
+            otkr = pp_.get("opened_at")
+            if stol is None:
+                print(f"  !! #{i} {kto} (открыта {otkr}): СЛЕПКА НЕТ")
+                print("     → открыта ДО патча. Судья по ней промолчит НАВСЕГДА.")
+            elif not any(v for v in stol.values()):
+                print(f"  !! #{i} {kto} (открыта {otkr}): слепок ПУСТОЙ")
+                print("     → открыта ДО patch_slepok_iz_chain_v1.")
+            else:
+                print(f"  OK #{i} {kto} (открыта {otkr}): слепок живой")
+                for k, v in stol.items():
+                    print(f"       {k}: {v}")
 
     # ── 3. вывод ─────────────────────────────────────────────
     print("=" * 74)
