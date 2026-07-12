@@ -846,6 +846,96 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 ''')
             return
 
+        # PRIBORY_TREJDEROV_V1: трейдеры (A06/A07/A08) — приборов не было ВООБЩЕ,
+        # код падал сразу в заглушку ниже. Один шаблон на троих — та же
+        # связка pre=brut/avan/cons, что уже использует _apply_agent_result.
+        if state["active_agent"] in ("A06", "A07", "A08"):
+            pre = {"A06": "brut", "A07": "avan", "A08": "cons"}[state["active_agent"]]
+            _label = _agent_label(roster, state["active_agent"])
+            tsig = state.get(f"{pre}_signal", {})
+            tst  = state.get(f"{pre}_stats", {})
+            if not tsig:
+                with stats_ref["element"]:
+                    ui.html(f'<div style="color:rgba(255,255,255,0.3); font-size:11px; '
+                            f'padding:10px; text-align:center;">{_label} ещё не смотрел(а) '
+                            f'стол — нажми РЫНОК (нужен сигнал Искры)</div>')
+                return
+            verdict = tsig.get(f"{pre}_verdict", "—")
+            v_ok = (verdict == "APPROVED")
+            v_color = "#00ff88" if v_ok else "rgba(255,255,255,0.5)"
+            body = (
+                '<div style="display:flex; justify-content:space-between; margin-bottom:7px;">'
+                '<span style="color:rgba(255,255,255,0.45); font-size:10px;">ВЕРДИКТ</span>'
+                f'<span style="color:{v_color}; font-size:11px; font-weight:700;">{verdict}</span></div>'
+            )
+            if v_ok:
+                direction = tsig.get(f"{pre}_direction", "—") or "—"
+                entry = tsig.get(f"{pre}_entry", "—")
+                stop  = tsig.get(f"{pre}_stop", "—")
+                lot   = tsig.get(f"{pre}_lot", "—")
+                body += (
+                    '<div style="display:flex; justify-content:space-between; margin-bottom:7px;">'
+                    '<span style="color:rgba(255,255,255,0.45); font-size:10px;">НАПРАВЛЕНИЕ</span>'
+                    f'<span style="color:rgba(0,204,255,0.9); font-size:11px; font-weight:700;">{direction}</span></div>'
+                    '<div style="display:flex; justify-content:space-between; margin-bottom:7px;">'
+                    '<span style="color:rgba(255,255,255,0.45); font-size:10px;">ВХОД / СТОП</span>'
+                    f'<span style="color:rgba(255,255,255,0.7); font-size:11px;">{entry} / {stop}</span></div>'
+                    '<div style="display:flex; justify-content:space-between; margin-bottom:10px;">'
+                    '<span style="color:rgba(255,255,255,0.45); font-size:10px;">ЛОТ</span>'
+                    f'<span style="color:rgba(255,255,255,0.7); font-size:11px;">{lot}</span></div>'
+                )
+            else:
+                reason = tsig.get(f"{pre}_reason", "—") or "—"
+                body += (
+                    '<div style="margin-bottom:10px;">'
+                    '<span style="color:rgba(255,255,255,0.45); font-size:10px;">ПРИЧИНА</span>'
+                    '<div style="color:rgba(255,255,255,0.7); font-size:10px; font-style:italic;'
+                    f'margin-top:3px; line-height:1.4;">«{reason}»</div></div>'
+                )
+            body += (
+                '<div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:8px;'
+                'color:rgba(255,255,255,0.35); font-size:9px; line-height:1.7;">'
+                f'взглядов: {tst.get("runs","—")} · '
+                f'входов: {tst.get("approved","—")} · '
+                f'пасов: {tst.get("rejected","—")}</div>'
+            )
+            with stats_ref["element"]:
+                ui.html(f'<div style="padding:10px 12px; '
+                        f'font-family:\'JetBrains Mono\',monospace;">{body}</div>')
+            return
+
+        # PRIBORY_TREJDEROV_V1: Исполнитель (A09) — тоже приборов не было.
+        if state["active_agent"] == "A09":
+            esig = state.get("executor_signal", {})
+            if not esig:
+                with stats_ref["element"]:
+                    ui.html('<div style="color:rgba(255,255,255,0.3); font-size:11px; '
+                            'padding:10px; text-align:center;">Исполнитель ещё не '
+                            'подводил итог — нажми РЫНОК (нужен сигнал Искры)</div>')
+                return
+            fdna = esig.get("final_dna", {})
+            sent = fdna.get("orders_sent", "—")
+            tsk  = fdna.get("task_score", "—")
+            hist = esig.get("history_dna", "") or "—"
+            with stats_ref["element"]:
+                ui.html(f'''
+                <div style="padding:10px 12px; font-family:'JetBrains Mono',monospace;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:7px;">
+                    <span style="color:rgba(255,255,255,0.45); font-size:10px;">ОРДЕРОВ</span>
+                    <span style="color:rgba(0,204,255,0.9); font-size:11px; font-weight:700;">{sent} из 3</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span style="color:rgba(255,255,255,0.45); font-size:10px;">TASK_SCORE</span>
+                    <span style="color:rgba(255,255,255,0.7); font-size:11px;">{tsk}</span>
+                  </div>
+                  <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:8px;
+                              color:rgba(255,255,255,0.35); font-size:9px; line-height:1.4;">
+                    {hist}
+                  </div>
+                </div>
+                ''')
+            return
+
         if state["active_agent"] != "A01":
             with stats_ref["element"]:
                 ui.html('<div style="color:rgba(255,255,255,0.3); font-size:11px; '

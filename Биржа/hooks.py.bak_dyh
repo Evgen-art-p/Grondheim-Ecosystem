@@ -757,18 +757,7 @@ def _judge_iskra_by_result(pos: dict, pnl_r):
             pokazanie = stol.get(key) or {}
             vyvod = sudit_sensora(key, pokazanie, direction, pnl_r, trader, bar)
             if vyvod:
-                # значимое: вдох уже внутри zapisat_vyvod_pare
                 zapisat_vyvod_pare("торговый_хаос", slot, vyvod, pnl_r=pnl_r)
-                continue
-            # DYHANIE_SDELKI_V1: вывода нет (рутина) — но если сенсор ЗВАЛ в
-            # эту сделку, исход его задевает: заряд двигается. Молчавший НЕ
-            # дышит — не его сделка, не его боль (то же правило, что в суде).
-            try:
-                from nositel import _zval, dyhnut_slovom
-                if _zval(key, pokazanie, direction):
-                    dyhnut_slovom("торговый_хаос", slot, pnl_r)
-            except Exception:
-                pass
     except Exception as e:
         print(f"[СУД] ⚠️  суд сенсоров не сработал ({e}) — сделка в журнале цела")
     return
@@ -800,8 +789,7 @@ def _judge_trader_by_result(pos: dict, pnl_r):
         _b = str(_P(__file__).resolve().parent)
         if _b not in _s.path:
             _s.path.insert(0, _b)
-        from nositel import (sudit_po_kotinu, zapisat_vyvod,
-                             dyhnut_sdelkoy)   # DYHANIE_SDELKI_V1
+        from nositel import sudit_po_kotinu, zapisat_vyvod
 
         vyvod = sudit_po_kotinu(
             pos.get("direction"),
@@ -811,13 +799,7 @@ def _judge_trader_by_result(pos: dict, pnl_r):
             pos.get("opened_at"),
         )
         if not vyvod:
-            # DYHANIE_SDELKI_V1: РУТИНА — в ОПЫТ не идёт (якорей 7-10, это не
-            # журнал), но ЗАРЯД обязан двинуться: Чертёж Гл.4.4 — «единичное
-            # событие меняет заряд, не фильтр». Раньше здесь стоял голый
-            # return, и человек терял деньги, НИЧЕГО НЕ ЧУВСТВУЯ.
-            dyhnut_sdelkoy(pos.get("magic"), pnl_r)
-            return
-        # значимая сделка: вдох уже внутри zapisat_vyvod — двойного нет
+            return                      # рутина — живёт в журнале, не в опыте
         zapisat_vyvod(pos.get("magic"), vyvod, pnl_r=pnl_r)
     except Exception as e:
         print(f"[СУД] ⚠️  нога Опыта не сработала ({e}) — сделка в журнале цела")

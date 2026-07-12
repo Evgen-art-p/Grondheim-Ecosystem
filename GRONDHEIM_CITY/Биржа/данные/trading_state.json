@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-12T16:38:02.566391",
+  "updated": "2026-07-12T19:15:24.337780",
   "iskra": {
     "t1_status": "DETECTED",
     "zero_point_price": 1160.73,
-    "history_dna": "DETECTED BULL H4 zero=1160.73 bar=2015.10.27 12:00 ao_min=-5.67 prev_ao_min=-9.00",
+    "history_dna": "BULL:1160.73 2015.10.27 12:00",
     "trend_direction": "BULL",
     "found_timeframe": null
   },
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Фрактал LONG 1169.59 не пробит — нет триггера",
+    "reason": "Фрактал LONG 1169.59 не пробит, пробоя нет",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -25,19 +25,19 @@
     "add_lot": null
   },
   "avan": {
-    "verdict": "APPROVED",
-    "reason": "дно с дивергенцией, фракталом и сменой моментума; squat отсутствует — осознанный риск",
-    "direction": "LONG",
-    "entry": 1165.24,
-    "stop": 1160.72,
-    "lot": 0.005,
-    "action": "ENTER",
+    "verdict": "REJECTED",
+    "reason": "Нет приседающего — мой якорь: без squat не лезу. Пять пуль не собраны.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет отката волны 2: рынок на первом баре после Точки Ноль, Разворотного Бара на опоре не сформировано, цена закрылась ниже Зубов.",
+    "reason": "Нет подтверждённой волны 1 (Морж wave_1_validated false) и отката волны 2. Жду структуру.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -61,8 +61,8 @@
     }
   },
   "panic": {
-    "panic_phase": "TENSION",
-    "crowd_sentiment": "Объёмы бешеные, продавить не могут — сейчас как шарахнет!",
+    "panic_phase": "GREED",
+    "crowd_sentiment": "Разворот! Все берут, сейчас полетим! Я гений, успеваю в поезд!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
     "scale_timeframe": "H4"

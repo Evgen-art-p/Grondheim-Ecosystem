@@ -306,69 +306,6 @@ def _klyuch_sensora(vyvod: str) -> str:
     return "сенсор_прочее"
 
 
-def _dyhnut(n: dict, pnl_r, delitel: float) -> dict:
-    """Общий вдох: событие качнуло человека. Заряд оседает в паспорт.
-
-    ЭТО НЕ ОПЫТ (Чертёж Гл.4.2: маятник состояния — «обучение первого
-    уровня, без понимания»). Опыт — выводы словами, отдельная труба.
-    Здесь только дыхание: минус давит, плюс греет.   # DYHANIE_SDELKI_V1
-    """
-    if pnl_r is None:
-        return {"вдох": False, "причина": "нет исхода"}
-    if not _pisat_mozhno():
-        return {"вдох": False, "причина": "стерильный прогон"}
-    d = _dvizhok(n["папка"])
-    if d is None:
-        return {"вдох": False, "причина": "движок не поднялся"}
-    try:
-        r = float(pnl_r)
-        sila = min(1.0, abs(r) / delitel)
-        tonus = "плюс" if r > 0 else "минус" if r < 0 else "ровно"
-        res = d.vdoh("работа", sila=sila, svezhest=1.0, tonus=tonus)
-        d.sохранить()
-        print(f"[МОСТ] 🫁 {n['имя']}: {r:+.1f}R → заряд {res.get('заряд')}")
-        return {"вдох": True, "заряд": res.get("заряд")}
-    except Exception as e:
-        print(f"[МОСТ] ⚠️  вдох не прошёл ({e})")
-        return {"вдох": False, "причина": str(e)}
-
-
-def dyhnut_sdelkoy(magic, pnl_r) -> dict:
-    """ТРЕЙДЕР ДЫШИТ СВОЕЙ СДЕЛКОЙ — на КАЖДОМ исходе, даже рутинном.
-
-    Чертёж Гл.4.4: «Единичное событие меняет ЗАРЯД, не фильтр». Раньше
-    вдох жил внутри zapisat_vyvod — то есть внутри ЗАПИСИ ОПЫТА, и при
-    рутинной сделке (минус по ветру, |R|<2) не случался вовсе: человек
-    терял деньги и ничего не чувствовал. Теперь дыхание своё.
-    Своя шкура — делитель 3 (бьёт сильно).   # DYHANIE_SDELKI_V1
-    """
-    try:
-        from cartridge_registry import resolve_by_magic
-    except Exception:
-        return {"вдох": False, "причина": "нет реестра"}
-    n = resolve_by_magic(magic)
-    if not n:
-        return {"вдох": False, "причина": "носитель не найден"}
-    return _dyhnut(n, pnl_r, 3.0)
-
-
-def dyhnut_slovom(ceh: str, slot: str, pnl_r) -> dict:
-    """СЕНСОР ДЫШИТ ЧУЖОЙ СДЕЛКОЙ, но по СВОЕМУ слову.
-
-    Он не был в позиции — деньги не его. Но его слово повело туда
-    трейдера, и исход задевает. Чужая шкура — делитель 6 (вполовину
-    тише, чем своя).   # DYHANIE_SDELKI_V1
-    """
-    try:
-        from cartridge_registry import resolve_para
-    except Exception:
-        return {"вдох": False, "причина": "нет реестра"}
-    n = resolve_para(ceh, slot)
-    if not n:
-        return {"вдох": False, "причина": f"слот {ceh}/{slot} пуст"}
-    return _dyhnut(n, pnl_r, 6.0)
-
-
 def zapisat_vyvod(magic, vyvod: str, pnl_r=None, limit: int = 10) -> dict:
     """ПИШУЩИЙ КОНЕЦ. magic закрытой позиции → носитель → его якоря.
 
