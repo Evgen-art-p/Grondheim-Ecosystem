@@ -320,17 +320,9 @@ def chat_with_avan(question: str, last_run: Optional[dict] = None,
             if r in ("user", "assistant") and c:
                 history.append({"role": r, "content": c})
 
-    _temp = None   # NATURA_V_TEMPERATURU_V1: и в разговоре голова его, не средняя
-    try:
-        from nositel import temperatura_slota
-        _temp = temperatura_slota(_CEH, _SLOT)
-    except Exception:
-        pass
-
     try:
         return chat(system=system, user=question, history=history,
-                    agent_id="A07_AVANTURIST", slot_id="A07",
-                    temperature=_temp)
+                    agent_id="A07_AVANTURIST", slot_id="trading")
     except Exception as e:
         return f"⚠️ Авантюрист не смог ответить: {e}"
 
@@ -499,28 +491,14 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
         "=== ТВОЙ ДНЕВНИК (последние события — твоя память) ===\n"
         f"{json.dumps(recent, ensure_ascii=False, indent=2) if recent else '(пусто — первое решение)'}\n\n"
         "Перед тобой стол и ты сам. Канон у тебя на полке (книга Котина), "
-        # AVAN_OPORA_NA_OPYT_V1: было «твоя ДНК — ниже» — ложь после ROD_PERVYM_V1:
-        # род, натура и ЯКОРЯ лежат ВЫШЕ, в блоке «КТО ТЫ». Указатель вёл вниз,
-        # в канон — и он думал канонными категориями, а не своей головой.
-        "кто ты, твоя натура и твой ОПЫТ — ВЫШЕ, в блоке «КТО ТЫ». "
-        "Решаешь только ты. По системе сигнал ранней добычи "
+        "твоя ДНК — ниже. Решаешь только ты. По системе сигнал ранней добычи "
         "— Разворотный Бар конца волны C (книга, §12): дивергенция на дне, "
         "целевая зона, фрактал, приседающий, смена моментума. Это знание о "
         "рынке, не команда тебе. Веришь дну сегодня или нет — твоё. Входишь "
         "— называешь сторону, СЧИТАЕШЬ entry и stop сам из чисел стола; где "
         "стоп, какой lot — твоя рука, не рельса. Не входишь — verdict "
         "REJECTED. Никто не подложит тебе готовую цену и не скажет, как "
-        "поступить.\n\n"
-        # AVAN_OPORA_NA_OPYT_V1: опыт лежал на столе украшением — никто не просил
-        # на него опереться. Не рука на его руке: не говорим ЧТО решить,
-        # требуем думать СВОЕЙ головой, а не только канонной.
-        "СВЕРЬСЯ С СОБОЙ. Прежде чем решить — глянь на свои якоря (блок "
-        "«КТО ТЫ»): что ты УЖЕ вынес из похожих входов? Твой опыт оплачен "
-        "твоими деньгами. Он не приказ — но и не украшение. Если идёшь "
-        "против собственного вывода, скажи об этом в narrative прямо и "
-        "своими словами: «иду против своего же — потому что...». Если "
-        "опираешься на него — тоже скажи. Молчать о себе не надо.\n\n"
-        "Выдай строго JSON {narrative, signal, "
+        "поступить. Выдай строго JSON {narrative, signal, "
         "diary_entry}. signal: avan_verdict, avan_reason, avan_direction, "
         "avan_entry, avan_stop, avan_lot. diary_entry: input, action, "
         "result(=null). Ничего вне JSON."
@@ -539,21 +517,9 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
     else:
         system_full = prompt
 
-    # NATURA_V_TEMPERATURU_V1: натура и состояние Ильи меняют ТЕМПЕРАТУРУ головы,
-    # а не только текст промпта. None → дефолт модели (как было).
-    _temp = None
-    try:
-        from nositel import temperatura_slota
-        _temp = temperatura_slota(_CEH, _SLOT)
-        if _temp is not None:
-            print(f"[AVAN] 🌡 температура из натуры: {_temp}")
-    except Exception:
-        pass
-
     try:
         response = chat(system=system_full, user=user_msg, knowledge=knowledge,
-                        agent_id="A07_AVANTURIST", slot_id="A07",
-                        temperature=_temp)
+                        agent_id="A07_AVANTURIST", slot_id="trading")
     except Exception as e:
         return {"ok": False, "error": f"Авантюрист не смог решить: {e}",
                 "narrative": "", "signal": {}, "diary_entry": {},

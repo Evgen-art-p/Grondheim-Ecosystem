@@ -161,43 +161,6 @@ def magic_slota(ceh: str, slot: str):
         return None
 
 
-def temperatura_slota(ceh: str, slot: str):
-    """НАТУРА → ТЕМПЕРАТУРА. Как думает голова, а не только что читает.
-
-    До этого моста stress_to_temperature() в llm.py была МЁРТВОЙ: ни один
-    мозг не передавал temperature, все девять думали на дефолте модели.
-    Душа была буквами в промпте — на поведение головы не влияла.
-
-    Заряд — маятник состояния (Чертёж):
-        минус ДАВИТ → stress → выше температура (нервный, хаотичный)
-        плюс  ГРЕЕТ → light  → ниже температура (спокойный, точный)
-    Упрямство — натура: упрямого мотает МЕНЬШЕ (устойчив к состоянию).
-
-    Честный None — носителя нет: тогда мозг зовёт модель как раньше,
-    на дефолте (ничего не ломаем).   # NATURA_V_TEMPERATURU_V1
-    """
-    d = dusha_slota(ceh, slot)
-    if not d or not d.get("стол"):
-        return None
-    stol = d["стол"]
-    try:
-        from llm import stress_to_temperature
-    except Exception:
-        return None
-
-    charge = float(stol.get("заряд") or 0.0)
-    dna = stol.get("натура") or {}
-    stubborn = float(dna.get("Stubbornness", 0.5) or 0.5)
-
-    stress = max(0.0, -charge)              # минус давит
-    light = 0.5 + max(0.0, charge) / 2.0    # плюс греет
-    t = stress_to_temperature(stress, light)
-
-    # упрямый устойчив: натура гасит размах от состояния
-    t = 0.70 + (t - 0.70) * (1.0 - 0.5 * stubborn)
-    return round(max(0.3, min(1.2, t)), 2)
-
-
 # ════════════════════════════════════════════════════════════
 # ПИШУЩИЙ КОНЕЦ — суд рынка оседает ОПЫТОМ в носителя
 # ════════════════════════════════════════════════════════════
