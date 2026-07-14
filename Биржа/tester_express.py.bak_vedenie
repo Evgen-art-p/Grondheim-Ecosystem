@@ -148,144 +148,12 @@ def _settle_bar(window, symbol, timeframe, point):
     st = {'chain_data': {'market_data': md,
                          'open_positions': positions}}
     try:
-        # OTLOZHENNY_ORDER_V1: ПЕРВЫМ ДЕЛОМ — активация заявок.
-        # Порядок строг: заявка → активация → трейлинг → закрытие.
-        # Иначе стоп потянется у того, кто ещё НЕ ВОШЁЛ.
-        try:
-            from hooks import _aktivirovat_ordera
-            _aktivirovat_ordera(st)
-            st['chain_data']['open_positions'] = (
-                load_trading_state().get('positions', []) or [])
-        except Exception as _ae:
-            print(f'[ОРДЕР] ⚠️  {_ae}')
-
-        # VEDENIE_POZICII_V1: СНАЧАЛА тянем стоп за Зубами («сейф»),
-        # ПОТОМ проверяем закрытие. Порядок важен: сейф должен
-        # успеть сработать РАНЬШЕ, чем рынок дотянется до старого
-        # стопа. Это код, не LLM — по канону (гл.10) трейлинг НЕ
-        # вопрос вкуса, а закон системы.
-        try:
-            from hooks import _treyling_za_zubami
-            _treyling_za_zubami(st)
-            # стоп мог сдвинуться — перечитываем позиции
-            st['chain_data']['open_positions'] = (
-                load_trading_state().get('positions', []) or [])
-        except Exception as _te:
-            print(f'[ТРЕЙЛ] ⚠️  {_te}')
-
         _settle_positions(st)   # закрывает по стопу/колоколу, пишет pnl_r
     except Exception as _e:
         print(f'[TESTER·SETTLE] пропуск ({_e})')
 
 
 # ── TESTER_TRADE_FEED_V1: лента сделок (открытие/закрытие в кабинет) ──
-# ═══════════════════════════════════════════════════════════
-# VEDENIE_POZICII_V1 — ДОЛИВ: БУДИМ ТРЕЙДЕРА НА ФРАКТАЛЕ
-# ═══════════════════════════════════════════════════════════
-# Канон (гл.8): «каждый новый пробитый фрактал по тренду наращивает
-# позицию, пока цена держит сторону Зубов».
-#
-# Стоп тянет КОД (закон). А долив — РИСК, и тут решает ХАРАКТЕР:
-# Илья дольёт агрессивно, Василий откажется. Решение Шефа: гибрид.
-#
-# ⚠ БУДИМ ОДНОГО ТРЕЙДЕРА, НЕ ВЕСЬ СОВЕТ. И ТОЛЬКО НА ФРАКТАЛЕ —
-# не на каждом баре. Иначе разорение: позиция живёт сотни баров.
-# Фракталы по тренду редки — цена копеечная.
-# ═══════════════════════════════════════════════════════════
-
-_VEDENIE_SLOT = {100001: ("торговый_хаос", "A06", "run_brut"),
-                 100002: ("торговый_хаос", "A07", "run_avan"),
-                 100003: ("торговый_хаос", "A08", "run_cons")}
-
-
-def _vesti_poziciyu(window, symbol, timeframe, point, out=print):
-    """Долив по канону: новый фрактал по тренду → будим ХОЗЯИНА позиции
-    (одного!) → он решает ADD / MOVE_STOP / HOLD своим характером.
-
-    Возвращает True, если кого-то будили (для счёта вызовов)."""
-    from williams_core import build_market_data
-    from hooks import load_trading_state
-
-    positions = [p for p in (load_trading_state().get('positions', []) or [])
-                 if p.get('status') == 'OPEN']
-    if not positions:
-        return False
-
-    md = build_market_data(window, symbol=symbol,
-                           timeframe=timeframe, point=point)
-    if not md:
-        return False
-
-    fr = md.get('fractals', {}) or {}
-    allig = md.get('alligator', {}) or {}
-    teeth = allig.get('teeth')
-    close = (md.get('price', {}) or {}).get('close')
-    if teeth is None or close is None:
-        return False
-
-    budili = False
-    for pos in positions:
-        d = (pos.get('direction') or '').upper()
-
-        # ── ТРИГГЕР: свежий фрактал ПО ТРЕНДУ, цена держит сторону Зубов ──
-        # Ключи ПРОВЕРЕНЫ НА ДИСКЕ (14.07): build_market_data отдаёт
-        #   fractals: {'last_up': {'price':..., 'bar_index':..., 'date':...},
-        #              'last_down': {...}, 'count_up':.., 'count_down':..}
-        # Первый заход я написал fr.get('up')/fr.get('bull') — ПО ДОГАДКЕ.
-        # Долив не сработал бы НИ РАЗУ. Смотреть в код, потом писать.
-        if d == 'LONG':
-            if close < teeth:          # пирамида мертва (гл.7)
-                continue
-            f = fr.get('last_up') or {}
-            f_price = f.get('price') if isinstance(f, dict) else None
-            if not f_price or close <= f_price:   # фрактал ещё не пробит
-                continue
-        elif d == 'SHORT':
-            if close > teeth:
-                continue
-            f = fr.get('last_down') or {}
-            f_price = f.get('price') if isinstance(f, dict) else None
-            if not f_price or close >= f_price:
-                continue
-        else:
-            continue
-
-        # тот же фрактал дважды не доливаем
-        if pos.get('last_fractal') == f_price:
-            continue
-
-        slot = _VEDENIE_SLOT.get(pos.get('magic'))
-        if not slot:
-            continue
-        ceh, sid, fn = slot
-
-        out(f"  🔺 ДОЛИВ? {pos.get('trader')} {d}: фрактал {f_price} пробит, "
-            f"цена {close} держит Зубы {round(teeth, 2)} — бужу хозяина")
-
-        try:
-            brain = _slot_brain(ceh, sid)
-            r = getattr(brain, fn)(symbol=symbol, timeframe=timeframe)
-            if not (r or {}).get('ok'):
-                continue
-            budili = True
-
-            # пометим фрактал — второй раз по нему не будим
-            _ts = load_trading_state()
-            for _p in _ts.get('positions', []) or []:
-                if _p.get('magic') == pos.get('magic'):
-                    _p['last_fractal'] = f_price
-            from hooks import save_trading_state
-            save_trading_state(_ts)
-
-            nar = (r.get('narrative') or '').strip()
-            if nar:
-                out(f"     └─ {nar[:200]}")
-        except Exception as _e:
-            out(f"     ⚠️  ведение не вышло: {_e}")
-
-    return budili
-
-
 def _table_snapshot():
     """Множество magic открытых позиций сейчас — для сравнения
     до/после (что открылось, что закрылось)."""
@@ -845,11 +713,6 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
             # ровно там, где реально дошёл до стопа/колокола, а не
             # через годы на следующем кандидате (убивает зомби-позиции).
             # _settle_bar мгновенно выходит на пустом столе — дёшево.
-            # VEDENIE_POZICII_V1: на каждом баре между кандидатами
-            # позиция ЖИВЁТ: код тянет стоп (в _settle_bar), а на
-            # фрактале по тренду просыпается ХОЗЯИН и решает — долить
-            # или нет. Раньше здесь была только физика: позиция
-            # умирала одним выстрелом, не дожив до решения.
             for _b in range(_last_settled + 1, i + 1):
                 # TESTER_SETTLE_FULL_WINDOW_V1: ПОЛНОЕ окно 300 баров (было 60).
                 # exit_bell (дивергенция AO) требует большого окна —
@@ -857,12 +720,6 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                 # годами. На 300 звонок звенит вовремя (§9 Котина).
                 _settle_bar(bars_all[max(0, _b - 299):_b + 1],
                             symbol, timeframe, point)
-                # VEDENIE_POZICII_V1: долив — только если позиция жива
-                try:
-                    _vesti_poziciyu(bars_all[max(0, _b - 299):_b + 1],
-                                    symbol, timeframe, point, out)
-                except Exception as _ve:
-                    print(f'[ВЕДЕНИЕ] ⚠️  {_ve}')
             _last_settled = i
             _feed_check_closures(i)   # TESTER_TRADE_FEED_V1: лента закрытий
 

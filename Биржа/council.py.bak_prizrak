@@ -90,86 +90,19 @@ _TRADERS = [
 _EXECUTOR = ("A09", "контора", "исполнитель", "run_executor")
 
 
-# ═══════════════════════════════════════════════════════════
-# NET_PRIZRAKOV_V1 — МЁРТВЫЙ АГЕНТ НЕ ТОРГУЕТ
-# ═══════════════════════════════════════════════════════════
-# Лог Шефа 14.07: Илья упал (OpenRouter вернул пустое тело) — а
-# Исполнитель открыл SHORT @1202.44 по его СТАРОМУ вердикту, при том
-# что цена на баре была 1367-1387, а компас показывал BULL.
-#
-# Трейдер пишет вердикт в стол САМ, в конце run_*. Упал раньше — не
-# написал — в столе остался прошлый. Живой, с ценами другой эпохи.
-#
-# ПРАВИЛО: сбой → вердикт ОБНУЛЯЕТСЯ. Молчание — это REJECTED, а не
-# согласие. Иначе судья потом впишет Илье «МОЯ ОШИБКА» за решение,
-# которого он не принимал — и это отравит его опыт КЛЕВЕТОЙ.
-# ═══════════════════════════════════════════════════════════
-
-# кто где живёт в столе (проверено на диске: A06/A07/A08 :: мозг.py)
-_STOL_KEY = {"A06": "brut", "A07": "avan", "A08": "cons"}
-
-
-def _steret_verdikt(slot: str, prichina: str = ""):
-    """Стирает вердикт упавшего трейдера со стола. Он молчал — значит
-    REJECTED. Старый вердикт с прошлого бара торговать НЕ ИМЕЕТ ПРАВА."""
-    key = _STOL_KEY.get(slot)
-    if not key:
-        return
-    try:
-        from hooks import load_trading_state, save_trading_state
-        t = load_trading_state()
-        staryi = (t.get(key, {}) or {}).get("verdict")
-        t.setdefault(key, {})
-        t[key] = {
-            "verdict":   "REJECTED",
-            "reason":    f"агент не ответил ({prichina[:60]})",
-            "direction": None,
-            "entry":     None,
-            "stop":      None,
-            "lot":       None,
-            "action":    None,
-            "new_stop":  None,
-            "add_lot":   None,
-        }
-        save_trading_state(t)
-        if staryi and staryi != "REJECTED":
-            print(f"[ПРИЗРАК] 🚫 {slot} упал — стёр его старый вердикт "
-                  f"«{staryi}». Мёртвый агент НЕ ТОРГУЕТ.")
-        else:
-            print(f"[ПРИЗРАК] 🚫 {slot} упал — стол очищен (REJECTED)")
-    except Exception as e:
-        print(f"[ПРИЗРАК] ⚠️  не смог стереть вердикт {slot}: {e}")
-
-
 def _call(ceh_id: str, slot: str, fn_name: str, **kw) -> dict:
     """Зовёт живой run_* агента через слот. Любой сбой — мягко, не
     роняем Совет (честная вакансия/ошибка отдаётся как {ok:False})."""
-    # NET_PRIZRAKOV_V1: ЛЮБОЙ сбой агента → его вердикт на столе
-    # ОБНУЛЯЕТСЯ. Без этого Исполнитель откроет позицию по СТАРОМУ
-    # вердикту с прошлого бара — что и случилось 14.07: Илья упал
-    # (OpenRouter вернул пустое тело), а SHORT открылся @1202.44 при
-    # цене 1367-1387 и компасе BULL. Мёртвый агент НЕ ТОРГУЕТ.
-    #
-    # Ловим на ВЫХОДЕ: главный случай — не исключение, а мозг,
-    # который САМ вернул {"ok": False} из `fn(**kw)`.
-    _res = None
     try:
         brain = _slot_brain(ceh_id, slot)
         if brain is None:
-            _res = {"ok": False, "error": f"{ceh_id}/{slot}: мозг ещё не в слоте"}
-        else:
-            fn = getattr(brain, fn_name, None)
-            if fn is None:
-                _res = {"ok": False, "error": f"{ceh_id}/{slot}: нет {fn_name}"}
-            else:
-                _res = fn(**kw) or {}
+            return {"ok": False, "error": f"{ceh_id}/{slot}: мозг ещё не в слоте"}
+        fn = getattr(brain, fn_name, None)
+        if fn is None:
+            return {"ok": False, "error": f"{ceh_id}/{slot}: нет {fn_name}"}
+        return fn(**kw) or {}
     except Exception as e:
-        _res = {"ok": False, "error": f"{fn_name}: {e}"}
-
-    if not (_res or {}).get("ok"):
-        _steret_verdikt(slot, str((_res or {}).get("error", "сбой")))
-
-    return _res
+        return {"ok": False, "error": f"{fn_name}: {e}"}
 
 
 def wake_council(symbol: str, timeframe: str,

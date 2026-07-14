@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-14T17:14:48.539473",
+  "updated": "2026-07-15T00:00:08.082442",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1244.94,
-    "history_dna": "DETECTED BULL MIN@1244.94 AO=-0.2254 спуск:H1",
+    "zero_point_price": 1237.59,
+    "history_dna": "BEAR_DETECT@1237.59(2010.06.16 14:00)",
     "trend_direction": "BULL",
     "found_timeframe": null
   },
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Аллигатор спит — тренда нет. Пробой фрактала без активной пасти не мой вход.",
+    "reason": "пробой фрактала был, но close под Teeth — цена в пасти, импульс не подтверждён",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -25,19 +25,19 @@
     "add_lot": null
   },
   "avan": {
-    "verdict": "APPROVED",
-    "reason": "Разворотный бар конца C: дивергенция DETECTED, zero point 1244.94 достигнут, фрактал LONG 1247.25, закрытие выше Зубов, штиль.",
-    "direction": "LONG",
-    "entry": 1247.36,
-    "stop": 1244.93,
-    "lot": 0.1,
-    "action": "ENTER",
+    "verdict": "REJECTED",
+    "reason": "Нет разворотного бычьего бара — свеча медвежья, моментум вниз. High равен zero Искры, но закрытие под open. Смена не подтверждена. Иду строго по роду: смена моментума — одна из пяти пуль.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Волна 1 не подтверждена, откат волны 2 не сформирован, Аллигатор спит — нет опоры для входа Консерватора.",
+    "reason": "Нет медвежьего Разворотного Бара на опоре. Откат волны 2 продолжается бычьим баром.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -47,31 +47,31 @@
     "add_lot": null
   },
   "morj": {
-    "morj_status": "SLEEPING",
+    "morj_status": "AWAKE",
     "wave_1_validated": false,
     "tension_peak": true,
     "history_dna": "",
     "scale_timeframe": "H1",
     "inherited_dir": "BULL",
     "alligator_state": {
-      "sleeping": true,
+      "sleeping": false,
       "opening": false,
-      "mature": false,
-      "bars_open": 0
+      "mature": true,
+      "bars_open": 20
     }
   },
   "panic": {
-    "panic_phase": "ASLEEP",
-    "crowd_sentiment": "Тихо. Все ушли. Даже смотреть не на что.",
-    "action_for_traders": "NEUTRAL",
+    "panic_phase": "TENSION",
+    "crowd_sentiment": "Объёмы бешеные, цена стоит — СЕЙЧАС РВАНЁТ!!! Все ломятся, никто не может сдвинуть!",
+    "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
     "scale_timeframe": "H1"
   },
   "hans": {
     "fractal_valid": true,
     "fractal_side": "LONG",
-    "fractal_price": 1247.25,
-    "absorption_ratio": 0.15,
+    "fractal_price": 1236.94,
+    "absorption_ratio": 0.85,
     "scale_timeframe": "H1",
     "history_dna": ""
   }

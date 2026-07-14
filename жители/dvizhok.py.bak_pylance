@@ -15,11 +15,9 @@
 #   проходит от того, что прошла ночь. Полураспад = сутки ×
 #   (1 + упрямство). Источник времени — _seychas(), одна точка
 #   правды: подменишь на биржевые сессии — формула не тронется.
-# PYLANCE_GIGIENA_V1: pattern: Optional[str] — тип больше не врёт.
 # `шесть·проверено·до·корня`
 # ─────────────────────────────────────────────────────────────
 import json
-from typing import Optional   # PYLANCE_GIGIENA_V1
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -383,8 +381,7 @@ class Dvizhok:
             pass   # архив не должен ронять запись опыта
 
     def dopisat_vyvod(self, vyvod: str, limit: int = 10,
-                      pattern: Optional[str] = None,   # PYLANCE_GIGIENA_V1
-                      otkuda: str = "рынок") -> dict:
+                      pattern: str = None, otkuda: str = "рынок") -> dict:
         """Дописывает ВЫВОД — нога Опыта. TRI_ETAZHA_V1.
 
         ⚠ ПИШЕТ В МЕТКИ (2_метки/metki.json), НЕ в Anchor_Points.

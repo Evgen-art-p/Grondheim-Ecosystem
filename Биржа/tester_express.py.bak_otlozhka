@@ -148,17 +148,6 @@ def _settle_bar(window, symbol, timeframe, point):
     st = {'chain_data': {'market_data': md,
                          'open_positions': positions}}
     try:
-        # OTLOZHENNY_ORDER_V1: ПЕРВЫМ ДЕЛОМ — активация заявок.
-        # Порядок строг: заявка → активация → трейлинг → закрытие.
-        # Иначе стоп потянется у того, кто ещё НЕ ВОШЁЛ.
-        try:
-            from hooks import _aktivirovat_ordera
-            _aktivirovat_ordera(st)
-            st['chain_data']['open_positions'] = (
-                load_trading_state().get('positions', []) or [])
-        except Exception as _ae:
-            print(f'[ОРДЕР] ⚠️  {_ae}')
-
         # VEDENIE_POZICII_V1: СНАЧАЛА тянем стоп за Зубами («сейф»),
         # ПОТОМ проверяем закрытие. Порядок важен: сейф должен
         # успеть сработать РАНЬШЕ, чем рынок дотянется до старого

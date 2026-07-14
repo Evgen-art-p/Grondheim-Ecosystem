@@ -320,20 +320,6 @@ def _open_positions_from_table(traders: dict, market: dict) -> list:
         stop      = v.get("stop")
         if direction not in ("LONG", "SHORT") or entry is None or stop is None:
             continue
-        # ═══ OTLOZHENNY_ORDER_V1 ═══
-        # Трейдер сказал «Buy Stop 1248.22» — это ЗАЯВКА НА ПРОБОЙ,
-        # а не сделка. Раньше код открывал МГНОВЕННО по названной
-        # цене — даже если рынок туда НИКОГДА не дошёл. Половина
-        # сделок была ФАНТОМАМИ (67% стопов ровно по −1.0R: вошли
-        # «на пробое», которого не было → цена сразу против).
-        #
-        # Теперь: PENDING. Ждёт, пока рынок сам возьмёт (канон гл.8:
-        # «Buy Stop на 1 тик выше high фрактального бара»).
-        #
-        # ⚠ Рыночный вход (цена ≈ текущая) активируется тем же
-        # механизмом на ЭТОМ ЖЕ баре: high/low его накроют.
-        # Отложка не мешает войти по рынку — она мешает войти
-        # ТУДА, КУДА РЫНОК НЕ ХОДИЛ.
         pos = {
             "trader":    TRADER_NAME[key],
             "magic":     magic,
@@ -342,9 +328,7 @@ def _open_positions_from_table(traders: dict, market: dict) -> list:
             "stop":      stop,
             "tp":        None,
             "lot":       v.get("lot"),
-            "status":    "PENDING",   # OTLOZHENNY_ORDER_V1
-            "_ждёт_с":   bar_time,
-            "_ждёт_баров": 0,
+            "status":    "OPEN",
             "mode":      "PAPER",
             "opened_at": bar_time,
             "pnl":       None,
@@ -357,7 +341,7 @@ def _open_positions_from_table(traders: dict, market: dict) -> list:
             "стол_входа": _snyat_stol_vhoda(),
         }
         tstate["positions"].append(pos)
-        opened.append(pos)   # OTLOZHENNY_ORDER_V1: это ЗАЯВКА
+        opened.append(pos)
 
     if opened:
         save_trading_state(tstate)

@@ -616,16 +616,8 @@ def _teeth_cross_index(bars: list, teeth_series: list, direction) -> Optional[in
 
 
 def _angulation_angle(bars: list, teeth_series: list, cross_idx: int,
-                      i: int, direction: Optional[str],
+                      i: int, direction: str,
                       point: Optional[float]) -> Optional[float]:
-    # PYLANCE_GIGIENA_V1: direction реально бывает None (нет
-    # направления — не от чего мерить). Тип врал.
-    #
-    # ⚠ ЭТО КОД МЁРТВОГО ОРГАНА. Угол выброшен из затвора
-    # (REZINKA_DZHASTIN_V1) — bdb_strong его больше не
-    # спрашивает. Книга Моржа §3: «ГЛАВНОЕ — НЕ СЧИТАТЬ УГОЛ.»
-    # Оставлен в раскладке как факт: пусть видно, что он врал
-    # (медиана 0.9° при максимуме 179.9°).
     """
     НАСТОЯЩАЯ ангуляция (WILLIAMS_REAL_ANGULATION_V1) — угол расхождения
     (в градусах) между краем цены и линией Teeth от cross_idx до i.

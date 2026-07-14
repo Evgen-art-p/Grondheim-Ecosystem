@@ -38,3 +38,12 @@
 {"ts": "2026-07-14T16:29:34.850452", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -3.11, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "H1"}}
 {"ts": "2026-07-14T16:45:50.109333", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "EXIT_BELL", "pnl": -6.68, "pnl_r": -0.7237, "symbol": "XAUUSD", "timeframe": "H1"}}
 {"ts": "2026-07-14T17:14:48.460473", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -2.43, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "H1"}}
+{"ts": "2026-07-14T22:19:51.009663", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -5.721119, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "H4"}}
+{"ts": "2026-07-14T22:23:50.597366", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -15.3, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "H4"}}
+{"ts": "2026-07-14T22:40:49.180141", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -5.721119, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "H4"}}
+{"ts": "2026-07-14T23:00:20.714206", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "EXIT_BELL", "pnl": 3.83, "pnl_r": 0.5572, "symbol": "XAUUSD", "timeframe": "H4"}}
+{"ts": "2026-07-14T23:00:20.802205", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "EXIT_BELL", "pnl": 3.83, "pnl_r": 0.5572, "symbol": "XAUUSD", "timeframe": "H4"}}
+{"ts": "2026-07-14T23:19:21.550728", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -12.94157, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "H4"}}
+{"ts": "2026-07-14T23:53:42.122415", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -0.438872, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "H1"}}
+{"ts": "2026-07-14T23:57:41.730373", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": 1.758423, "pnl_r": null, "symbol": "XAUUSD", "timeframe": "H1"}}
+{"ts": "2026-07-14T23:57:41.770373", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "STOP_LOSS", "pnl": -12.62, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "H1"}}
