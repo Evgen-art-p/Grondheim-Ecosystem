@@ -9,6 +9,12 @@
 #   Решение и выход — НЕ здесь (следующие камни). Движок только дышит.
 #
 # Прежде она — житель (ядро). Из ядра вдох. Ручки — её натура.
+# TRI_ETAZHA_V1: три этажа разведены. Anchor_Points = РОД, не растёт.
+#   Нажитое → 2_метки/metki.json. Момент → 3_маяки/mayaki.json.
+# SUTOCHNY_TIK_V1: заряд тает по ВРЕМЕНИ, не только по вдоху. Обида
+#   проходит от того, что прошла ночь. Полураспад = сутки ×
+#   (1 + упрямство). Источник времени — _seychas(), одна точка
+#   правды: подменишь на биржевые сессии — формула не тронется.
 # `шесть·проверено·до·корня`
 # ─────────────────────────────────────────────────────────────
 import json
@@ -52,12 +58,90 @@ class Dvizhok:
         # СОСТОЯНИЕ — заряд. Если в паспорте нет — рождаем в покое (0.0).
         self.charge = self.p.get("_charge", 0.0)
 
+    # ═══════════════════════════════════════════════════════
+    # SUTOCHNY_TIK_V1 — ВРЕМЯ ОСТУЖАЕТ
+    # ═══════════════════════════════════════════════════════
+    # Раньше заряд таял ТОЛЬКО за вдох (10%). Нет событий → висит вечно:
+    # Лока сидела +0.874 четвёртые сутки, а |заряд|>0.8 открывает архив —
+    # максимальный аффект без выхода. Ловушка: чтобы остыть, надо трогать,
+    # а тронешь — качнётся снова.
+    #
+    # Теперь: прошли сутки тишины — маятник сам качнулся к покою.
+    # Обида проходит от того, что прошла ночь.
+    #
+    # Источник «сейчас» — реальные часы (решение Шефа, вариант А).
+    # Захочешь городское время (по биржевым сессиям) — подмени _seychas(),
+    # остальное не тронется.
+    # ═══════════════════════════════════════════════════════
+
+    POLURASPAD_CHASOV = 24.0   # сутки — база. Упрямство её растягивает.
+
+    def _seychas(self) -> datetime:
+        """Момент «сейчас». Одна точка правды о времени — чтобы потом
+        подменить на городское/биржевое, не трогая формулу."""
+        return datetime.now(timezone.utc)
+
+    def _kogda_dyshal(self):
+        """Момент последнего вдоха из паспорта. Нет метки — None
+        (житель ещё не дышал, остужать нечего)."""
+        ts = self.p.get("_charge_ts")
+        if not ts:
+            return None
+        try:
+            t = datetime.fromisoformat(str(ts))
+            # старые записи бывают без зоны — считаем их UTC, не гадаем
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=timezone.utc)
+            return t
+        except Exception:
+            return None
+
+    def ostyt_po_vremeni(self) -> dict:
+        """Остывание за время тишины. Меняет self.charge В ПАМЯТИ.
+        На диск НЕ пишет — это делает sохранить() (закон побочки).
+
+        Полураспад: сутки × (1 + упрямство). Упрямый держит дольше:
+          упрямство 0.1 → ~1.1 суток на половину
+          упрямство 0.9 → ~2.5 суток (Илья, Брут — такие)
+        Экспонента, не линейка: свежая рана болит сильно, старая тлеет.
+        """
+        bylo = self.charge
+        if abs(bylo) < 0.001:
+            return {"остыл": False, "причина": "и так в покое",
+                    "было": bylo, "стало": bylo, "часов": 0.0}
+
+        t0 = self._kogda_dyshal()
+        if t0 is None:
+            return {"остыл": False, "причина": "нет метки времени вдоха",
+                    "было": bylo, "стало": bylo, "часов": 0.0}
+
+        chasov = (self._seychas() - t0).total_seconds() / 3600.0
+        if chasov <= 0:
+            return {"остыл": False, "причина": "время не шло",
+                    "было": bylo, "стало": bylo, "часов": 0.0}
+
+        polur = self.POLURASPAD_CHASOV * (1.0 + self.stubborn)
+        self.charge = bylo * (0.5 ** (chasov / polur))
+        if abs(self.charge) < 0.01:
+            self.charge = 0.0        # хвост не тянем — это покой
+
+        return {"остыл": True, "было": round(bylo, 3),
+                "стало": round(self.charge, 3),
+                "часов": round(chasov, 1),
+                "полураспад_ч": round(polur, 1)}
+
     def vdoh(self, kontekst: str, sila: float, svezhest: float, tonus: str = "ровно") -> dict:
         """Вдох: входящий факт проходит через ядро.
         сила 0..1, свежесть 0..1 (1=только что, 0=давно).
         Возвращает что стало — но НЕ решает за жителя."""
-        # OSTYVANIE_ZARYADA_V1: маятник сначала чуть качнулся обратно к
-        # покою САМ (до нового толчка) — упрямый тает медленнее.
+        # SUTOCHNY_TIK_V1: СПЕРВА остужает ВРЕМЯ. Житель, которого
+        # тронули после недели тишины, приходит на вдох уже остывшим —
+        # как живой. Раньше этого не было: заряд ждал следующего
+        # события, даже если между ними прошли сутки.
+        self.ostyt_po_vremeni()
+
+        # OSTYVANIE_ZARYADA_V1: и ещё чуть — за сам вдох (маятник
+        # качнулся к покою до нового толчка). Упрямый тает медленнее.
         _ostyv_koef = OSTYVANIE_BAZA * (1.0 - 0.7 * self.stubborn)
         self.charge *= (1.0 - _ostyv_koef)
 
@@ -145,6 +229,8 @@ class Dvizhok:
             "история":        self.p.get("Hidden_History", ""),
             "чувство":        self.p.get("Sensory_Response", ""),
             "якоря":          self.p.get("Anchor_Points", ""),
+            "метки":          self._metki_v_stol(),   # TRI_ETAZHA_V1
+            "черновики":      self.mayaki(),          # TRI_ETAZHA_V1
             "скрытый_вкус":   self.p.get("Hidden_Taste", ""),
             "тянет_к":        self.p.get("Pull_Vector", ""),
             # PATCH_DOM_V_DUSHU: дом — носится в себе ВСЕГДА, не по заряду
@@ -195,19 +281,81 @@ class Dvizhok:
         минус побочка. Заряд отдаём на ЧТЕНИЕ (в __init__ уже загружен,
         диск не трогаем). # DVIZHOK_STOL_CHISTO_VYVOD_V1
         """
+        # SUTOCHNY_TIK_V1: промпт должен видеть ЧЕСТНЫЙ заряд, а не
+        # окаменевший с прошлой недели. Остужаем В ПАМЯТИ — на диск
+        # НЕ пишем (контракт метода: чтение БЕЗ побочки). Осядет при
+        # следующем настоящем вдохе.
+        self.ostyt_po_vremeni()
         return {
             "кто_я":        self.p.get("Official_Name"),
             "заряд":        round(self.charge, 3),
             "ядро":         self.yadro(),   # DVIZHOK_YAKORYA_YADRO_V1: ядро из маски (Роль), не из Рода
             "история":      self.p.get("Hidden_History", ""),
             "чувство":      self.p.get("Sensory_Response", ""),
-            "якоря":        self.p.get("Anchor_Points", ""),
-            "черновики":    self.p.get("Draft_Anchors", []),   # YAKORYA_DVA_YARUSA_V1
+            # TRI_ETAZHA_V1: три этажа, три голоса
+            "якоря":        self.p.get("Anchor_Points", ""),   # РОД — кто он ЕСТЬ
+            "метки":        self._metki_v_stol(),              # НАЖИТОЕ — свежие,
+                                                               # остальное по MEMORY_REQUEST
+            "черновики":    self.mayaki(),                     # МАЯКИ — «замечаю за собой»
             "скрытый_вкус": self.p.get("Hidden_Taste", ""),
             "тянет_к":      self.p.get("Pull_Vector", ""),
             "дом":          self.p.get("домашний_промпт", ""),
             "натура":       self.p.get("DNA_Static", {}),
         }
+
+    # ═══════════════════════════════════════════════════════
+    # TRI_ETAZHA_V1 — ТРИ ЭТАЖА ПО ЗАКОНУ ЯДРА
+    # ═══════════════════════════════════════════════════════
+    # 1_якоря (Anchor_Points в паспорте) — РОД. Не меняется. Не пишем.
+    # 2_метки (дом/2_метки/metki.json)   — НАЖИТОЕ. Растёт.
+    # 3_маяки (дом/3_маяки/mayaki.json)  — МОМЕНТ. Гаснет (черновики).
+    #
+    # Раньше всё валилось в Anchor_Points — и род, и нажитое. Отсюда
+    # лимит, вытеснение и ложная тревога «вторая профессия сотрёт
+    # первую». Этаж И ЕСТЬ происхождение — изобретать было нечего.
+    # ═══════════════════════════════════════════════════════
+
+    METKI_CAP = 40      # меток живёт много — это вся трудовая жизнь
+    METKI_V_STOL = 4    # а в промпт идут только свежие: стол маленький,
+                        # остальное житель поднимет через MEMORY_REQUEST
+
+    def _metki_path(self) -> Path:
+        return self.dom / "2_метки" / "metki.json"
+
+    def _mayaki_path(self) -> Path:
+        return self.dom / "3_маяки" / "mayaki.json"
+
+    def _chitat_etazh(self, path: Path) -> list:
+        """Чтение этажа. Нет файла — пустой этаж, это нормально."""
+        try:
+            if path.exists():
+                d = json.loads(path.read_text(encoding="utf-8"))
+                return d if isinstance(d, list) else []
+        except Exception:
+            pass
+        return []
+
+    def _pisat_etazh(self, path: Path, data: list):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2),
+                        encoding="utf-8")
+
+    def metki(self) -> list:
+        """Весь второй этаж — нажитое. Список объектов."""
+        return self._chitat_etazh(self._metki_path())
+
+    def mayaki(self) -> list:
+        """Третий этаж — черновики момента. Гаснут, не набрав повтора."""
+        return self._chitat_etazh(self._mayaki_path())
+
+    def _metki_v_stol(self) -> list:
+        """Свежие METKI_V_STOL меток — для промпта. НЕ все: контекст
+        Биржи уже 25к символов, а метки растут всю жизнь. Маленький
+        стол + право дотянуться (MEMORY_REQUEST) — дешевле и честнее
+        по природе: живой человек тоже не держит всю жизнь в голове."""
+        m = self.metki()
+        m.sort(key=lambda x: str(x.get("когда", "")))
+        return m[-self.METKI_V_STOL:]
 
     # YAKORYA_DVA_YARUSA_V1: порог повтора для перехода черновик→устойчивый.
     # То же число, что Путь Зрелости (Чертёж §4.6.2: «3 вердикта судьи»)
@@ -233,123 +381,130 @@ class Dvizhok:
             pass   # архив не должен ронять запись опыта
 
     def dopisat_vyvod(self, vyvod: str, limit: int = 10,
-                      pattern: str = None) -> dict:
-        """Дописывает ВЫВОД из сделки — нога Опыта (Чертёж §5.2/4.6.4).
+                      pattern: str = None, otkuda: str = "рынок") -> dict:
+        """Дописывает ВЫВОД — нога Опыта. TRI_ETAZHA_V1.
 
-        ДВА ЯРУСА (Чертёж §4.4, «единичное событие меняет заряд, не
-        фильтр» — защита от дребезга, решение Шефа 12.07):
+        ⚠ ПИШЕТ В МЕТКИ (2_метки/metki.json), НЕ в Anchor_Points.
+        Anchor_Points = РОД по закону ядра, он НЕ РАСТЁТ. То, что я
+        (Брат) 12.07 дописывал туда торговые выводы — было ошибкой,
+        разобранной Шефом. Опыт — это МЕТКИ.
 
-          pattern=None (умолчание, старое поведение для любого чужого
-            вызывающего кода) — пишет СРАЗУ в устойчивые якоря, как было.
+        ДВА ЯРУСА (порог 3, канон Пути Зрелости):
+          pattern=None  — вывод ложится в метки СРАЗУ (для чужого кода,
+                          что зовёт без ключа: поведение сохранено).
+          pattern="ключ" — сперва МАЯК (черновик, «замечаю за собой»).
+                          Тот же ключ встретился PROMOTE_THRESHOLD раз →
+                          маяк гаснет, на его месте встаёт МЕТКА.
 
-          pattern="ключ_природы_вывода" — ДВУХЪЯРУСНЫЙ путь:
-            тот же природы вывод встретился впервые → ЧЕРНОВИК (раз=1),
-            стол его видит, но пониженным голосом («замечаю, не
-            подтвердилось»). Встретился РОВНО В ТУ ЖЕ природу ещё раз —
-            раз+=1, текст обновляется свежим. Набрал PROMOTE_THRESHOLD
-            повторов → ПОВЫШЕН: уходит из черновиков, ложится постоянной
-            строкой в Anchor_Points (тот же лимит 7-10, то же архивное
-            вытеснение старейшего, что и раньше).
+        otkuda — ЧЕСТНОЕ ПОЛЕ «откуда вывод»: "рынок" / "учёба" /
+        "<профессия>". Это НЕ «происхождение якоря», которое я собрался
+        изобретать (§5.1) — этаж и есть происхождение. Это просто голос
+        внутри одного этажа: медийщик на Бирже увидит и «что я вынес в
+        монтажной», и «что мне сказал рынок» — и может их СТОЛКНУТЬ.
 
-        Дубликат ТОЧНОГО текста не плодит строку ни в одном ярусе.
-        Классификатор (какой текст → какой pattern) сюда НЕ входит —
-        dvizhok не знает слова «трейдер»; ключ передаёт вызывающий код
-        (Закон Фрактала: один механизм, разные источники).
-        # DVIZHOK_STOL_CHISTO_VYVOD_V1 · YAKORYA_DVA_YARUSA_V1
+        limit — legacy-параметр, оставлен для совместимости вызовов
+        (nositel.py передаёт limit=10). Метки живут по METKI_CAP.
         """
         vyvod = (vyvod or "").strip()
         if not vyvod:
             return {"дописано": False, "причина": "пустой вывод"}
 
-        raw = self.p.get("Anchor_Points", "") or ""
-        sep = self._yakorya_razdelitel(raw)
-        lines = self._yakorya_spisok(raw)
+        metki  = self.metki()
+        mayaki = self.mayaki()
+        now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-        if vyvod in lines:
-            return {"дописано": False, "причина": "уже среди устойчивых якорей",
-                    "всего": len(lines)}
+        # дубль текста — ни в одном этаже не плодим
+        if any(m.get("текст") == vyvod for m in metki):
+            return {"дописано": False, "причина": "уже среди меток",
+                    "меток": len(metki)}
+        if any(m.get("текст") == vyvod for m in mayaki):
+            return {"дописано": False, "причина": "уже среди маяков",
+                    "маяков": len(mayaki)}
 
-        # ── СТАРОЕ ПОВЕДЕНИЕ: pattern не передали — пишем сразу ───
-        if pattern is None:
-            lines.append(vyvod)
+        # РОД тоже сверяем: если житель «вывел» то, что и так его натура —
+        # это не открытие, а подтверждение. Не плодим строку.
+        if vyvod in self._yakorya_spisok(self.p.get("Anchor_Points", "") or ""):
+            return {"дописано": False,
+                    "причина": "это его род (Anchor_Points), не нажитое"}
+
+        def _lech_metkoy(txt, patt, raz):
+            metki.append({"текст": txt, "паттерн": patt, "откуда": otkuda,
+                          "когда": now_iso, "раз": raz})
             ushlo = []
-            if len(lines) > limit:
-                ushlo = lines[:len(lines) - limit]
-                lines = lines[len(lines) - limit:]
+            if len(metki) > self.METKI_CAP:
+                ushlo = metki[:len(metki) - self.METKI_CAP]
+                del metki[:len(metki) - self.METKI_CAP]
                 for old in ushlo:
-                    self._archive_zapis(old, "якорь вытеснен (лимит опыта)")
-            self.p["Anchor_Points"] = sep.join(lines)
-            self.passport_path.write_text(
-                json.dumps(self.p, ensure_ascii=False, indent=2),
-                encoding="utf-8")
-            return {"дописано": True, "тип": "устойчивый", "всего": len(lines),
+                    self._archive_zapis(old.get("текст", ""),
+                                        "метка вытеснена (лимит нажитого)")
+            return ushlo
+
+        # ── ЯРУС 1: без ключа — сразу в метки ───────────────────
+        if pattern is None:
+            ushlo = _lech_metkoy(vyvod, None, 1)
+            self._pisat_etazh(self._metki_path(), metki)
+            return {"дописано": True, "тип": "устойчивый", "этаж": "метка",
+                    "откуда": otkuda, "меток": len(metki),
                     "вытеснено": len(ushlo)}
 
-        # ── НОВОЕ: два яруса ────────────────────────────────────
-        drafts = list(self.p.get("Draft_Anchors") or [])
-        for d in drafts:
-            if d.get("текст") == vyvod:
-                return {"дописано": False, "причина": "уже среди черновиков",
-                        "паттерн": pattern, "раз": d.get("раз", 1)}
-
+        # ── ЯРУС 2: с ключом — сперва маяк ──────────────────────
         found = None
-        for d in drafts:
-            if d.get("паттерн") == pattern:
-                found = d
+        for m in mayaki:
+            if m.get("паттерн") == pattern:
+                found = m
                 break
 
-        now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
         if found is not None:
             found["раз"] = found.get("раз", 1) + 1
             found["текст"] = vyvod
             found["последний_раз"] = now_iso
+            found["откуда"] = otkuda
             raz = found["раз"]
         else:
-            found = {"текст": vyvod, "паттерн": pattern, "раз": 1,
-                     "первый_раз": now_iso, "последний_раз": now_iso}
-            drafts.append(found)
+            found = {"текст": vyvod, "паттерн": pattern, "откуда": otkuda,
+                     "раз": 1, "первый_раз": now_iso, "последний_раз": now_iso}
+            mayaki.append(found)
             raz = 1
 
         promoted = False
         ushlo = []
         if raz >= self.PROMOTE_THRESHOLD:
-            drafts = [d for d in drafts if d is not found]
-            lines.append(found["текст"])
+            # маяк догорел — на его месте встаёт метка
+            mayaki = [m for m in mayaki if m is not found]
+            ushlo = _lech_metkoy(found["текст"], pattern, raz)
             promoted = True
-            if len(lines) > limit:
-                ushlo = lines[:len(lines) - limit]
-                lines = lines[len(lines) - limit:]
-                for old in ushlo:
-                    self._archive_zapis(old, "якорь вытеснен (лимит опыта)")
-            self.p["Anchor_Points"] = sep.join(lines)
 
-        # ── шапка черновиков: не резиновый склад ─────────────────
-        vytesneno_ch = []
-        if len(drafts) > self.DRAFT_CAP:
-            drafts.sort(key=lambda d: (d.get("раз", 1), d.get("первый_раз", "")))
-            vytesneno_ch = drafts[:len(drafts) - self.DRAFT_CAP]
-            drafts = drafts[len(drafts) - self.DRAFT_CAP:]
-            for d in vytesneno_ch:
+        # маяки — не резиновый склад: слабейшие гаснут в архив
+        pogaslo = []
+        if len(mayaki) > self.DRAFT_CAP:
+            mayaki.sort(key=lambda d: (d.get("раз", 1),
+                                       d.get("первый_раз", "")))
+            pogaslo = mayaki[:len(mayaki) - self.DRAFT_CAP]
+            mayaki = mayaki[len(mayaki) - self.DRAFT_CAP:]
+            for d in pogaslo:
                 self._archive_zapis(
                     d.get("текст", ""),
-                    f"черновик вытеснен, не набрал повтора ({d.get('раз',1)}/"
+                    f"маяк погас, не набрал повтора ({d.get('раз', 1)}/"
                     f"{self.PROMOTE_THRESHOLD})")
 
-        self.p["Draft_Anchors"] = drafts
-        self.passport_path.write_text(
-            json.dumps(self.p, ensure_ascii=False, indent=2),
-            encoding="utf-8")
+        if promoted:
+            self._pisat_etazh(self._metki_path(), metki)
+        self._pisat_etazh(self._mayaki_path(), mayaki)
 
         return {
             "дописано": True,
-            "тип": "устойчивый" if promoted else "черновик",
+            "тип":   "устойчивый" if promoted else "черновик",
+            "этаж":  "метка" if promoted else "маяк",
+            "откуда": otkuda,
             "раз": raz,
-            "якорей": len(self._yakorya_spisok(self.p.get("Anchor_Points", "") or "")),
-            "черновиков": len(drafts),
-            "вытеснено_якорей": len(ushlo),
-            "вытеснено_черновиков": len(vytesneno_ch),
+            "меток": len(metki),
+            "маяков": len(mayaki),
+            "черновиков": len(mayaki),      # legacy-ключ: nositel читает его
+            "якорей": len(self._yakorya_spisok(
+                self.p.get("Anchor_Points", "") or "")),
+            "вытеснено_меток": len(ushlo),
+            "вытеснено_черновиков": len(pogaslo),
         }
-
     def vspomnit(self, zapros: str, limit: int = 6) -> str:
         """PATCH_ZHITEL_VSPOMINAET: житель САМ решил вспомнить (MEMORY_REQUEST).
         Текстовый поиск по своим слоям: sensory + resonance + archive.

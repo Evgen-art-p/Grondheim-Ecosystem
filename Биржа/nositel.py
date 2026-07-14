@@ -95,22 +95,44 @@ def _sobrat_dushu(stol: dict, s_domom: bool = False) -> str:
             sost = "ровно"
         L.append(f"Твой заряд сейчас: {zaryad} ({sost}).")
 
-    # ── НОГА ОПЫТА — главное, ради чего мост ────────────────────
+    # ── ТРИ ГОЛОСА (DVER_V_METKI_V1) ────────────────────────────
+    # Закон ядра (Брат/README.md): род / метки / маяки — три этажа,
+    # три РАЗНЫХ голоса. Раньше здесь был один, и он ВРАЛ: называл
+    # род «твоими выводами, оплаченными твоими деньгами». А род вписан
+    # при рождении — житель его не выносил и не оплачивал.
+    # Голоса разные — значит житель может их СТОЛКНУТЬ.
+
+    # ГОЛОС 1 — РОД. Кто он ЕСТЬ. Не менялось и не меняется.
     yak = stol.get("якоря") or ""
     parts = [x.strip() for x in yak.replace("\\n", "\n").split("\n") if x.strip()]
     if parts:
-        L.append("\nТВОЙ ОПЫТ — что ты вынес сам (якоря). Это не правила "
-                 "сверху, это твои же выводы, оплаченные твоими деньгами:")
+        L.append("\nКТО ТЫ ЕСТЬ — твой род. Не выводы, не уроки: так ты "
+                 "устроен(а) с самого начала. Это дно, оно не спорит:")
         for p in parts:
             L.append(f"  • {p}")
-        L.append("Опыт — твой. Хочешь идти против него — иди, но знай, что идёшь.")
 
-    # YAKORYA_DVA_YARUSA_V1: черновики — видны, но НЕ равны якорям. Гл.4.4
-    # Чертежа: один вывод — не опыт; показываем честно, без притворства.
+    # ГОЛОС 2 — МЕТКИ. Нажитое. ВОТ ЭТО оплачено, и вот здесь голос
+    # «твои же выводы» — правда. Поле ОТКУДА даёт разный тон: то, что
+    # сказал рынок, звучит иначе, чем то, чему учили.
+    metki = stol.get("метки") or []
+    if metki:
+        L.append("\nЧТО ТЫ НАЖИЛ САМ — выводы, которых при рождении не "
+                 "было. Ты их заработал:")
+        for m in metki:
+            otk = (m.get("откуда") or "").strip()
+            golos = {
+                "рынок":  "рынок сказал",
+                "учёба":  "чему тебя учили",
+            }.get(otk, f"вынес(ла) как {otk}" if otk else "вынес(ла)")
+            L.append(f"  • [{golos}] {m.get('текст','')}")
+        L.append("Это твоё, оплаченное. Хочешь идти против — иди, "
+                 "но знай, что идёшь против себя же.")
+
+    # ГОЛОС 3 — МАЯКИ. Момент. Ещё не вывод (Гл.4.4: один вывод — не опыт).
     chernoviki = stol.get("черновики") or []
     if chernoviki:
-        L.append("\nЗАМЕЧАЮ ЗА СОБОЙ (пока не подтвердилось повтором —"
-                 " не готовый вывод, наблюдение):")
+        L.append("\nЗАМЕЧАЮ ЗА СОБОЙ (не подтвердилось повтором — "
+                 "наблюдение, не готовый вывод):")
         for d in chernoviki:
             raz = d.get("раз", 1)
             hvost = "" if raz < 2 else f" (уже {raz} раз(а) — похоже на закономерность)"
@@ -418,7 +440,13 @@ def zapisat_vyvod(magic, vyvod: str, pnl_r=None, limit: int = 10) -> dict:
         _est = [x.strip() for x in _raw.replace("\\n", "\n").split("\n") if x.strip()]
         # YAKORYA_DVA_YARUSA_V1: та же сделка не должна засчитаться как ВТОРОЙ
         # повтор паттерна — сверяем и черновики, не только устойчивые якоря.
-        _est += [dd.get("текст", "") for dd in (d.p.get("Draft_Anchors") or [])]
+        # DVER_V_METKI_V1: черновики уехали из паспорта в 3_маяки.
+        # Сверяем ВСЕ ТРИ этажа — иначе повтор проскочит.
+        try:
+            _est += [dd.get("текст", "") for dd in d.mayaki()]
+            _est += [dd.get("текст", "") for dd in d.metki()]
+        except AttributeError:
+            _est += [dd.get("текст", "") for dd in (d.p.get("Draft_Anchors") or [])]
         _bar = ""
         if "(" in vyvod and ")" in vyvod:
             _bar = vyvod[vyvod.find("(") + 1:vyvod.find(")")]
@@ -433,7 +461,8 @@ def zapisat_vyvod(magic, vyvod: str, pnl_r=None, limit: int = 10) -> dict:
 
     try:
         res = d.dopisat_vyvod(vyvod, limit=limit,
-                              pattern=_klyuch_trader(vyvod))   # YAKORYA_DVA_YARUSA_V1
+                              pattern=_klyuch_trader(vyvod),
+                              otkuda="рынок")   # DVER_V_METKI_V1: голос вывода назван   # YAKORYA_DVA_YARUSA_V1
     except AttributeError:
         print("[МОСТ] ⚠️  в dvizhok нет dopisat_vyvod — "
               "нужен patch_dvizhok_stol_chisto_vyvod_v1")
@@ -629,7 +658,13 @@ def zapisat_vyvod_pare(ceh: str, slot: str, vyvod: str,
     try:
         _raw = d.p.get("Anchor_Points", "") or ""
         _est = [x.strip() for x in _raw.replace("\\n", "\n").split("\n") if x.strip()]
-        _est += [dd.get("текст", "") for dd in (d.p.get("Draft_Anchors") or [])]
+        # DVER_V_METKI_V1: черновики уехали из паспорта в 3_маяки.
+        # Сверяем ВСЕ ТРИ этажа — иначе повтор проскочит.
+        try:
+            _est += [dd.get("текст", "") for dd in d.mayaki()]
+            _est += [dd.get("текст", "") for dd in d.metki()]
+        except AttributeError:
+            _est += [dd.get("текст", "") for dd in (d.p.get("Draft_Anchors") or [])]
         _bar = ""
         if "(" in vyvod and ")" in vyvod:
             _bar = vyvod[vyvod.find("(") + 1:vyvod.find(")")]
@@ -643,7 +678,8 @@ def zapisat_vyvod_pare(ceh: str, slot: str, vyvod: str,
 
     try:
         res = d.dopisat_vyvod(vyvod, limit=limit,
-                              pattern=_klyuch_sensora(vyvod))   # YAKORYA_DVA_YARUSA_V1
+                              pattern=_klyuch_sensora(vyvod),
+                              otkuda="рынок")   # DVER_V_METKI_V1: голос вывода назван   # YAKORYA_DVA_YARUSA_V1
     except AttributeError:
         return {"дописано": False, "причина": "нет руки опыта"}
 
@@ -653,3 +689,90 @@ def zapisat_vyvod_pare(ceh: str, slot: str, vyvod: str,
     elif res.get("дописано"):
         print(f"[МОСТ] 🧠 ОПЫТ → {n['имя']} ({slot}): «{vyvod[:60]}...»")
     return res
+
+
+# ═══════════════════════════════════════════════════════════
+# MEMORY_REQUEST_BIRZHA_V1 — ВОЛЯ ЖИТЕЛЯ ВСПОМНИТЬ
+# ═══════════════════════════════════════════════════════════
+# Шлюз (|заряд|>0.8 → архив) работает от СОСТОЯНИЯ. Запрос — от ВОЛИ.
+# Спокойный Илья на Точке Ноль увидит знакомый разворот и ЗАХОЧЕТ
+# вспомнить — а шлюз ему этого не даст, потому что он спокоен.
+# Закон -2 (Спринт 43): «вспомнить можно в любом месте, БЕЗУСЛОВНО».
+#
+# ОДНА ДВЕРЬ на всех — как dusha_slota. В девять мозгов не вписываем:
+# через месяц было бы девять копий, которые разъехались.
+# Правило: ОДИН ЗАПРОС ЗА РАН. Архив не льётся сам.
+# ═══════════════════════════════════════════════════════════
+
+MEMORY_MARKER = "MEMORY_REQUEST:"
+
+
+def izvlech_zapros(text: str) -> str:
+    """Первая строка MEMORY_REQUEST: <что вспомнить> из ответа жителя.
+    Один запрос за ран — берём ТОЛЬКО первую (канон -2)."""
+    for line in (text or "").splitlines():
+        if MEMORY_MARKER in line:
+            return line.split(MEMORY_MARKER, 1)[1].strip()
+    return ""
+
+
+def ubrat_zapros(text: str) -> str:
+    """Техническая строка вычищается — она не часть ответа, она сигнал."""
+    lines = [l for l in (text or "").splitlines() if MEMORY_MARKER not in l]
+    return "\n".join(lines).strip()
+
+
+def vspomnit_slotom(ceh: str, slot: str, zapros: str, limit: int = 6) -> str:
+    """Житель, сидящий в слоте, копает СВОЮ память по своему запросу.
+    Ищет по sensory + resonance + archive (dvizhok.vspomnit).
+    Пусто — значит следа нет. Честно, без выдумок."""
+    if not (zapros or "").strip():
+        return ""
+    try:
+        n = dusha_slota(ceh, slot)
+        if not n:
+            return ""
+        d = _dvizhok(n["носитель"]["дом"])
+        if d is None:
+            return ""
+        return d.vspomnit(zapros, limit=limit) or ""
+    except Exception as e:
+        print(f"[МОСТ] ⚠️  вспомнить не вышло ({ceh}/{slot}): {e}")
+        return ""
+
+
+def podnyat_iz_arhiva(ceh: str, slot: str, otvet: str) -> tuple:
+    """ПОЛНЫЙ ЦИКЛ ЗАПРОСА — одной дверью.
+
+    Житель ответил. Если он ПОПРОСИЛ вспомнить — копаем и отдаём
+    найденное для ВТОРОГО вызова модели. Если не просил — ничего
+    не тратим.
+
+    Возвращает (запрос, поднятое). Оба пустые — житель не просил
+    или следа нет.
+    """
+    zapros = izvlech_zapros(otvet)
+    if not zapros:
+        return "", ""
+    naydeno = vspomnit_slotom(ceh, slot, zapros)
+    if naydeno:
+        print(f"[МОСТ] 🧠 {ceh}/{slot} вспоминает: «{zapros[:50]}» — "
+              f"поднято {len(naydeno.splitlines())} след(ов)")
+    else:
+        print(f"[МОСТ] 🧠 {ceh}/{slot} искал «{zapros[:50]}» — следа нет")
+    return zapros, naydeno
+
+
+def blok_pamyati(zapros: str, naydeno: str) -> str:
+    """Найденное — в контекст следующего шага. Пусто тоже говорим:
+    «следа нет» — это ЧЕСТНЫЙ ответ, не ошибка. Житель должен знать,
+    что он искал и не нашёл, а не думать, что его не услышали."""
+    if not zapros:
+        return ""
+    if not naydeno:
+        return (f"\n\n=== 📚 ТЫ ИСКАЛ В ПАМЯТИ: «{zapros}» ===\n"
+                "Следа нет. Такого с тобой не было — или ты не запомнил.\n"
+                "Решай без этого.")
+    return (f"\n\n=== 📚 ПОДНЯТО ИЗ ТВОЕЙ ПАМЯТИ (ты просил: «{zapros}») ===\n"
+            f"{naydeno}\n"
+            "Это твоё, было с тобой. Теперь решай.")

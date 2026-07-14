@@ -1,31 +1,63 @@
 {
   "version": 1,
-  "updated": "2026-07-12T21:33:34.934715",
+  "updated": "2026-07-14T14:48:45.718121",
   "iskra": {
-    "t1_status": "NOT_FOUND",
-    "zero_point_price": null,
-    "history_dna": ""
+    "t1_status": "DETECTED",
+    "zero_point_price": 1689.94,
+    "history_dna": "BULL DETECTED at 1689.94 (2012.09.07 15:00 H1), compass BULL from H1, exit_bell false, prev_zero_point 1698.97",
+    "trend_direction": "BULL",
+    "found_timeframe": null
   },
   "positions": [],
   "feed": {
     "mode": "tester",
     "symbol": "XAUUSD"
   },
-  "brut": {},
-  "avan": {},
-  "cons": {},
+  "brut": {
+    "verdict": "APPROVED",
+    "reason": "канон Брута: валидный LONG фрактал за пастью, тренд BULL, структура дала разрешение",
+    "direction": "LONG",
+    "entry": 1696.45,
+    "stop": 1690.22,
+    "lot": 0.01,
+    "action": "ENTER",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "avan": {
+    "verdict": "REJECTED",
+    "reason": "Нет приседающего, нет бычьего пин-бара — Разворотный Бар конца C не подтверждён",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "cons": {
+    "verdict": "REJECTED",
+    "reason": "Нет подтверждённой волны 1 (закрытия выше ТН 1698.97) и отката к опоре с Разворотным Баром. Паникёр GREED — риск ловушки.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
   "morj": {
-    "morj_status": "AWAKE",
+    "morj_status": "SLEEPING",
     "wave_1_validated": false,
-    "tension_peak": false,
+    "tension_peak": true,
     "history_dna": "",
-    "scale_timeframe": "H4",
+    "scale_timeframe": "H1",
     "inherited_dir": "BULL",
     "alligator_state": {
-      "sleeping": false,
+      "sleeping": true,
       "opening": false,
-      "mature": true,
-      "bars_open": 157
+      "mature": false,
+      "bars_open": 0
     }
   },
   "panic": {
@@ -33,14 +65,14 @@
     "crowd_sentiment": "РАЗВОРОТ! Все берут! Надо успеть, пока не улетело!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "H4"
+    "scale_timeframe": "H1"
   },
   "hans": {
     "fractal_valid": true,
     "fractal_side": "LONG",
-    "fractal_price": 1349.02,
+    "fractal_price": 1696.44,
     "absorption_ratio": 0.65,
-    "scale_timeframe": "H4",
+    "scale_timeframe": "H1",
     "history_dna": ""
   }
 }

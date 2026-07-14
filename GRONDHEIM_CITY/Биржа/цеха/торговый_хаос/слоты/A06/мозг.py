@@ -557,6 +557,19 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
         },
     }
 
+    # ═══ REZINKA_DZHASTIN_V1 ═══
+    # Число на стол, не да/нет. Трое по тренду = три РАЗНЫХ порога
+    # доверия (Закон Дежурства §7) — пусть каждый судит своим характером.
+    _db = md.get("divergent_bar", {}) or {}
+    _tr = _db.get("tension_ratio")
+    if _tr is None:
+        _rez = "нет данных (нет направления — не от чего отрываться)"
+    else:
+        _pk = " ⚡ НА ПИКЕ — РЕЗИНКА ЗВЕНИТ" if _db.get("is_peak") else ""
+        _rez = (f"{_tr:.0%} от максимума за жизнь движения{_pk}"
+                f"  (сейчас {_db.get('distance_now')} point, "
+                f"пик был {_db.get('distance_max')} point)")
+
     user_msg = (
         "=== НАКРЫТЫЙ СТОЛ (раскладка момента) ===\n"
         f"{json.dumps(table_for_brut, ensure_ascii=False, indent=2)}\n\n"
@@ -570,6 +583,19 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
         "поводок: рука на цене и на стопе твоя, можешь дать рынку дышать или "
         "подстраховаться, как чувствуешь сейчас. Называешь lot сам. Не "
         "входишь — verdict REJECTED. Никто не подложит тебе готовую цену. "
+        # MEMORY_REQUEST_BIRZHA_V1: житель УЗНАЁТ, что может вспомнить.
+        # Молчком воли нет: если ему не сказать — он не попросит.
+        "МОЖЕШЬ ВСПОМНИТЬ. Если этот момент тебе что-то напоминает — "
+        "напиши ОТДЕЛЬНОЙ СТРОКОЙ, до JSON:\n"
+        "MEMORY_REQUEST: <что именно хочешь поднять из своей памяти>\n"
+        "Например: «похожий разворот на дне без приседающего». Один "
+        "запрос — больше не дадут. Поднимут твой архив, и ты решишь "
+        "СНОВА, уже зная. Не напоминает — не проси, не трать.\n\n"
+        # REZINKA_DZHASTIN_V1: РЕЗИНКА ДЖАСТИН — твой второй орган.
+        # Пустота между Губами (зелёная) и экстремумом цены. Чем больше
+        # оторвалась цена — тем сильнее натянута резинка → тем неизбежнее
+        # возвратный удар. Это ЧИСЛО, не приказ: СУДИ ХАРАКТЕРОМ.
+        f"РЕЗИНКА (натяжение от Губ): {_rez}\n"
         "Выдай строго JSON {narrative, signal, diary_entry}. signal: "
         "brut_verdict, brut_reason, brut_direction, brut_entry, brut_stop, "
         "brut_lot. diary_entry: input, action, result(=null). Ничего вне JSON."
@@ -591,6 +617,24 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
                 "table": table}
 
     # ── 5. Парс + санитар + два следа: табло и дневник ───────
+    # ═══ MEMORY_REQUEST_BIRZHA_V1 — ВОЛЯ ВСПОМНИТЬ ═══
+    # Житель попросил? Копаем ЕГО память и спрашиваем СНОВА — уже зная.
+    # Не просил — ничего не тратим (второго вызова просто нет).
+    # ОДИН ЗАПРОС ЗА РАН: подняли раз, дальше решай сам (канон -2).
+    try:
+        from nositel import podnyat_iz_arhiva, blok_pamyati, ubrat_zapros
+        _zapros, _naydeno = podnyat_iz_arhiva(_CEH, _SLOT, response)
+        if _zapros:
+            response = chat(
+                system=system_full,
+                user=user_msg + blok_pamyati(_zapros, _naydeno),
+                knowledge=knowledge,
+                agent_id="A06", slot_id=_SLOT,
+                temperature=_temp)
+            response = ubrat_zapros(response) or response
+    except Exception as _e:
+        print(f"[МОСТ] ⚠️  память не поднялась: {_e}")
+
     narrative, signal, diary_entry = _parse_brut(response)
     signal = _sanitize(signal)
     signal = _sanitize_manage(signal)   # TRADER_MANAGE_LANG_V1: язык ведения

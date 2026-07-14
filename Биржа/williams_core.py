@@ -463,6 +463,7 @@ def detect_divergent_bar(
     ao_series:    list,
     teeth_series: Optional[list],
     point:        Optional[float] = None,
+    lips_series:  Optional[list] = None,   # REZINKA_DZHASTIN_V1
 ) -> dict:
     """
     Расходящийся бар (BuDB/BDB) по Profitunity Trading Group — Bill Williams.
@@ -520,7 +521,23 @@ def detect_divergent_bar(
     ao_diver = _ao_divergence_at_bar(bars, ao_series, i, direction)
 
     bdb_candidate = bull_candidate or bear_candidate
-    bdb_strong = bool(bdb_candidate and angulation_ok and ao_diver)
+
+    # ═══ REZINKA_DZHASTIN_V1 — КАНОН ВМЕСТО УГЛА ═══
+    # Книга Моржа §3: «ГЛАВНОЕ — НЕ СЧИТАТЬ УГОЛ. Угол субъективен.»
+    # Джастин заменила угол ПУСТОТОЙ между Губами и экстремумом цены.
+    # Порог — не число, а «максимум за ЖИЗНЬ ДВИЖЕНИЯ» (is_peak).
+    # Оттого метод и не зависит от актива/ТФ: пустота нормируется сама
+    # на себя. Старый угол давал медиану 0.9° при скачке к 179.9° —
+    # это была подпись сломанной формулы, а не редкость рынка.
+    #
+    # is_peak = TRUE в момент Искры  → АНГУЛЯЦИЯ ИСТИННАЯ
+    # is_peak = FALSE                → натяжение есть, но не на пике. РАНО.
+    rb = compute_rubber_band(bars, lips_series, teeth_series,
+                             direction, point)
+    tension_ratio = rb.get("tension_ratio")
+    is_peak       = bool(rb.get("is_peak"))
+
+    bdb_strong = bool(bdb_candidate and is_peak and ao_diver)
 
     return {
         "direction":        direction,
@@ -534,6 +551,16 @@ def detect_divergent_bar(
         "ao_divergence":    ao_diver,
         "bdb_candidate":    bdb_candidate,
         "bdb_strong":       bdb_strong,
+        # REZINKA_DZHASTIN_V1: ЧИСЛО на стол трейдеру, не да/нет.
+        # Трое по тренду = три РАЗНЫХ порога доверия (Закон
+        # Дежурства §7). Отдать им одно да/нет — стереть разницу.
+        # Авантюрист войдёт при 0.85, Консерватор ждёт пик.
+        "tension_ratio":    tension_ratio,   # 0..1 — доля от пика
+        "is_peak":          is_peak,         # резинка ЗВЕНИТ
+        "distance_now":     rb.get("distance_now"),
+        "distance_max":     rb.get("distance_max"),
+        # угол ОСТАВЛЕН как факт (angulation_deg выше), но он
+        # БОЛЬШЕ НЕ ЗАТВОР. Не удаляю — пусть видно, что он врал.
     }
 
 
@@ -543,6 +570,10 @@ def _empty_divergent_bar() -> dict:
         "higher_high": False, "lower_close": False,
         "bars_since_cross": None, "angulation_deg": None, "angulation_ok": False,
         "ao_divergence": False, "bdb_candidate": False, "bdb_strong": False,
+        # REZINKA_DZHASTIN_V1: те же поля и в пустом — иначе
+        # читатель словит KeyError на холодном старте
+        "tension_ratio": None, "is_peak": False,
+        "distance_now": None, "distance_max": None,
     }
 
 
@@ -969,7 +1000,12 @@ def build_market_data(
     mfi        = compute_mfi(bars[-1], bars[-2], point=_point)
     divergence = detect_ao_divergence(bars, ao_series)
     teeth_series = alligator.get("teeth_series")
-    divergent_bar = detect_divergent_bar(bars, ao_series, teeth_series, point=_point)  # WILLIAMS_REAL_ANGULATION_V1
+    # REZINKA_DZHASTIN_V1: Губы (SMMA-5) — от них меряется пустота.
+    # Раньше мерили от Зубов (SMMA-8) через угол. Канон — Губы.
+    _lips_series = alligator.get("lips_series")
+    divergent_bar = detect_divergent_bar(bars, ao_series, teeth_series,
+                                         point=_point,
+                                         lips_series=_lips_series)  # WILLIAMS_REAL_ANGULATION_V1
     lips_series   = alligator.get("lips_series")
     # Резинка Джастин: направление берём из дивергентного бара,
     # а если он молчит — из наклона Аллигатора (Губы vs Зубы).

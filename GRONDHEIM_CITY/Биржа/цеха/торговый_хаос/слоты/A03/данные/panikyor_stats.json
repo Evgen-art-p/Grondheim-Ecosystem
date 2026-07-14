@@ -1,9 +1,9 @@
 {
-  "runs": 65,
+  "runs": 85,
   "asleep": 1,
-  "greed": 37,
-  "tension": 15,
+  "greed": 49,
+  "tension": 19,
   "deception": 3,
-  "panic": 4,
-  "disbelief": 5
+  "panic": 7,
+  "disbelief": 6
 }
