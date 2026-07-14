@@ -796,7 +796,6 @@ def read_ao_wave_form(
     bars:         list,
     ao_series:    list,
     teeth_series: Optional[list],
-    lips_series:  Optional[list] = None,   # REZINKA_DOBIVKA_V1
     window:       int = 120,   # ISKRA_WORKING_TF_FIRST_V1: канон Шефа —
                                 # 100-140 баров, экран рисует волну и
                                 # 3-ю волну AO наиболее адекватно
@@ -838,9 +837,6 @@ def read_ao_wave_form(
     ao_w   = ao_series[off:]
     bars_w = bars[off:]
     teeth_w = teeth_series[off:] if teeth_series else None
-    # REZINKA_DOBIVKA_V1: Губы режем тем же окном, что Зубы —
-    # без них резинка не считается и bdb_strong ВСЕГДА False
-    lips_w = lips_series[off:] if lips_series else None
 
     # ── пивоты AO в окне (локальные экстремумы, как _find_ao_pivots) ──
     pv = []  # (local_idx, type, ao_value)
@@ -880,14 +876,7 @@ def read_ao_wave_form(
     bdb_dir = None
     bdb_price = None
     if teeth_w is not None:
-        # REZINKA_DOBIVKA_V1: ВОТ ОНА, ДЫРА. Без lips_series
-        # резинка не считалась → is_peak=False ВСЕГДА →
-        # bdb_strong=False ВСЕГДА → bdb_dir=None ВСЕГДА →
-        # спуск Искры (_descend ищет bdb_dir == compass)
-        # не находил НИЧЕГО. 454 кандидата, 0 подтверждений.
-        db = detect_divergent_bar(bars_w, ao_w, teeth_w,
-                                  point=point,
-                                  lips_series=lips_w)  # WILLIAMS_REAL_ANGULATION_V1
+        db = detect_divergent_bar(bars_w, ao_w, teeth_w, point=point)  # WILLIAMS_REAL_ANGULATION_V1
         if db.get("bdb_strong"):
             bdb_dir = db.get("direction")
             if bdb_dir == "BULL":
@@ -1028,7 +1017,7 @@ def build_market_data(
 
     # Читалка формы AO — факты структуры для Искры v2 (окно 140-150).
     # Сенсор кладёт факты (дивер-компас, B/D/B-точка, горб-царь), не вердикты.
-    wave_form = read_ao_wave_form(bars, ao_series, teeth_series, point=_point, lips_series=_lips_series)  # WILLIAMS_REAL_ANGULATION_V1
+    wave_form = read_ao_wave_form(bars, ao_series, teeth_series, point=_point)  # WILLIAMS_REAL_ANGULATION_V1
 
     # Компас глобального фона из синей линии (Jaw).  # GLOBAL_BIAS_COMPASS_V1
     # Факт направления, всегда на столе (не зависит от дивера/терминала).

@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-14T15:55:20.983095",
+  "updated": "2026-07-14T17:14:48.539473",
   "iskra": {
-    "t1_status": "NOT_FOUND",
-    "zero_point_price": null,
-    "history_dna": "MIN:4.4664@1256.35",
+    "t1_status": "DETECTED",
+    "zero_point_price": 1244.94,
+    "history_dna": "DETECTED BULL MIN@1244.94 AO=-0.2254 спуск:H1",
     "trend_direction": "BULL",
     "found_timeframe": null
   },
@@ -13,9 +13,39 @@
     "mode": "tester",
     "symbol": "XAUUSD"
   },
-  "brut": {},
-  "avan": {},
-  "cons": {},
+  "brut": {
+    "verdict": "REJECTED",
+    "reason": "Аллигатор спит — тренда нет. Пробой фрактала без активной пасти не мой вход.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "avan": {
+    "verdict": "APPROVED",
+    "reason": "Разворотный бар конца C: дивергенция DETECTED, zero point 1244.94 достигнут, фрактал LONG 1247.25, закрытие выше Зубов, штиль.",
+    "direction": "LONG",
+    "entry": 1247.36,
+    "stop": 1244.93,
+    "lot": 0.1,
+    "action": "ENTER",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "cons": {
+    "verdict": "REJECTED",
+    "reason": "Волна 1 не подтверждена, откат волны 2 не сформирован, Аллигатор спит — нет опоры для входа Консерватора.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
   "morj": {
     "morj_status": "SLEEPING",
     "wave_1_validated": false,
@@ -31,17 +61,17 @@
     }
   },
   "panic": {
-    "panic_phase": "GREED",
-    "crowd_sentiment": "РАЗВОРОТ! Все берут! Надо успеть, пока не улетело!",
-    "action_for_traders": "HIGH_SKEPTICISM",
+    "panic_phase": "ASLEEP",
+    "crowd_sentiment": "Тихо. Все ушли. Даже смотреть не на что.",
+    "action_for_traders": "NEUTRAL",
     "history_dna": "",
     "scale_timeframe": "H1"
   },
   "hans": {
     "fractal_valid": true,
     "fractal_side": "LONG",
-    "fractal_price": 1696.44,
-    "absorption_ratio": 0.65,
+    "fractal_price": 1247.25,
+    "absorption_ratio": 0.15,
     "scale_timeframe": "H1",
     "history_dna": ""
   }

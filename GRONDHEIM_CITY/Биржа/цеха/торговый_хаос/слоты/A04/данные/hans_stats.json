@@ -1,7 +1,7 @@
 {
-  "runs": 84,
-  "valid": 84,
+  "runs": 99,
+  "valid": 98,
   "dead": 0,
-  "none": 0,
-  "squat_fuel": 17
+  "none": 1,
+  "squat_fuel": 19
 }

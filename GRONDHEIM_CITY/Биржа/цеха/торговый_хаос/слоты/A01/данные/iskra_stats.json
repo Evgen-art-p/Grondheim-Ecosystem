@@ -1,7 +1,7 @@
 {
-  "runs": 165,
-  "detected": 19,
+  "runs": 180,
+  "detected": 21,
   "confirmed": 0,
-  "annulled": 1,
-  "exit_bells": 36
+  "annulled": 2,
+  "exit_bells": 45
 }
