@@ -188,145 +188,6 @@ def _read_last_closures(n=10):
         return []
 
 
-# ═══════════════════════════════════════════════════════════
-# OTCHET_V_TESTERE_V1 — ЧТО ОНИ НАТОРГОВАЛИ
-# ═══════════════════════════════════════════════════════════
-# Слово Шефа: «мне отчёт должен в конце показываться, а не скриптами
-# ловить». Данные были всегда (trading_pnl.jsonl) — отчёта не было.
-# Отчёт не только СЧИТАЕТ, но и СУДИТ по книге Котина (гл.9):
-# без пирамиды и трейлинга система математически не может быть
-# прибыльной — минус всегда полный, плюс всегда обрезан.
-# ═══════════════════════════════════════════════════════════
-
-def _otchet_po_sdelkam(sdelki_do: int, out, _emit):
-    """Отчёт по сделкам ЭТОГО прогона. Читает trading_pnl.jsonl,
-    берёт всё, что дописалось после начала (sdelki_do — сколько было
-    ДО старта). Печатает в консоль, в файл разговора и в кабинет."""
-    import json as _json
-    from collections import defaultdict as _dd
-    from pathlib import Path as _P
-
-    _pnl = (_P(__file__).resolve().parent.parent / "GRONDHEIM_CITY" /
-            "Биржа" / "данные" / "trading_pnl.jsonl")
-    if not _pnl.exists():
-        return
-
-    _vse = []
-    for _ln in _pnl.read_text(encoding="utf-8").splitlines():
-        _ln = _ln.strip()
-        if not _ln:
-            continue
-        try:
-            _r = _json.loads(_ln)
-            if _r.get("pnl_r") is not None:
-                _vse.append(_r)
-        except Exception:
-            continue
-
-    _s = _vse[sdelki_do:]          # только сделки ЭТОГО прогона
-    if not _s:
-        out("")
-        out("─" * 64)
-        out("  ОТЧЁТ: сделок не было. Совет ни разу не дал ENTER.")
-        out("─" * 64)
-        return
-
-    _plus  = [x for x in _s if x["pnl_r"] > 0]
-    _minus = [x for x in _s if x["pnl_r"] <= 0]
-    _sp = sum(x["pnl_r"] for x in _plus)
-    _sm = abs(sum(x["pnl_r"] for x in _minus))
-    _sum = sum(x["pnl_r"] for x in _s)
-    _pf = (_sp / _sm) if _sm > 0 else (float("inf") if _sp else 0.0)
-    _pfs = "∞" if _pf == float("inf") else f"{_pf:.3f}"
-    _wr = len(_plus) / len(_s) * 100
-
-    out("")
-    out("═" * 64)
-    out("  💰 ОТЧЁТ ПО СДЕЛКАМ")
-    out("═" * 64)
-    out("")
-    out(f"  {'#':>2} {'трейдер':11s} {'напр':5s} {'вход':>9s} "
-        f"{'выход':>9s} {'R':>7s}  причина")
-    out("  " + "─" * 60)
-    for _i, _x in enumerate(_s, 1):
-        _r = _x["pnl_r"]
-        _z = "🟢" if _r > 0 else "🔴"
-        _n = "LONG" if (_x.get("stop") or 0) < (_x.get("entry") or 0) else "SHORT"
-        out(f"  {_i:>2} {str(_x.get('trader',''))[:11]:11s} {_n:5s} "
-            f"{_x.get('entry','—'):>9} {_x.get('exit','—'):>9} "
-            f"{_r:>+7.2f} {_z} {_x.get('close_reason','')}")
-
-    out("")
-    out(f"  сделок: {len(_s)}   плюсов: {len(_plus)}   минусов: {len(_minus)}"
-        f"   winrate: {_wr:.0f}%")
-    out(f"  ИТОГО:  {_sum:+.2f}R      средняя: {_sum/len(_s):+.2f}R/сделку")
-    out(f"  PF:     {_pfs}  ({'ПРИБЫЛЬНАЯ' if _pf > 1 else 'УБЫТОЧНАЯ'})")
-
-    # ── по трейдерам ──
-    _pt = _dd(list)
-    for _x in _s:
-        _pt[_x.get("trader", "?")].append(_x["pnl_r"])
-    out("")
-    out("  ── по трейдерам ──")
-    for _t, _rs in sorted(_pt.items()):
-        _p2 = [r for r in _rs if r > 0]
-        _m2 = abs(sum(r for r in _rs if r <= 0))
-        _pf2 = (sum(_p2) / _m2) if _m2 > 0 else (float("inf") if _p2 else 0.0)
-        _pf2s = "∞" if _pf2 == float("inf") else f"{_pf2:.2f}"
-        out(f"     {str(_t)[:12]:12s} {len(_rs):>2} сдел · "
-            f"плюс {len(_p2):>2} · {sum(_rs):>+7.2f}R · PF {_pf2s}")
-
-    # ── как закрывались ──
-    _pr = _dd(list)
-    for _x in _s:
-        _pr[_x.get("close_reason", "?")].append(_x["pnl_r"])
-    out("")
-    out("  ── как закрывались ──")
-    for _rn, _rs in sorted(_pr.items(), key=lambda z: -len(z[1])):
-        out(f"     {str(_rn)[:14]:14s} {len(_rs):>2} шт · "
-            f"{sum(_rs):>+7.2f}R · средняя {sum(_rs)/len(_rs):+.2f}R")
-
-    # ══════════════════════════════════════════════════════
-    # ДИАГНОЗ — по книге Котина, гл.9
-    # ══════════════════════════════════════════════════════
-    _polny = [x for x in _s if abs(x["pnl_r"] + 1.0) < 0.05]
-    _dolya = len(_polny) / len(_s) * 100
-    _krup  = [x for x in _s if x["pnl_r"] >= 2.0]
-
-    out("")
-    out("  ── ДИАГНОЗ (книга Котина, гл.9) ──")
-    out("")
-    out(f"     закрытий ровно по −1.0R (стоп не подтянут): "
-        f"{len(_polny)}/{len(_s)} ({_dolya:.0f}%)")
-    out(f"     сделок ≥ +2.0R (то, что даёт пирамида):     {len(_krup)}")
-
-    if _dolya > 40 or (not _krup and len(_s) >= 4):
-        out("")
-        out("     ⚠ ВЕДЕНИЯ ПОЗИЦИИ НЕТ. Позиция умирает ОДНИМ ВЫСТРЕЛОМ.")
-        out("       Канон: вошёл 1R → цена пошла → СТОП В СЕЙФ (риск→0)")
-        out("       → ДОЛИВ → ДОЛИВ → exit_bell → закрыл всю пирамиду.")
-        out("       Книга Котина гл.9 САМА признаётся:")
-        out("         «Отложенный долг (слой 3, НЕ РЕАЛИЗОВАН): пирамида")
-        out("          доливок и трейлинг-стоп. ПОКА ВЕДЕНИЕ УПРОЩЕНО.»")
-        out("       ⇒ Минус ВСЕГДА полный, плюс ВСЕГДА обрезан.")
-        out("         Система МАТЕМАТИЧЕСКИ не может быть прибыльной.")
-        out("")
-        out("       Половина Вильямса — ВХОД — работает.")
-        out("       Вторая половина — ВЕДЕНИЕ — не построена.")
-
-    out("═" * 64)
-
-    # ── в кабинет ──
-    try:
-        _emit({"type": "trades_report",
-               "trades": len(_s), "wins": len(_plus), "winrate": round(_wr, 1),
-               "sum_r": round(_sum, 2), "pf": (None if _pf == float("inf")
-                                               else round(_pf, 3)),
-               "full_stops": len(_polny), "big_wins": len(_krup)})
-    except Exception:
-        pass
-
-
 def run_tester(csv_path: str, symbol: str, timeframe: str,
                n_signals: int = 1, point_override=None,
                warmup: int = 60, loose: bool = False,
@@ -466,24 +327,6 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
     print(f"  point={point} · ловлю срабатываний Искры: {n_signals}")
     print(f"  кухня сама ищет — я только микрофон")
     print("═" * 64)
-
-    # OTCHET_V_TESTERE_V1: сколько сделок было ДО прогона — чтобы
-    # отчёт показал только ЭТОТ прогон, а не всю историю журнала.
-    try:
-        import json as _jj
-        _pnl_p = (Path(__file__).resolve().parent.parent / "GRONDHEIM_CITY" /
-                  "Биржа" / "данные" / "trading_pnl.jsonl")
-        _sdelok_do = 0
-        if _pnl_p.exists():
-            for _l in _pnl_p.read_text(encoding="utf-8").splitlines():
-                if _l.strip():
-                    try:
-                        if _jj.loads(_l).get("pnl_r") is not None:
-                            _sdelok_do += 1
-                    except Exception:
-                        pass
-    except Exception:
-        _sdelok_do = 0
 
     # ── отчёт-файл рядом с CSV ──
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -923,13 +766,6 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
         mt5_feed.pull_bars = orig_pull
         mt5_feed.step_down = orig_step
         report.close()
-
-    # OTCHET_V_TESTERE_V1: ОТЧЁТ — сам, в конце. Слово Шефа:
-    # «мне отчёт должен в конце показываться, а не скриптами ловить».
-    try:
-        _otchet_po_sdelkam(_sdelok_do, print, _emit)
-    except Exception as _e:
-        print(f"⚠️  отчёт не собрался: {_e}")
 
     # ── РАЗВИЛКА (TESTER_TO_CABINET_V1) — в кабинет через on_progress + в консоль ──
     _verdict = (f"РАЗВИЛКА · Сито 1: {len(candidates)} кандидатов · "
