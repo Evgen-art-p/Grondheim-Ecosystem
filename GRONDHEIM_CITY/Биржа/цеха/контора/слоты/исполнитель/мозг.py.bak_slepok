@@ -232,65 +232,6 @@ def _iskra_zero_for_judgement():
         return None
 
 
-def _snyat_stol_vhoda() -> dict:
-    """SLEPOK_ISPOLNITELYA_V1 — СЛЕПОК СТОЛА на баре ВХОДА.
-
-    Позиция уносит с собой показания всех четырёх сенсоров — те, что
-    они дали ИМЕННО НА ЭТОМ БАРЕ. Стол перетирается каждый бар, а
-    сделка живёт десятки баров: судить Моржа по чужому бару — клевета.
-
-    Исполнитель ходит ПОСЛЕДНИМ (после сенсоров и трейдеров), значит
-    в tstate сейчас лежат показания этого самого бара. Свежие.
-
-    Формат — байт в байт как ждёт судья (hooks._sudit_sensorov):
-    он читает pos["стол_входа"][key], где key ∈ iskra/morj/panic/hans.
-    Пустой слепок = судья молча выходит и ЧЕРНОВИК НЕ РОЖДАЕТСЯ.
-    """
-    try:
-        from hooks import load_trading_state
-        t = load_trading_state()
-    except Exception as e:
-        print(f"[СЛЕПОК] ⚠️  не снял стол: {e}")
-        return {}
-
-    isk = t.get("iskra", {}) or {}
-    mrj = t.get("morj",  {}) or {}
-    pnk = t.get("panic", {}) or {}
-    hns = t.get("hans",  {}) or {}
-
-    # компас: без него не понять, звала ли Вера В СТОРОНУ сделки —
-    # BULL зовёт в LONG, но НЕ зовёт в SHORT
-    kompas = (isk.get("trend_direction")
-              or mrj.get("inherited_dir")
-              or isk.get("global_bias"))
-
-    stol = {
-        "iskra": {
-            "t1_status":        isk.get("t1_status"),
-            "zero_point_price": isk.get("zero_point_price"),
-            "trend_direction":  kompas,
-        },
-        "morj": {
-            "morj_status":      mrj.get("morj_status"),
-            "wave_1_validated": mrj.get("wave_1_validated"),
-            "tension_peak":     mrj.get("tension_peak"),
-        },
-        "panic": {
-            "panic_phase":      pnk.get("panic_phase"),
-        },
-        "hans": {
-            "fractal_valid":    hns.get("fractal_valid"),
-            "fractal_side":     hns.get("fractal_side"),
-            "fractal_price":    hns.get("fractal_price"),
-        },
-    }
-    print(f"[СЛЕПОК] 📸 стол снят: искра={stol['iskra']['t1_status']} "
-          f"морж={stol['morj']['morj_status']} "
-          f"паник={stol['panic']['panic_phase']} "
-          f"ганс={stol['hans']['fractal_valid']} компас={kompas}")
-    return stol
-
-
 def _open_positions_from_table(traders: dict, market: dict) -> list:
     """
     Для каждого APPROVED-трейдера кладёт позицию в trading_state["positions"]
@@ -333,12 +274,6 @@ def _open_positions_from_table(traders: dict, market: dict) -> list:
             "opened_at": bar_time,
             "pnl":       None,
             "iskra_zero_point": _iskra_zero_for_judgement(),
-            # SLEPOK_ISPOLNITELYA_V1: позиция уносит С СОБОЙ показания
-            # сенсоров на баре ВХОДА. Без этого судья сенсоров молча
-            # выходит на КАЖДОЙ сделке → черновик не рождается →
-            # МЕТКА НЕ РОДИТСЯ НИКОГДА. Это был последний перекрытый
-            # кран: труба построена, вода шла, а на выходе — ничего.
-            "стол_входа": _snyat_stol_vhoda(),
         }
         tstate["positions"].append(pos)
         opened.append(pos)

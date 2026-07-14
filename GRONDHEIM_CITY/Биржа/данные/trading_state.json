@@ -1,51 +1,19 @@
 {
   "version": 1,
-  "updated": "2026-07-14T14:48:45.718121",
+  "updated": "2026-07-14T15:40:14.763105",
   "iskra": {
-    "t1_status": "DETECTED",
-    "zero_point_price": 1689.94,
-    "history_dna": "BULL DETECTED at 1689.94 (2012.09.07 15:00 H1), compass BULL from H1, exit_bell false, prev_zero_point 1698.97",
-    "trend_direction": "BULL",
-    "found_timeframe": null
+    "t1_status": "NOT_FOUND",
+    "zero_point_price": null,
+    "history_dna": ""
   },
   "positions": [],
   "feed": {
     "mode": "tester",
     "symbol": "XAUUSD"
   },
-  "brut": {
-    "verdict": "APPROVED",
-    "reason": "канон Брута: валидный LONG фрактал за пастью, тренд BULL, структура дала разрешение",
-    "direction": "LONG",
-    "entry": 1696.45,
-    "stop": 1690.22,
-    "lot": 0.01,
-    "action": "ENTER",
-    "new_stop": null,
-    "add_lot": null
-  },
-  "avan": {
-    "verdict": "REJECTED",
-    "reason": "Нет приседающего, нет бычьего пин-бара — Разворотный Бар конца C не подтверждён",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
-    "new_stop": null,
-    "add_lot": null
-  },
-  "cons": {
-    "verdict": "REJECTED",
-    "reason": "Нет подтверждённой волны 1 (закрытия выше ТН 1698.97) и отката к опоре с Разворотным Баром. Паникёр GREED — риск ловушки.",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
-    "new_stop": null,
-    "add_lot": null
-  },
+  "brut": {},
+  "avan": {},
+  "cons": {},
   "morj": {
     "morj_status": "SLEEPING",
     "wave_1_validated": false,
