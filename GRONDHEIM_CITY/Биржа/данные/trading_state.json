@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-15T00:00:08.082442",
+  "updated": "2026-07-15T00:01:38.276810",
   "iskra": {
     "t1_status": "DETECTED",
     "zero_point_price": 1237.59,
@@ -37,12 +37,12 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет медвежьего Разворотного Бара на опоре. Откат волны 2 продолжается бычьим баром.",
+    "reason": "агент не ответил (Консерватор не смог решить: Таймаут 90s — OpenRouter не отве)",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": "WAIT",
+    "action": null,
     "new_stop": null,
     "add_lot": null
   },
