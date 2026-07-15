@@ -549,11 +549,14 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
     # а в тестере prev_status тащится через годы — штраф несправедлив.
     # Наказание за УБЫТОЧНУЮ точку теперь в hooks._settle (по pnl_r) —
     # там видно ДЕЛО: повела точка к прибыли или в минус.
-    # MAYATNIK_SNYAT_V1: мёртвый маятник sync_to_dna снят (см. патч-док).
-    # Сенсор НЕ качает свою ДНК за «точность» — это НЕ-опыт (Чертёж 4.2).
-    # Судья сенсора = РЫНОК: hooks._judge_iskra_by_result →
-    # nositel.zapisat_vyvod_pare. Вывод оплачивается деньгами, не сам собой.
-    # Не воскрешать: сюда придёт Мост, если петля точности заболит.
+    try:
+        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]
+        if prev_status == "DETECTED" and new_status == "CONFIRMED":
+            sync_to_dna("A01_ISKRA", "good_work", intensity=0.6, dept="trading")
+        # DETECTED→NOT_FOUND больше НЕ штрафуется здесь (см. _settle).
+    except Exception as e:
+        print(f"[ISKRA] ⚠️  sync_to_dna не сработал ({e})")
+
     return {
         "ok": True,
         "error": None,

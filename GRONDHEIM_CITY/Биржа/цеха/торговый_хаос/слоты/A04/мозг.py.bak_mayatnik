@@ -462,11 +462,17 @@ def run_hans(symbol: str = "XAUUSD", timeframe: str = "H4",
         (fact_up.get("outside_teeth") and fact_up.get("fresh")) or
         (fact_down.get("outside_teeth") and fact_down.get("fresh"))
     )
-    # MAYATNIK_SNYAT_V1: мёртвый маятник sync_to_dna снят (см. патч-док).
-    # Сенсор НЕ качает свою ДНК за «точность» — это НЕ-опыт (Чертёж 4.2).
-    # Судья сенсора = РЫНОК: hooks._judge_iskra_by_result →
-    # nositel.zapisat_vyvod_pare. Вывод оплачивается деньгами, не сам собой.
-    # Не воскрешать: сюда придёт Мост, если петля точности заболит.
+    try:
+        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]
+        if says_valid and fact_valid:
+            sync_to_dna("A04_GANS", "good_work", intensity=0.5, dept="trading")
+        elif says_valid and not fact_valid:
+            # объявил добычу там, где факт движка её не видит — соврал
+            sync_to_dna("A04_GANS", "bad_work", intensity=0.5, dept="trading")
+        # says_valid=False — честный ноль, петлю не трогаем
+    except Exception as e:
+        print(f"[HANS] ⚠️  sync_to_dna не сработал ({e})")
+
     return {
         "ok": True,
         "error": None,

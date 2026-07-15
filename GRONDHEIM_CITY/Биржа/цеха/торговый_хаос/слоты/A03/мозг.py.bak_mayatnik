@@ -367,11 +367,15 @@ def run_panikyor(symbol: str = "XAUUSD", timeframe: str = "H4",
         (mfi_type == "FADE"  and phase == "ASLEEP") or
         phase in ("DISBELIEF", "PANIC")   # эти держатся на статусе+свечке, не на окне
     )
-    # MAYATNIK_SNYAT_V1: мёртвый маятник sync_to_dna снят (см. патч-док).
-    # Сенсор НЕ качает свою ДНК за «точность» — это НЕ-опыт (Чертёж 4.2).
-    # Судья сенсора = РЫНОК: hooks._judge_iskra_by_result →
-    # nositel.zapisat_vyvod_pare. Вывод оплачивается деньгами, не сам собой.
-    # Не воскрешать: сюда придёт Мост, если петля точности заболит.
+    try:
+        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]
+        if coherent:
+            sync_to_dna("A03_PANIKYOR", "good_work", intensity=0.4, dept="trading")
+        else:
+            sync_to_dna("A03_PANIKYOR", "bad_work", intensity=0.4, dept="trading")
+    except Exception as e:
+        print(f"[PANIC] ⚠️  sync_to_dna не сработал ({e})")
+
     return {
         "ok": True,
         "error": None,

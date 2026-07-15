@@ -404,11 +404,16 @@ def run_morj(symbol: str = "XAUUSD", timeframe: str = "H4",
     new_status   = signal.get("morj_status", "SLEEPING")
     field_alive  = (not alligator.get("sleeping")) and rubber_band.get("is_peak")
     morj_says_go = signal.get("wave_1_validated") and new_status in ("AWAKE", "WAKING")
-    # MAYATNIK_SNYAT_V1: мёртвый маятник sync_to_dna снят (см. патч-док).
-    # Сенсор НЕ качает свою ДНК за «точность» — это НЕ-опыт (Чертёж 4.2).
-    # Судья сенсора = РЫНОК: hooks._judge_iskra_by_result →
-    # nositel.zapisat_vyvod_pare. Вывод оплачивается деньгами, не сам собой.
-    # Не воскрешать: сюда придёт Мост, если петля точности заболит.
+    try:
+        from studio.grondheim_memory import sync_to_dna  # type: ignore[import]
+        if field_alive and morj_says_go:
+            sync_to_dna("A02_MORJ", "good_work", intensity=0.5, dept="trading")
+        elif (not field_alive) and morj_says_go:
+            # сказал «иди» когда поле спит — ложное разрешение
+            sync_to_dna("A02_MORJ", "bad_work", intensity=0.5, dept="trading")
+    except Exception as e:
+        print(f"[MORJ] ⚠️  sync_to_dna не сработал ({e})")
+
     return {
         "ok": True,
         "error": None,
