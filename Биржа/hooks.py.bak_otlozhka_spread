@@ -592,49 +592,6 @@ def _aktivirovat_ordera(state: dict):
         save_trading_state(tstate)
 
 
-
-# OTLOZHKA_SPREAD_V2: отложка + поправка на спред ────────────────────
-def _spread_price(chain: dict) -> float:
-    """Живой спред В ЦЕНЕ из бара терминала.
-    spread приходит в пунктах (целое из MT5), point — размер тика."""
-    md = chain.get("market_data", {}) or {}
-    point = md.get("point") or 0.01
-    spread_pts = (md.get("mfi", {}) or {}).get("spread")
-    if spread_pts is None:
-        spread_pts = 0.0
-    return float(spread_pts) * float(point)
-
-
-def _otlozhka_entry_stop(order: dict, chain: dict):
-    """(entry, stop) с поправкой на спред по стороне сделки.
-    Трейдер посчитал сырой entry/stop от СВОЕГО бара — добавляем зазор.
-
-    LONG  (Buy Stop, по Ask):  entry = high + 2*спред; стоп снизу — как есть.
-    SHORT (Sell Stop, по Bid): entry = low - 3 пункта; стоп сверху + 2*спред.
-    Нет сырых чисел — возвращаем как пришло (не выдумываем).
-    """
-    d = (order.get("direction") or "").upper()
-    entry = order.get("entry")
-    stop = order.get("stop")
-    md = chain.get("market_data", {}) or {}
-    price = md.get("price", {}) or {}
-    high = price.get("high")
-    low = price.get("low")
-    sp = _spread_price(chain)
-    punkt = 0.10  # XAUUSD: 1 пункт = цена тика = 0.10
-
-    if d == "LONG":
-        if high is not None:
-            entry = round(high + 2 * sp, 6)      # Buy Stop над баром, по Ask
-        # стоп снизу по Bid — спред не мешает
-    elif d == "SHORT":
-        if low is not None:
-            entry = round(low - 3 * punkt, 6)    # Sell Stop, запас 3 пункта
-        if stop is not None:
-            stop = round(stop + 2 * sp, 6)       # стоп сверху по Ask
-    return entry, stop
-
-
 def _settle_positions(state: dict):
     """
     ЗАКРЫТИЕ позиций — физика, считает КОД (не LLM).
@@ -984,20 +941,16 @@ def _persist_trading_state(state: dict):
             "trader":    order.get("trader"),
             "magic":     order.get("magic"),
             "direction": order.get("direction"),   # FIX: было потеряно — шорт закрывался как лонг
-            # OTLOZHKA_SPREAD_V2: entry/stop с поправкой на спред.
-            # LONG: high+2спреда (по Ask). SHORT: low-0.30, стоп+2спреда.
-            # stop_initial = спред-поправленный стоп (R от реального стопа).
-            **dict(zip(("entry", "stop", "stop_initial"),
-                      (lambda es: (es[0], es[1], es[1]))(
-                          _otlozhka_entry_stop(order, chain)))),
+            "entry":     order.get("entry"),
+            "stop":      order.get("stop"),
+            # STOP_INITIAL_R_V1: ПЕРВЫЙ стоп — неизменная мера риска R.
+            # Трейлинг/СЕЙФ перетирают "stop"; этот помнит вход.
+            "stop_initial": order.get("stop"),
             "tp":        order.get("tp"),
             "lot":       order.get("lot"),
-            # OTLOZHKA_SPREAD_V2: ВСЕГДА отложка. Ждём пробоя, никто не
-            # входит по рынку. opened_at поставит _aktivirovat_ordera
-            # в миг реального пробоя (время ИСТИННОГО входа).
-            "status":    "PENDING",
-            "_ждёт_баров": 0,
+            "status":    "OPEN",
             "mode":      order.get("status"),       # PAPER | LIVE
+            "opened_at": bar_time,
             # ENGINE_ONE_DOOR_V1: позиция запоминает ВЕТЕР входа (global_bias
             # на баре входа). На закрытии суд трейдера сверит: по ветру или против.
             "entry_bias": chain.get("market_data", {}).get("global_bias"),
