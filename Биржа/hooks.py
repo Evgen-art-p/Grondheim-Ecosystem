@@ -632,6 +632,12 @@ def _otlozhka_entry_stop(order: dict, chain: dict):
             entry = round(low - 3 * punkt, 6)    # Sell Stop, запас 3 пункта
         if stop is not None:
             stop = round(stop + 2 * sp, 6)       # стоп сверху по Ask
+
+    # ZAYAVKA_PRINT_FIX_V1: печать заявки — ПОТЕРЯНА при переписывании
+    # v1->v2, вернул. Первый шаг ведения должен быть виден в консоли.
+    print(f"[ОРДЕР] 📌 {order.get('trader')} {d} @ {entry} — "
+          f"ЗАЯВКА поставлена (спред={sp:.2f}), ждём пробоя")
+
     return entry, stop
 
 

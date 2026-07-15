@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-16T00:47:25.427498",
+  "updated": "2026-07-16T02:10:00.980848",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1567.39,
-    "history_dna": "DETECTED BULL via v2_descent on H8, zero_point=1567.39, compass=BULL H8, bdb_candidate=true, ao_divergence false but descent found",
+    "zero_point_price": 1752.59,
+    "history_dna": "BEAR_DETECTED H8 1752.59",
     "trend_direction": "BULL",
     "found_timeframe": null
   },
@@ -15,7 +15,18 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Якорь не задан — нет глобального тренда. Без компаса не вхожу.",
+    "reason": "close под Teeth, но стоп не задет и нет exit_bell [гашу: APPROVED без направления]",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "HOLD",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "avan": {
+    "verdict": "REJECTED",
+    "reason": "Только 2 из 5 пуль: дивергенция и целевая зона. Нет бычьего РБ (close < Teeth), нет squat, фрактал на дне не сформирован.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -24,20 +35,9 @@
     "new_stop": null,
     "add_lot": null
   },
-  "avan": {
-    "verdict": "APPROVED",
-    "reason": "Структура бычья, close > Teeth, медвежьей дивергенции нет. Стоп 1642.54 защищает.",
-    "direction": "LONG",
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "HOLD",
-    "new_stop": null,
-    "add_lot": null
-  },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет якоря, нет валидированной волны 1, нет отката волны 2 к опоре — импульс от ТН, а не мой РБ на опоре.",
+    "reason": "Нет валидированной Моржем волны 1 — не к чему искать откат волны 2. Цена закрылась под Teeth, опора не держит. Бар медвежий, не Разворотный Бар на опоре.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -57,21 +57,21 @@
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 54
+      "bars_open": 288
     }
   },
   "panic": {
-    "panic_phase": "GREED",
-    "crowd_sentiment": "РАЗВОРОТ! Все берут! Надо успеть!",
-    "action_for_traders": "HIGH_SKEPTICISM",
+    "panic_phase": "PANIC",
+    "crowd_sentiment": "Стопы трещат! Все выходят! Обман!!!",
+    "action_for_traders": "GREEN_LIGHT_IF_GANS",
     "history_dna": "",
     "scale_timeframe": "H8"
   },
   "hans": {
     "fractal_valid": true,
     "fractal_side": "LONG",
-    "fractal_price": 1586.51,
-    "absorption_ratio": 0.6,
+    "fractal_price": 1752.02,
+    "absorption_ratio": 0.65,
     "scale_timeframe": "H8",
     "history_dna": ""
   }

@@ -1566,6 +1566,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             ui.notify(f"Активен: {a['symbol']} {a['timeframe']}", type="info")
 
     def update_files_display():
+        # ZAGRUZCHIK_PAPKI_TORG_V1: активы сгруппированы в папки по symbol.
+        # Внутри папки — список ТФ. Папка с активным ТФ раскрыта сама.
         if not files_ref["element"]:
             return
         files_ref["element"].clear()
@@ -1573,27 +1575,52 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             assets = state.get("loaded_assets", [])
             if not assets:
                 ui.label("Нет активов").style("color: rgba(255,255,255,0.4); font-size:11px;")
-            else:
-                active = state.get("active_asset")
-                for i, a in enumerate(assets):
-                    is_active = (i == active)
-                    row = ui.element("div").style(
-                        "padding:7px 10px; margin:3px 0; border-radius:7px; cursor:pointer; "
-                        "font-family:'JetBrains Mono',monospace; "
-                        + ("background:rgba(0,255,136,0.10); border:1px solid rgba(0,255,136,0.45);"
-                           if is_active else
-                           "background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.07);"))
-                    row.on("click", lambda _, idx=i: set_active(idx))
-                    with row:
-                        ui.html(
-                            f'''<div style="display:flex;justify-content:space-between;align-items:center;">
-                              <span style="color:{'#00ff88' if is_active else 'rgba(255,255,255,0.85)'};
-                                           font-size:12px;font-weight:700;">{a["symbol"]}</span>
-                              <span style="color:rgba(0,204,255,0.9);font-size:11px;font-weight:700;">{a["timeframe"]}</span>
-                            </div>
-                            <div style="color:rgba(255,255,255,0.5);font-size:9px;margin-top:2px;">
-                              {a["date_from"]} → {a["date_to"]} · {a["bars"]}
-                            </div>''')
+                return
+
+            active = state.get("active_asset")
+
+            groups = {}
+            order = []
+            for i, a in enumerate(assets):
+                sym = a["symbol"]
+                if sym not in groups:
+                    groups[sym] = []
+                    order.append(sym)
+                groups[sym].append(i)
+
+            for sym in order:
+                idxs = groups[sym]
+                has_active = active in idxs
+                with ui.expansion(
+                    f"{sym}  ·  {len(idxs)} ТФ",
+                    value=has_active,
+                ).classes("w-full").style(
+                    "background:rgba(255,255,255,0.02); "
+                    "border:1px solid rgba(255,255,255,0.07); "
+                    "border-radius:7px; margin:3px 0; "
+                    "font-family:'JetBrains Mono',monospace; "
+                    + ("border-color:rgba(0,255,136,0.45);" if has_active else "")
+                ):
+                    for i in idxs:
+                        a = assets[i]
+                        is_active = (i == active)
+                        row = ui.element("div").style(
+                            "padding:7px 10px; margin:3px 0; border-radius:7px; cursor:pointer; "
+                            "font-family:'JetBrains Mono',monospace; "
+                            + ("background:rgba(0,255,136,0.10); border:1px solid rgba(0,255,136,0.45);"
+                               if is_active else
+                               "background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.07);"))
+                        row.on("click", lambda _, idx=i: set_active(idx))
+                        with row:
+                            ui.html(
+                                f'''<div style="display:flex;justify-content:space-between;align-items:center;">
+                                  <span style="color:rgba(255,255,255,0.4);font-size:10px;">ТФ</span>
+                                  <span style="color:{'#00ff88' if is_active else 'rgba(0,204,255,0.9)'};
+                                               font-size:11px;font-weight:700;">{a["timeframe"]}</span>
+                                </div>
+                                <div style="color:rgba(255,255,255,0.5);font-size:9px;margin-top:2px;">
+                                  {a["date_from"]} → {a["date_to"]} · {a["bars"]}
+                                </div>''')
 
     _HISTORY_TFS = ["MN1", "W1", "D1", "H12", "H8", "H4", "H1",
                     "M30", "M15", "M10", "M5", "M1"]
