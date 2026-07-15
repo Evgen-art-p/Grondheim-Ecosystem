@@ -654,15 +654,11 @@ def _settle_positions(state: dict):
             continue
 
         # PnL зеркально: для шорта прибыль когда цена УПАЛА (entry > exit)
-        # STOP_INITIAL_R_V1: R считается от ПЕРВОГО стопа, а не текущего.
-        # Трейлинг двигает стоп в прибыль → |entry-stop| текущего
-        # уходил в минус → risk<0 → pnl_r=None. R — мера риска НА ВХОДЕ.
-        stop_r = pos.get("stop_initial", stop)  # fallback для старых позиций
         if direction == "LONG":
-            risk      = entry - stop_r
+            risk      = entry - stop
             pnl_price = round(exit_price - entry, 6)
         else:  # SHORT
-            risk      = stop_r - entry
+            risk      = stop - entry
             pnl_price = round(entry - exit_price, 6)
         pnl_r     = round(pnl_price / risk, 4) if risk > 0 else None
 
@@ -943,9 +939,6 @@ def _persist_trading_state(state: dict):
             "direction": order.get("direction"),   # FIX: было потеряно — шорт закрывался как лонг
             "entry":     order.get("entry"),
             "stop":      order.get("stop"),
-            # STOP_INITIAL_R_V1: ПЕРВЫЙ стоп — неизменная мера риска R.
-            # Трейлинг/СЕЙФ перетирают "stop"; этот помнит вход.
-            "stop_initial": order.get("stop"),
             "tp":        order.get("tp"),
             "lot":       order.get("lot"),
             "status":    "OPEN",

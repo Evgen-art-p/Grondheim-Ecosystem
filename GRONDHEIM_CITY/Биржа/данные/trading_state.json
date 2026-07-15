@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updated": "2026-07-15T00:01:38.276810",
+  "updated": "2026-07-15T08:24:35.647691",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1237.59,
-    "history_dna": "BEAR_DETECT@1237.59(2010.06.16 14:00)",
-    "trend_direction": "BULL",
+    "zero_point_price": 1586.16,
+    "history_dna": "BULL compass H4; point 1586.16; last AO min -14.56 at 1591.0 2012.06.12 04:00",
+    "trend_direction": null,
     "found_timeframe": null
   },
   "positions": [],
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "пробой фрактала был, но close под Teeth — цена в пасти, импульс не подтверждён",
+    "reason": "нет пробоя фрактала",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -25,8 +25,19 @@
     "add_lot": null
   },
   "avan": {
+    "verdict": "APPROVED",
+    "reason": "Пять пуль: дивергенция, целевая зона, фрактал на дне, GREED толпы, смена моментума (бычий РБ). Приседающего нет, но опыт 01.08.2011 (+3.29R) разрешает. Против якоря — малый лот",
+    "direction": "LONG",
+    "entry": 1572.99,
+    "stop": 1552.16,
+    "lot": 0.01,
+    "action": "ENTER",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет разворотного бычьего бара — свеча медвежья, моментум вниз. High равен zero Искры, но закрытие под open. Смена не подтверждена. Иду строго по роду: смена моментума — одна из пяти пуль.",
+    "reason": "Нет валидированной волны 1 — не от чего откатываться",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -35,44 +46,33 @@
     "new_stop": null,
     "add_lot": null
   },
-  "cons": {
-    "verdict": "REJECTED",
-    "reason": "агент не ответил (Консерватор не смог решить: Таймаут 90s — OpenRouter не отве)",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": null,
-    "new_stop": null,
-    "add_lot": null
-  },
   "morj": {
     "morj_status": "AWAKE",
     "wave_1_validated": false,
     "tension_peak": true,
     "history_dna": "",
-    "scale_timeframe": "H1",
-    "inherited_dir": "BULL",
+    "scale_timeframe": "H4",
+    "inherited_dir": null,
     "alligator_state": {
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 20
+      "bars_open": 288
     }
   },
   "panic": {
-    "panic_phase": "TENSION",
-    "crowd_sentiment": "Объёмы бешеные, цена стоит — СЕЙЧАС РВАНЁТ!!! Все ломятся, никто не может сдвинуть!",
+    "panic_phase": "GREED",
+    "crowd_sentiment": "разворот, все берут, надо успеть",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "H1"
+    "scale_timeframe": "H4"
   },
   "hans": {
     "fractal_valid": true,
-    "fractal_side": "LONG",
-    "fractal_price": 1236.94,
-    "absorption_ratio": 0.85,
-    "scale_timeframe": "H1",
+    "fractal_side": null,
+    "fractal_price": null,
+    "absorption_ratio": 0.6,
+    "scale_timeframe": "H4",
     "history_dna": ""
   }
 }
