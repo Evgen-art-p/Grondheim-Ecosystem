@@ -63,3 +63,6 @@
 {"ts": "2026-07-16T13:01:44.633530", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "EXIT_BELL", "pnl": -0.01041, "pnl_r": -0.6885, "symbol": "GBPUSD", "timeframe": "D1"}}
 {"ts": "2026-07-16T13:22:52.701561", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -0.013489, "pnl_r": -1.0, "symbol": "GBPUSD", "timeframe": "D1"}}
 {"ts": "2026-07-16T13:34:17.786876", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -0.009642, "pnl_r": -1.0, "symbol": "GBPUSD", "timeframe": "D1"}}
+{"ts": "2026-07-16T17:53:04.622680", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "STOP_LOSS", "pnl": -0.00293, "pnl_r": -1.0, "symbol": "GBPUSD", "timeframe": "H1"}}
+{"ts": "2026-07-16T17:57:33.147464", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "STOP_LOSS", "pnl": -0.000337, "pnl_r": -1.0, "symbol": "GBPUSD", "timeframe": "H1"}}
+{"ts": "2026-07-16T17:57:33.514465", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -0.000997, "pnl_r": -1.0, "symbol": "GBPUSD", "timeframe": "H1"}}

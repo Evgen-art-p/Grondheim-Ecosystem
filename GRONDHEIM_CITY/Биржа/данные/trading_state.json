@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-16T13:48:20.413388",
+  "updated": "2026-07-16T17:58:52.048810",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1.60152,
-    "history_dna": "BEAR_DETECTED zero=1.60152 bar=2011.01.25 D1 compass=BEAR",
+    "zero_point_price": 1.4767,
+    "history_dna": "BEARISH pivot MAX ao=0.01294 price_high=1.47778 date=2010.06.14 18:00 | zero_point=1.4767 tf=H1 compass=BEAR",
     "trend_direction": "BULL",
     "found_timeframe": null
   },
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Фрактал LONG 1.6058 не пробит. Канон требует пробоя фрактала за пастью на импульсе. Жду закрытия выше.",
+    "reason": "цена под Teeth, фрактал LONG не пробит, SHORT против якоря — не мой вход",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -25,19 +25,19 @@
     "add_lot": null
   },
   "avan": {
-    "verdict": "REJECTED",
-    "reason": "Нет бычьего закрытия и приседающего — смена моментума не подтверждена, опираюсь на reject 2007.01.03 и 2007.08.06",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
+    "verdict": "APPROVED",
+    "reason": "Медвежий РБ конца волны C: дивергенция, цель, смена моментума (close < Teeth). Нет приседающего, но закрытие уверенное.",
+    "direction": "SHORT",
+    "entry": 1.46876,
+    "stop": 1.47579,
+    "lot": 0.1,
+    "action": "ENTER",
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "wave_1_not_validated",
+    "reason": "wave_1_validated=false, нет структуры для отката волны 2; закрытие под Teeth — опора в пасти потеряна",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -51,28 +51,28 @@
     "wave_1_validated": false,
     "tension_peak": true,
     "history_dna": "",
-    "scale_timeframe": "D1",
+    "scale_timeframe": "H1",
     "inherited_dir": "BULL",
     "alligator_state": {
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 93
+      "bars_open": 92
     }
   },
   "panic": {
-    "panic_phase": "GREED",
-    "crowd_sentiment": "Все продают! Объёмы бешеные, цена летит вниз! Успеть запрыгнуть в шорт!",
+    "panic_phase": "TENSION",
+    "crowd_sentiment": "Объёмы бешеные, а цена стоит! Щас рванёт!!!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "D1"
+    "scale_timeframe": "H1"
   },
   "hans": {
     "fractal_valid": true,
     "fractal_side": "LONG",
-    "fractal_price": 1.6058,
-    "absorption_ratio": 0.6,
-    "scale_timeframe": "D1",
+    "fractal_price": 1.47623,
+    "absorption_ratio": 0.85,
+    "scale_timeframe": "H1",
     "history_dna": ""
   }
 }
