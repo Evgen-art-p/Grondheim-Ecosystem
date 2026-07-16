@@ -1,21 +1,21 @@
 {
   "version": 1,
-  "updated": "2026-07-16T17:58:52.048810",
+  "updated": "2026-07-16T20:47:58.499590",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1.4767,
-    "history_dna": "BEARISH pivot MAX ao=0.01294 price_high=1.47778 date=2010.06.14 18:00 | zero_point=1.4767 tf=H1 compass=BEAR",
-    "trend_direction": "BULL",
+    "zero_point_price": 1.3127,
+    "history_dna": "BEAR_DETECTED zero_point=1.3127 tf=H4 compass=BEAR spusk_V2",
+    "trend_direction": null,
     "found_timeframe": null
   },
   "positions": [],
   "feed": {
     "mode": "tester",
-    "symbol": "GBPUSD"
+    "symbol": "EURUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "цена под Teeth, фрактал LONG не пробит, SHORT против якоря — не мой вход",
+    "reason": "close под Зубами — фрактал не за пастью, условие входа Брута не выполнено",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -25,19 +25,19 @@
     "add_lot": null
   },
   "avan": {
-    "verdict": "APPROVED",
-    "reason": "Медвежий РБ конца волны C: дивергенция, цель, смена моментума (close < Teeth). Нет приседающего, но закрытие уверенное.",
-    "direction": "SHORT",
-    "entry": 1.46876,
-    "stop": 1.47579,
-    "lot": 0.1,
-    "action": "ENTER",
+    "verdict": "REJECTED",
+    "reason": "Нет squat, нет компаса — неполный набор для SHORT. Риск без якоря не оправдан.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "wave_1_validated=false, нет структуры для отката волны 2; закрытие под Teeth — опора в пасти потеряна",
+    "reason": "Чек-лист Консерватора: (1) валидированная волна 1 — нет; (2) структурированный откат волны 2 — невозможен; (3) Разворотный Бар на опоре с разрядкой AO к нулю — отсутствует.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -51,28 +51,28 @@
     "wave_1_validated": false,
     "tension_peak": true,
     "history_dna": "",
-    "scale_timeframe": "H1",
-    "inherited_dir": "BULL",
+    "scale_timeframe": "H4",
+    "inherited_dir": null,
     "alligator_state": {
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 92
+      "bars_open": 34
     }
   },
   "panic": {
-    "panic_phase": "TENSION",
-    "crowd_sentiment": "Объёмы бешеные, а цена стоит! Щас рванёт!!!",
+    "panic_phase": "GREED",
+    "crowd_sentiment": "Все берут! Не опоздать бы — поезд уходит!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "H1"
+    "scale_timeframe": "H4"
   },
   "hans": {
     "fractal_valid": true,
     "fractal_side": "LONG",
-    "fractal_price": 1.47623,
-    "absorption_ratio": 0.85,
-    "scale_timeframe": "H1",
+    "fractal_price": 1.3113,
+    "absorption_ratio": 0.65,
+    "scale_timeframe": "H4",
     "history_dna": ""
   }
 }

@@ -372,6 +372,9 @@ def _treyling_za_zubami(state: dict):
             if close < teeth:
                 continue
             novy = teeth
+            # TRAILING_NE_V_UBYTOK_V1: Зубы ниже входа → стоп в убыток, не тянем
+            if novy < entry:
+                continue
             if novy <= old:          # только в защиту
                 continue
             if novy >= close:        # стоп не может быть выше цены
@@ -380,6 +383,9 @@ def _treyling_za_zubami(state: dict):
             if close > teeth:
                 continue
             novy = teeth
+            # TRAILING_NE_V_UBYTOK_V1: Зубы выше входа → стоп в убыток, не тянем
+            if novy > entry:
+                continue
             if novy >= old:
                 continue
             if novy <= close:
