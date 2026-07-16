@@ -617,10 +617,12 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
     except Exception:
         _sdelok_do = 0
 
-    # ── отчёт-файл рядом с CSV ──
+    # HRONIKI_PAPKA_V1: отчёты уходят в ОТДЕЛЬНУЮ папку хроники,
+    # не в test_data к котировкам. Медийщики берут летопись отсюда.
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_path = Path(full_path).with_name(
-        f"{Path(full_path).stem}_tester_{stamp}.txt")
+    _hroniki_dir = _HERE / "хроники"
+    _hroniki_dir.mkdir(parents=True, exist_ok=True)
+    report_path = _hroniki_dir / f"{Path(full_path).stem}_tester_{stamp}.txt"
     report = open(report_path, "w", encoding="utf-8")
 
     def out(line=""):

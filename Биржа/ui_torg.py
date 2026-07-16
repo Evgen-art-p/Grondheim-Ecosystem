@@ -339,7 +339,7 @@ body{
 .left-col{ height: 100%; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 
 .client-panel{ flex-shrink: 0; overflow: hidden; }
-.asset-bay{ height: 120px; flex-shrink: 0; overflow: hidden; }
+.asset-bay{ height: auto; max-height: 340px; flex-shrink: 0; overflow: visible; }  /* ZAGRUZCHIK_SCROLL_V1: было 120px/hidden */
 .settings-panel{ flex-grow: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 
 .panel-title{
@@ -353,7 +353,14 @@ body{
 }
 .panel-body{ padding: 12px 16px; min-height: 0; overflow: auto; }
 
-.file-list{ padding: 8px 12px; max-height: 50px; overflow-y: auto; font-family: monospace; font-size: 11px; }
+.file-list{ padding: 8px 12px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 11px; }  /* ZAGRUZCHIK_SCROLL_V1: было 50px */
+/* ZAGRUZCHIK_SCROLL_V1: стрелка раскрытия папок — видимый цвет */
+.file-list .q-expansion-item .q-icon,
+.file-list .q-item__section--side .q-icon{
+  color: rgba(0,204,255,0.9) !important;
+}
+.file-list .q-expansion-item{ color: rgba(255,255,255,0.85); }
+
 
 .right-col{ height: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 12px; }
 .right-top-slot{
@@ -1827,7 +1834,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
         with ui.element("div").classes("area-left"):
             with ui.element("div").classes("left-col"):
-                with ui.element("div").classes("glass asset-bay").style("height:auto; flex:1;"):
+                with ui.element("div").classes("glass asset-bay").style("height:auto; max-height:360px; flex:0 0 auto;"):  # ZAGRUZCHIK_SCROLL2_V1
                     with ui.row().style(
                         "width:100%; justify-content:space-between; align-items:center; "
                         "padding:8px 16px 6px 16px; border-bottom:1px solid rgba(255,255,255,0.08);"
@@ -1840,8 +1847,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     files_ref["uploader"] = ui.upload(
                         on_upload=handle_upload, multiple=True, auto_upload=True,
                     ).props("flat color=cyan").style("margin: 0 8px 8px 8px;")
+                    # ZAGRUZCHIK_SCROLL2_V1: инлайн глушил CSS-скролл. Даём предел
+                    # высоты и вертикальный скролл — до нижних ТФ добраться.
                     files_ref["element"] = ui.element("div").classes("file-list").style(
-                        "height:auto; max-height:none; overflow:visible; padding:4px 8px;")
+                        "max-height:300px; overflow-y:auto; overflow-x:hidden; padding:4px 8px;")
                     _scan_test_data()
                     update_files_display()
 

@@ -58,3 +58,8 @@
 {"ts": "2026-07-16T02:03:01.807600", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "EXIT_BELL", "pnl": 7.64, "pnl_r": 1.3042, "symbol": "XAUUSD", "timeframe": "H8"}}
 {"ts": "2026-07-16T02:03:01.911643", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "EXIT_BELL", "pnl": -5.23, "pnl_r": -0.1696, "symbol": "XAUUSD", "timeframe": "H8"}}
 {"ts": "2026-07-16T02:05:54.383141", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "STOP_LOSS", "pnl": 13.718449, "pnl_r": null, "symbol": "XAUUSD", "timeframe": "H8"}}
+{"ts": "2026-07-16T12:57:32.948705", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "STOP_LOSS", "pnl": -0.006707, "pnl_r": -1.0, "symbol": "GBPUSD", "timeframe": "D1"}}
+{"ts": "2026-07-16T12:57:33.067710", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -0.0252, "pnl_r": -1.0, "symbol": "GBPUSD", "timeframe": "D1"}}
+{"ts": "2026-07-16T13:01:44.633530", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "EXIT_BELL", "pnl": -0.01041, "pnl_r": -0.6885, "symbol": "GBPUSD", "timeframe": "D1"}}
+{"ts": "2026-07-16T13:22:52.701561", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -0.013489, "pnl_r": -1.0, "symbol": "GBPUSD", "timeframe": "D1"}}
+{"ts": "2026-07-16T13:34:17.786876", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -0.009642, "pnl_r": -1.0, "symbol": "GBPUSD", "timeframe": "D1"}}
