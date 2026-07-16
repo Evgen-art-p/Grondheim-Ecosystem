@@ -522,106 +522,6 @@ def _dopisat_v_dnevnik(trader: str, entry, pnl_r, reason: str, bar_time=None):
 ORDER_EXPIRE_BARS = 10   # не пробил за 10 баров — структура протухла
 
 
-
-# PEREEZD_ZAYAVKI_V1: переезд заявки за новым фракталом (Вильямс) ──────
-def _pereezd_zayavki(pos, md):
-    """Проверяет PENDING-заявку против текущей структуры фракталов.
-    Возвращает:
-      "MOVED"   — переехала на новый фрактал (pos обновлён на месте);
-      "CANCEL"  — цена вернулась к старту, сигнал мёртв (снять);
-      None      — ничего, ждём дальше.
-    Спред-поправка та же, что при рождении.
-    """
-    d = (pos.get("direction") or "").upper()
-    fr = md.get("fractals", {}) or {}
-    price = md.get("price", {}) or {}
-    close = price.get("close")
-    point = md.get("point") or 0.01
-    sp_pts = (md.get("mfi", {}) or {}).get("spread")
-    sp = (float(sp_pts) * float(point)) if sp_pts is not None else 0.0
-    punkt = 10 * float(point or 0.01)  # PUNKT_OT_POINT_V1: пункт = 10×point
-
-    if close is None:
-        return None
-
-    if d == "LONG":
-        up = fr.get("last_up") or {}
-        down = fr.get("last_down") or {}
-        up_px = up.get("price") if isinstance(up, dict) else None
-        up_idx = up.get("bar_index") if isinstance(up, dict) else None
-        down_px = down.get("price") if isinstance(down, dict) else None
-
-        # 2. возврат к старту сигнала — снять
-        start = pos.get("signal_start")
-        if start is not None and close < start:
-            return "CANCEL"
-
-        # 1. новый ВЕРХНИЙ фрактал (другой bar_index) ВЫШЕ прежнего → переезд
-        old_idx = pos.get("entry_fractal_idx")
-        old_px = pos.get("entry_fractal_price")
-        if (up_px is not None and up_idx is not None
-                and up_idx != old_idx
-                and (old_px is None or up_px > old_px)):
-            pos["entry"] = round(up_px + 2 * sp, 6)          # Buy Stop + спред
-            if down_px is not None:
-                pos["stop"] = round(down_px, 6)              # под новый низ
-                pos["stop_initial"] = pos["stop"]            # R от новой опоры
-                pos["signal_start"] = down_px                # новый старт сигнала
-            pos["entry_fractal_price"] = up_px
-            pos["entry_fractal_idx"] = up_idx
-            pos["_ждёт_баров"] = 0                            # счётчик сброшен
-            return "MOVED"
-
-    elif d == "SHORT":
-        up = fr.get("last_up") or {}
-        down = fr.get("last_down") or {}
-        down_px = down.get("price") if isinstance(down, dict) else None
-        down_idx = down.get("bar_index") if isinstance(down, dict) else None
-        up_px = up.get("price") if isinstance(up, dict) else None
-
-        start = pos.get("signal_start")
-        if start is not None and close > start:
-            return "CANCEL"
-
-        old_idx = pos.get("entry_fractal_idx")
-        old_px = pos.get("entry_fractal_price")
-        if (down_px is not None and down_idx is not None
-                and down_idx != old_idx
-                and (old_px is None or down_px < old_px)):
-            pos["entry"] = round(down_px - 3 * punkt, 6)     # Sell Stop − 3 пункта
-            if up_px is not None:
-                pos["stop"] = round(up_px + 2 * sp, 6)       # над новым верхом
-                pos["stop_initial"] = pos["stop"]
-                pos["signal_start"] = up_px
-            pos["entry_fractal_price"] = down_px
-            pos["entry_fractal_idx"] = down_idx
-            pos["_ждёт_баров"] = 0
-            return "MOVED"
-
-    return None
-
-
-def _zapomnit_fraktal_starta(order, chain):
-    """При рождении PENDING: запоминаем фрактал входа и старт
-    сигнала (противоположный фрактал) — опоры для переезда."""
-    d = (order.get("direction") or "").upper()
-    md = chain.get("market_data", {}) or {}
-    fr = md.get("fractals", {}) or {}
-    up = fr.get("last_up") or {}
-    down = fr.get("last_down") or {}
-    if d == "LONG":
-        f = up if isinstance(up, dict) else {}
-        opp = down if isinstance(down, dict) else {}
-    else:
-        f = down if isinstance(down, dict) else {}
-        opp = up if isinstance(up, dict) else {}
-    return {
-        "entry_fractal_price": f.get("price"),
-        "entry_fractal_idx":   f.get("bar_index"),
-        "signal_start":        opp.get("price"),
-    }
-
-
 def _aktivirovat_ordera(state: dict):
     """Отложенные заявки: активируем те, что рынок ПРОБИЛ; отменяем
     протухшие. Зовётся КАЖДЫЙ БАР, ДО трейлинга и ДО закрытия.
@@ -674,21 +574,6 @@ def _aktivirovat_ordera(state: dict):
             ostalis.append(pos)
             continue
 
-        # PEREEZD_ZAYAVKI_V1: не пробил — сверяем со СТРУКТУРОЙ (Вильямс).
-        _pz = _pereezd_zayavki(pos, md)
-        if _pz == "CANCEL":
-            print(f"[ОРДЕР] 🚫 {pos.get('trader')} {d} @ {entry} ОТМЕНЁН "
-                  f"— цена вернулась к старту сигнала (Вильямс)")
-            dirty = True
-            continue          # снять заявку совсем
-        if _pz == "MOVED":
-            print(f"[ОРДЕР] 🔄 {pos.get('trader')} {d} ПЕРЕЕХАЛ @ "
-                  f"{pos.get('entry')} — новый фрактал по тренду, стоп "
-                  f"{pos.get('stop')} (Вильямс §8)")
-            dirty = True
-            ostalis.append(pos)
-            continue          # PENDING на новом уровне
-
         # не сработал — считаем, сколько ждёт
         zhdyot = pos.get("_ждёт_баров", 0) + 1
         pos["_ждёт_баров"] = zhdyot
@@ -736,7 +621,7 @@ def _otlozhka_entry_stop(order: dict, chain: dict):
     high = price.get("high")
     low = price.get("low")
     sp = _spread_price(chain)
-    punkt = 10 * float(point or 0.01)  # PUNKT_OT_POINT_V1: пункт = 10×point (любой инструмент)
+    punkt = 0.10  # XAUUSD: 1 пункт = цена тика = 0.10
 
     if d == "LONG":
         if high is not None:
@@ -821,25 +706,13 @@ def _settle_positions(state: dict):
         # STOP_INITIAL_R_V1: R считается от ПЕРВОГО стопа, а не текущего.
         # Трейлинг двигает стоп в прибыль → |entry-stop| текущего
         # уходил в минус → risk<0 → pnl_r=None. R — мера риска НА ВХОДЕ.
-        # PAKET_PYRAMIDA_V1: ПАКЕТНЫЙ расчёт пирамиды (вариант А).
-        # risk0 — первоначальный риск ПЕРВОЙ ноги (entry vs stop_initial),
-        # неизменен. pnl — от СРЕДНЕЙ цены пакета × множитель объёма
-        # (lot/lot_base). Одиночная сделка: ea==entry, lot==lot_base →
-        # формула вырождается в старую, ничего не меняется.
-        stop_r    = pos.get("stop_initial", stop)  # первый стоп (неизменен)
-        ea        = pos.get("entry_avg", entry)    # средняя цена пакета
-        lot_base  = pos.get("lot_base") or pos.get("lot") or 1.0
-        lot_full  = pos.get("lot") or lot_base
-        try:
-            mult = float(lot_full) / float(lot_base) if lot_base else 1.0
-        except (TypeError, ZeroDivisionError):
-            mult = 1.0
+        stop_r = pos.get("stop_initial", stop)  # fallback для старых позиций
         if direction == "LONG":
-            risk      = entry - stop_r          # риск от ПЕРВОЙ ноги
-            pnl_price = round((exit_price - ea) * mult, 6)
+            risk      = entry - stop_r
+            pnl_price = round(exit_price - entry, 6)
         else:  # SHORT
             risk      = stop_r - entry
-            pnl_price = round((ea - exit_price) * mult, 6)
+            pnl_price = round(entry - exit_price, 6)
         pnl_r     = round(pnl_price / risk, 4) if risk > 0 else None
 
         record = {
@@ -853,9 +726,6 @@ def _settle_positions(state: dict):
             "stop":       stop,
             "exit":       exit_price,
             "lot":        pos.get("lot"),
-            # DIAGNOZ_PRAVDA_V1: следы пирамиды в записи — отчёт увидит доливы
-            "lot_base":   pos.get("lot_base"),
-            "dolivok":    pos.get("dolivok", 0),
             "mode":       pos.get("mode", "PAPER"),
             "opened_at":  pos.get("opened_at"),
             "close_reason": reason,
@@ -1128,21 +998,11 @@ def _persist_trading_state(state: dict):
                           _otlozhka_entry_stop(order, chain)))),
             "tp":        order.get("tp"),
             "lot":       order.get("lot"),
-            # PAKET_PYRAMIDA_V1: поля ПАКЕТА пирамиды. entry_avg —
-            # средневзвешенная цена входа (растёт при ADD). lot_base —
-            # объём первой ноги (для множителя R). Одиночная сделка:
-            # entry_avg==entry, lot==lot_base → расчёт как раньше.
-            **dict(zip(("entry_avg", "lot_base"),
-                      (lambda es: (es[0], order.get("lot")))(
-                          _otlozhka_entry_stop(order, chain)))),
             # OTLOZHKA_SPREAD_V2: ВСЕГДА отложка. Ждём пробоя, никто не
             # входит по рынку. opened_at поставит _aktivirovat_ordera
             # в миг реального пробоя (время ИСТИННОГО входа).
             "status":    "PENDING",
             "_ждёт_баров": 0,
-            # PEREEZD_ZAYAVKI_V1: заявка помнит, ОТ КАКОГО фрактала родилась,
-            # и старт сигнала (противоположный фрактал) — для переезда/снятия.
-            **_zapomnit_fraktal_starta(order, chain),
             "mode":      order.get("status"),       # PAPER | LIVE
             # ENGINE_ONE_DOOR_V1: позиция запоминает ВЕТЕР входа (global_bias
             # на баре входа). На закрытии суд трейдера сверит: по ветру или против.

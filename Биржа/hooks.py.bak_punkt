@@ -539,7 +539,7 @@ def _pereezd_zayavki(pos, md):
     point = md.get("point") or 0.01
     sp_pts = (md.get("mfi", {}) or {}).get("spread")
     sp = (float(sp_pts) * float(point)) if sp_pts is not None else 0.0
-    punkt = 10 * float(point or 0.01)  # PUNKT_OT_POINT_V1: пункт = 10×point
+    punkt = 0.10
 
     if close is None:
         return None
@@ -736,7 +736,7 @@ def _otlozhka_entry_stop(order: dict, chain: dict):
     high = price.get("high")
     low = price.get("low")
     sp = _spread_price(chain)
-    punkt = 10 * float(point or 0.01)  # PUNKT_OT_POINT_V1: пункт = 10×point (любой инструмент)
+    punkt = 0.10  # XAUUSD: 1 пункт = цена тика = 0.10
 
     if d == "LONG":
         if high is not None:

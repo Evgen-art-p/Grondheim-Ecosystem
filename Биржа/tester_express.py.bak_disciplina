@@ -219,23 +219,8 @@ def _primenit_vedenie(sid, r, pos_magic, md, out=print):
     add_lot = sig.get(f"{pref}_add_lot")
 
     if action not in ("ADD", "MOVE_STOP"):
-        # CLOSE_TREYDERA_V1: CLOSE — воля трейдера. Ставим manual_close,
-        # settle закроет ВЕСЬ ПАКЕТ по close (причина MANUAL_CLOSE)
-        # на следующем баре — раньше стопа и колокола.
-        if action == "CLOSE":
-            from hooks import load_trading_state, save_trading_state
-            _ts = load_trading_state()
-            _hit = False
-            for _p in _ts.get("positions", []) or []:
-                if _p.get("magic") == pos_magic and _p.get("status") == "OPEN":
-                    _p["manual_close"] = True
-                    _hit = True
-            if _hit:
-                save_trading_state(_ts)
-                out(f"     └─ 🚪 CLOSE: {sid} закрывает пакет своей волей "
-                    f"(settle исполнит на след. баре)")
-                return True
-            out("     └─ 🚪 CLOSE: открытой позиции нет — нечего закрывать")
+        if action in ("CLOSE",):
+            out(f"     └─ воля: {action} (settle закроет сам, не форсирую)")
         return False
 
     teeth = ((md.get("alligator", {}) or {}).get("teeth"))
@@ -272,22 +257,7 @@ def _primenit_vedenie(sid, r, pos_magic, md, out=print):
                 al = float(add_lot)
             except (TypeError, ValueError):
                 al = 0.0
-            # REVERSE_PYRAMID_DISCIPLINE_V1: реверсивная пирамида СУЖАЕТСЯ кверху.
-            # Долив > предыдущей ноги → полный ОТКАЗ + feedback в стол.
-            _last_leg = float(p.get("last_leg") or p.get("lot_base")
-                              or p.get("lot") or 0.0)
-            if al > 0 and _last_leg > 0 and al > _last_leg * 1.0001:
-                _pref = _VEDENIE_PREFIX.get(sid)
-                if _pref:
-                    ts.setdefault(_pref, {})
-                    ts[_pref]["vedenie_feedback"] = (
-                        f"Долив отклонён: превышен размер предыдущей ноги "
-                        f"({al} > {_last_leg}). Реверсивная пирамида только "
-                        f"сужается кверху.")
-                    changed = True
-                out(f"     └─ ⛔ ADD ОТКЛОНЁН: {al} > предыдущей ноги "
-                    f"{_last_leg} — дисциплина пирамиды (полный отказ)")
-            elif al > 0:
+            if al > 0:
                 # PAKET_PYRAMIDA_V1: средневзвешенная цена ПАКЕТА.
                 # entry_new = close бара долива (текущая цена входа ноги).
                 _lot_old = float(p.get("lot") or 0.0)
@@ -305,7 +275,6 @@ def _primenit_vedenie(sid, r, pos_magic, md, out=print):
                         p["stop"] = round(teeth, 6)
                     elif d == "SHORT" and teeth < old_stop and (close is None or teeth > close):
                         p["stop"] = round(teeth, 6)
-                p["last_leg"] = round(al, 4)  # REVERSE_PYRAMID_DISCIPLINE_V1: потолок для след. долива
                 p["dolivok"] = int(p.get("dolivok", 0)) + 1
                 changed = True
                 out(f"     └─ 🔺 ADD применён: лот +{al} → {p['lot']}"

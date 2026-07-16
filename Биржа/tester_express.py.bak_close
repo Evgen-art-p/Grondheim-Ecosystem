@@ -219,23 +219,8 @@ def _primenit_vedenie(sid, r, pos_magic, md, out=print):
     add_lot = sig.get(f"{pref}_add_lot")
 
     if action not in ("ADD", "MOVE_STOP"):
-        # CLOSE_TREYDERA_V1: CLOSE — воля трейдера. Ставим manual_close,
-        # settle закроет ВЕСЬ ПАКЕТ по close (причина MANUAL_CLOSE)
-        # на следующем баре — раньше стопа и колокола.
-        if action == "CLOSE":
-            from hooks import load_trading_state, save_trading_state
-            _ts = load_trading_state()
-            _hit = False
-            for _p in _ts.get("positions", []) or []:
-                if _p.get("magic") == pos_magic and _p.get("status") == "OPEN":
-                    _p["manual_close"] = True
-                    _hit = True
-            if _hit:
-                save_trading_state(_ts)
-                out(f"     └─ 🚪 CLOSE: {sid} закрывает пакет своей волей "
-                    f"(settle исполнит на след. баре)")
-                return True
-            out("     └─ 🚪 CLOSE: открытой позиции нет — нечего закрывать")
+        if action in ("CLOSE",):
+            out(f"     └─ воля: {action} (settle закроет сам, не форсирую)")
         return False
 
     teeth = ((md.get("alligator", {}) or {}).get("teeth"))

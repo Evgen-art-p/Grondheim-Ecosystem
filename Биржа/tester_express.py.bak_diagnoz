@@ -219,23 +219,8 @@ def _primenit_vedenie(sid, r, pos_magic, md, out=print):
     add_lot = sig.get(f"{pref}_add_lot")
 
     if action not in ("ADD", "MOVE_STOP"):
-        # CLOSE_TREYDERA_V1: CLOSE — воля трейдера. Ставим manual_close,
-        # settle закроет ВЕСЬ ПАКЕТ по close (причина MANUAL_CLOSE)
-        # на следующем баре — раньше стопа и колокола.
-        if action == "CLOSE":
-            from hooks import load_trading_state, save_trading_state
-            _ts = load_trading_state()
-            _hit = False
-            for _p in _ts.get("positions", []) or []:
-                if _p.get("magic") == pos_magic and _p.get("status") == "OPEN":
-                    _p["manual_close"] = True
-                    _hit = True
-            if _hit:
-                save_trading_state(_ts)
-                out(f"     └─ 🚪 CLOSE: {sid} закрывает пакет своей волей "
-                    f"(settle исполнит на след. баре)")
-                return True
-            out("     └─ 🚪 CLOSE: открытой позиции нет — нечего закрывать")
+        if action in ("CLOSE",):
+            out(f"     └─ воля: {action} (settle закроет сам, не форсирую)")
         return False
 
     teeth = ((md.get("alligator", {}) or {}).get("teeth"))
@@ -272,22 +257,7 @@ def _primenit_vedenie(sid, r, pos_magic, md, out=print):
                 al = float(add_lot)
             except (TypeError, ValueError):
                 al = 0.0
-            # REVERSE_PYRAMID_DISCIPLINE_V1: реверсивная пирамида СУЖАЕТСЯ кверху.
-            # Долив > предыдущей ноги → полный ОТКАЗ + feedback в стол.
-            _last_leg = float(p.get("last_leg") or p.get("lot_base")
-                              or p.get("lot") or 0.0)
-            if al > 0 and _last_leg > 0 and al > _last_leg * 1.0001:
-                _pref = _VEDENIE_PREFIX.get(sid)
-                if _pref:
-                    ts.setdefault(_pref, {})
-                    ts[_pref]["vedenie_feedback"] = (
-                        f"Долив отклонён: превышен размер предыдущей ноги "
-                        f"({al} > {_last_leg}). Реверсивная пирамида только "
-                        f"сужается кверху.")
-                    changed = True
-                out(f"     └─ ⛔ ADD ОТКЛОНЁН: {al} > предыдущей ноги "
-                    f"{_last_leg} — дисциплина пирамиды (полный отказ)")
-            elif al > 0:
+            if al > 0:
                 # PAKET_PYRAMIDA_V1: средневзвешенная цена ПАКЕТА.
                 # entry_new = close бара долива (текущая цена входа ноги).
                 _lot_old = float(p.get("lot") or 0.0)
@@ -305,7 +275,6 @@ def _primenit_vedenie(sid, r, pos_magic, md, out=print):
                         p["stop"] = round(teeth, 6)
                     elif d == "SHORT" and teeth < old_stop and (close is None or teeth > close):
                         p["stop"] = round(teeth, 6)
-                p["last_leg"] = round(al, 4)  # REVERSE_PYRAMID_DISCIPLINE_V1: потолок для след. долива
                 p["dolivok"] = int(p.get("dolivok", 0)) + 1
                 changed = True
                 out(f"     └─ 🔺 ADD применён: лот +{al} → {p['lot']}"
@@ -557,34 +526,19 @@ def _otchet_po_sdelkam(sdelki_do: int, out, _emit):
         f"{len(_polny)}/{len(_s)} ({_dolya:.0f}%)")
     out(f"     сделок ≥ +2.0R (то, что даёт пирамида):     {len(_krup)}")
 
-    # DIAGNOZ_PRAVDA_V1: ведение ПОСТРОЕНО (трейлинг/сейф/мост/пирамида).
-    # Диагноз теперь СЧИТАЕТ факт пирамиды, а не приговаривает.
-    _s_piram = [x for x in _s if int(x.get("dolivok", 0) or 0) > 0]
-    _s_win = [x for x in _s if x["pnl_r"] > 0]
-    def _mult(x):
-        _lb = x.get("lot_base") or x.get("lot") or 1.0
-        try:
-            return float(x.get("lot") or _lb) / float(_lb) if _lb else 1.0
-        except (TypeError, ZeroDivisionError):
-            return 1.0
-    _avg_mult = (sum(_mult(x) for x in _s_win) / len(_s_win)) if _s_win else 1.0
-    out(f"     сделок с доливом (пирамида сработала):     {len(_s_piram)}")
-    out(f"     средний множитель объёма у плюсовых:       {_avg_mult:.2f}x")
-
-    if not _krup and len(_s) >= 4:
+    if _dolya > 40 or (not _krup and len(_s) >= 4):
         out("")
-        if len(_s_piram) == 0:
-            out("     ⓘ Доливы НЕ случились ни разу за прогон.")
-            out("       Ведение построено (трейлинг/сейф/мост/пакет),")
-            out("       но пирамиде НЕ БЫЛО ПОВОДА. Честные причины:")
-            out("         • рынок не дал фрактал ПО ТРЕНДУ при живой позиции;")
-            out("         • цена ушла в минус сразу — доливать нечего;")
-            out("         • хозяин осознанно держал HOLD (осторожность).")
-            out("       Это НЕ поломка — это выборка. Нужен объём прогона.")
-        else:
-            out("     ⓘ Доливы были, но ни один пакет не дал +2R.")
-            out("       Смотреть: рано ли обрывался exit_bell, держит ли")
-            out("       тренд после долива. Пирамида живая, край ищем.")
+        out("     ⚠ ВЕДЕНИЯ ПОЗИЦИИ НЕТ. Позиция умирает ОДНИМ ВЫСТРЕЛОМ.")
+        out("       Канон: вошёл 1R → цена пошла → СТОП В СЕЙФ (риск→0)")
+        out("       → ДОЛИВ → ДОЛИВ → exit_bell → закрыл всю пирамиду.")
+        out("       Книга Котина гл.9 САМА признаётся:")
+        out("         «Отложенный долг (слой 3, НЕ РЕАЛИЗОВАН): пирамида")
+        out("          доливок и трейлинг-стоп. ПОКА ВЕДЕНИЕ УПРОЩЕНО.»")
+        out("       ⇒ Минус ВСЕГДА полный, плюс ВСЕГДА обрезан.")
+        out("         Система МАТЕМАТИЧЕСКИ не может быть прибыльной.")
+        out("")
+        out("       Половина Вильямса — ВХОД — работает.")
+        out("       Вторая половина — ВЕДЕНИЕ — не построена.")
 
     out("═" * 64)
 
