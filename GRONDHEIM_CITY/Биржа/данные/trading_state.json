@@ -1,77 +1,45 @@
 {
   "version": 1,
-  "updated": "2026-07-17T00:11:12.664970",
+  "updated": "2026-07-17T01:46:29.847796",
   "iskra": {
-    "t1_status": "DETECTED",
-    "zero_point_price": 0.9649,
-    "history_dna": "BEAR_DETECTED zero_point=0.9649",
-    "trend_direction": "BEAR",
-    "found_timeframe": null
+    "t1_status": "NOT_FOUND",
+    "zero_point_price": null,
+    "history_dna": ""
   },
   "positions": [],
   "feed": {
     "mode": "tester",
     "symbol": "EURUSD"
   },
-  "brut": {
-    "verdict": "REJECTED",
-    "reason": "",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
-    "new_stop": null,
-    "add_lot": null
-  },
-  "avan": {
-    "verdict": "REJECTED",
-    "reason": "Нет приседающего. Мой опыт: без squat не вхожу, особенно против компаса BEAR.",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
-    "new_stop": null,
-    "add_lot": null
-  },
-  "cons": {
-    "verdict": "REJECTED",
-    "reason": "wave_1_validated=false. Консерватор входит только на откате подтверждённой волны 1. Структуры нет.",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": "WAIT",
-    "new_stop": null,
-    "add_lot": null
-  },
+  "brut": {},
+  "avan": {},
+  "cons": {},
   "morj": {
-    "morj_status": "WAKING",
+    "morj_status": "AWAKE",
     "wave_1_validated": false,
     "tension_peak": true,
     "history_dna": "",
     "scale_timeframe": "H4",
-    "inherited_dir": "BEAR",
+    "inherited_dir": "BULL",
     "alligator_state": {
       "sleeping": false,
-      "opening": true,
-      "mature": false,
-      "bars_open": 4
+      "opening": false,
+      "mature": true,
+      "bars_open": 29
     }
   },
   "panic": {
-    "panic_phase": "DECEPTION",
-    "crowd_sentiment": "Дёрнули вверх без объёма — это ловушка, нас разводят как новичков!",
-    "action_for_traders": "NEUTRAL",
+    "panic_phase": "GREED",
+    "crowd_sentiment": "РАЗВОРОТ! Все берут! Новый тренд начался, надо успеть запрыгнуть, пока не поздно!",
+    "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
     "scale_timeframe": "H4"
   },
   "hans": {
     "fractal_valid": true,
-    "fractal_side": "SHORT",
-    "fractal_price": 0.9502,
-    "absorption_ratio": 0.3,
+    "fractal_side": "LONG",
+    "fractal_price": 0.9765,
+    "absorption_ratio": 0.6,
     "scale_timeframe": "H4",
     "history_dna": ""
   }

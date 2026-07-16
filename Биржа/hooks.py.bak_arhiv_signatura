@@ -896,11 +896,6 @@ def _settle_positions(state: dict):
         except Exception as _de:
             print(f"[ТЕТРАДЬ] ⚠️  {_de}")
 
-        # ARKHIV_SIGNATURA_ISHODA_V1: сигнатура сенсоров НА МОМЕНТ ВХОДА,
-        # разворачиваем из "стол_входа" (уже хранится на позиции) —
-        # без неё закрытые сделки никогда не совпадали ни с одним
-        # запросом Архивариуса (у них не было полей для сравнения).
-        _svh = pos.get("стол_входа") or {}
         _write_atlas({
             "event":       "POSITION_CLOSED",
             "trader":      pos.get("trader"),
@@ -909,10 +904,6 @@ def _settle_positions(state: dict):
             "pnl_r":       pnl_r,
             "symbol":      symbol,
             "timeframe":   timeframe,
-            "t1_status":     (_svh.get("iskra") or {}).get("t1_status"),
-            "morj_status":   (_svh.get("morj") or {}).get("morj_status"),
-            "panic_phase":   (_svh.get("panic") or {}).get("panic_phase"),
-            "fractal_valid": (_svh.get("hans") or {}).get("fractal_valid"),
         })
 
         # РУКА КЛАДУЩАЯ (ARKHIV_HAND_GIVING): тяжёлая сделка (|pnl_r|>=2R)

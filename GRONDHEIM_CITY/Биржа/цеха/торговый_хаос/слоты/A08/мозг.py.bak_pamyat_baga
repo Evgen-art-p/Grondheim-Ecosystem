@@ -572,7 +572,7 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
                 user=user_msg + blok_pamyati(_zapros, _naydeno),
                 knowledge=knowledge,
                 agent_id="A08", slot_id=_SLOT,
-                temperature=_my_temp())  # PAMYAT_DVA_BAGA_V1
+                temperature=_temp)
             response = ubrat_zapros(response) or response
     except Exception as _e:
         print(f"[МОСТ] ⚠️  память не поднялась: {_e}")

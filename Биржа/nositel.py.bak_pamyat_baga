@@ -732,10 +732,7 @@ def vspomnit_slotom(ceh: str, slot: str, zapros: str, limit: int = 6) -> str:
         n = dusha_slota(ceh, slot)
         if not n:
             return ""
-        # PAMYAT_DVA_BAGA_V1: было "дом" (не то поле — это прописка
-        # из _sobrat_dushu). Папка резидента — "папка" (см.
-        # dusha_slota выше в этом же файле, n["папка"]).
-        d = _dvizhok(n["носитель"]["папка"])
+        d = _dvizhok(n["носитель"]["дом"])
         if d is None:
             return ""
         return d.vspomnit(zapros, limit=limit) or ""
