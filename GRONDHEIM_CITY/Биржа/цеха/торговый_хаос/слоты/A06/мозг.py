@@ -93,6 +93,8 @@ def _read_table() -> dict:
         "panic":  t.get("panic", {}),
         "hans":   t.get("hans", {}),
         "arkhiv": t.get("arkhiv", {}),   # справка Архивариуса, если положил
+        # DISCIPLINA_PYRAMIDY_V1: своя обратная связь по ведению
+        "self": t.get("brut", {}),
     }
 
 
@@ -172,6 +174,9 @@ def _save_verdict_to_table(signal: dict):
     t["brut"]["action"]    = signal.get("brut_action")
     t["brut"]["new_stop"]  = signal.get("brut_new_stop")
     t["brut"]["add_lot"]   = signal.get("brut_add_lot")
+    # DISCIPLINA_PYRAMIDY_V1: укол одноразовый — гасим после прочтения
+    if t.get("brut", {}).get("vedenie_feedback"):
+        t["brut"]["vedenie_feedback"] = None
     save_trading_state(t)
 
 
@@ -571,7 +576,13 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
                 f"пик был {_db.get('distance_max')} point)")
 
     user_msg = (
-        "=== НАКРЫТЫЙ СТОЛ (раскладка момента) ===\n"
+        # DISCIPLINA_PYRAMIDY_V1: если по прошлому ведению был укол — показать
+        # его трейдеру ОТДЕЛЬНОЙ строкой, чтобы увидел и сделал вывод.
+        + ((f"⛔ ОБРАТНАЯ СВЯЗЬ ПО ВЕДЕНИЮ (прошлый бар): "
+            f"{table.get('self', {}).get('vedenie_feedback')}\n"
+            f"Учти это сейчас — дисциплина пирамиды железная.\n\n")
+           if table.get('self', {}).get('vedenie_feedback') else "")
+        + "=== НАКРЫТЫЙ СТОЛ (раскладка момента) ===\n"
         f"{json.dumps(table_for_brut, ensure_ascii=False, indent=2)}\n\n"
         "=== ТВОЙ ДНЕВНИК (последние события — твоя память) ===\n"
         f"{json.dumps(recent, ensure_ascii=False, indent=2) if recent else '(пусто — первое решение)'}\n\n"

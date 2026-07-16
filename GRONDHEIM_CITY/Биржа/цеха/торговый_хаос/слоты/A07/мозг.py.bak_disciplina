@@ -67,8 +67,6 @@ def _read_table() -> dict:
         "panic":  t.get("panic", {}),
         "hans":   t.get("hans", {}),
         "arkhiv": t.get("arkhiv", {}),
-        # DISCIPLINA_PYRAMIDY_V1: своя обратная связь по ведению
-        "self": t.get("avan", {}),
     }
 
 
@@ -138,9 +136,6 @@ def _save_verdict_to_table(signal: dict):
     t["avan"]["action"]    = signal.get("avan_action")
     t["avan"]["new_stop"]  = signal.get("avan_new_stop")
     t["avan"]["add_lot"]   = signal.get("avan_add_lot")
-    # DISCIPLINA_PYRAMIDY_V1: укол одноразовый — гасим после прочтения
-    if t.get("avan", {}).get("vedenie_feedback"):
-        t["avan"]["vedenie_feedback"] = None
     save_trading_state(t)
 
 
@@ -512,13 +507,7 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
                 f"пик был {_db.get('distance_max')} point)")
 
     user_msg = (
-        # DISCIPLINA_PYRAMIDY_V1: если по прошлому ведению был укол — показать
-        # его трейдеру ОТДЕЛЬНОЙ строкой, чтобы увидел и сделал вывод.
-        + ((f"⛔ ОБРАТНАЯ СВЯЗЬ ПО ВЕДЕНИЮ (прошлый бар): "
-            f"{table.get('self', {}).get('vedenie_feedback')}\n"
-            f"Учти это сейчас — дисциплина пирамиды железная.\n\n")
-           if table.get('self', {}).get('vedenie_feedback') else "")
-        + "=== НАКРЫТЫЙ СТОЛ (раскладка момента) ===\n"
+        "=== НАКРЫТЫЙ СТОЛ (раскладка момента) ===\n"
         f"{json.dumps(table_for_avan, ensure_ascii=False, indent=2)}\n\n"
         "=== ТВОЙ ДНЕВНИК (последние события — твоя память) ===\n"
         f"{json.dumps(recent, ensure_ascii=False, indent=2) if recent else '(пусто — первое решение)'}\n\n"

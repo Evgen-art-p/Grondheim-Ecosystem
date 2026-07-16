@@ -53,7 +53,17 @@ def base():
 
 
 def slot_path(b, aid):
-    return b / "цеха" / "торговый_хаос" / "слоты" / aid / "мозг.py"
+    # мозги лежат под GRONDHEIM_CITY/Биржа/цеха/..., а hooks/tester —
+    # прямо в Биржа/. Ищем мозг в обоих корнях.
+    candidates = [
+        b / "цеха" / "торговый_хаос" / "слоты" / aid / "мозг.py",
+        b.parent / "GRONDHEIM_CITY" / "Биржа" / "цеха" / "торговый_хаос" / "слоты" / aid / "мозг.py",
+        Path("GRONDHEIM_CITY") / "Биржа" / "цеха" / "торговый_хаос" / "слоты" / aid / "мозг.py",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]  # для сообщения "не найден"
 
 
 def patch_tester(b):
