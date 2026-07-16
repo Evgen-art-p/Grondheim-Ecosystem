@@ -531,10 +531,17 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
         # оторвалась цена — тем сильнее натянута резинка → тем неизбежнее
         # возвратный удар. Это ЧИСЛО, не приказ: СУДИ ХАРАКТЕРОМ.
         f"РЕЗИНКА (натяжение от Губ): {_rez}\n"
-        "как поступить. Выдай строго JSON {narrative, signal, "
-        "diary_entry}. signal: cons_verdict, cons_reason, cons_direction, "
-        "cons_entry, cons_stop, cons_lot. diary_entry: input, action, "
-        "result(=null). Ничего вне JSON."
+        # YAZYK_DOLIVA_V1: дописаны action/new_stop/add_lot — раньше
+        # эта, самая СВЕЖАЯ строка промта молчала про ведение позиции.
+        "Выдай строго JSON {narrative, signal, diary_entry}.\n"
+        "Нет открытой позиции: signal ключи — cons_verdict "
+        "(APPROVED/REJECTED), cons_reason, cons_direction, "
+        "cons_entry, cons_stop, cons_lot.\n"
+        "Есть открытая позиция (см. блок 'position' на столе): signal "
+        "ключи — cons_action (ENTER/WAIT/HOLD/MOVE_STOP/ADD/CLOSE), "
+        "cons_reason, cons_new_stop (если MOVE_STOP), cons_add_lot "
+        "(если ADD).\n"
+        "diary_entry: input, action, result(=null). Ничего вне JSON."
     )
 
     system_full = prompt

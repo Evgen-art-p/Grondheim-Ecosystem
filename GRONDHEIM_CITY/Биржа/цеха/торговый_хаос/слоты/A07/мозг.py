@@ -561,10 +561,17 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
         # оторвалась цена — тем сильнее натянута резинка → тем неизбежнее
         # возвратный удар. Это ЧИСЛО, не приказ: СУДИ ХАРАКТЕРОМ.
         f"РЕЗИНКА (натяжение от Губ): {_rez}\n"
-        "Выдай строго JSON {narrative, signal, "
-        "diary_entry}. signal: avan_verdict, avan_reason, avan_direction, "
-        "avan_entry, avan_stop, avan_lot. diary_entry: input, action, "
-        "result(=null). Ничего вне JSON."
+        # YAZYK_DOLIVA_V1: дописаны action/new_stop/add_lot — раньше
+        # эта, самая СВЕЖАЯ строка промта молчала про ведение позиции.
+        "Выдай строго JSON {narrative, signal, diary_entry}.\n"
+        "Нет открытой позиции: signal ключи — avan_verdict "
+        "(APPROVED/REJECTED), avan_reason, avan_direction, "
+        "avan_entry, avan_stop, avan_lot.\n"
+        "Есть открытая позиция (см. блок 'position' на столе): signal "
+        "ключи — avan_action (ENTER/WAIT/HOLD/MOVE_STOP/ADD/CLOSE), "
+        "avan_reason, avan_new_stop (если MOVE_STOP), avan_add_lot "
+        "(если ADD).\n"
+        "diary_entry: input, action, result(=null). Ничего вне JSON."
     )
 
     # ROD_PERVYM_V1: РОД ВПЕРЕДИ, маска внутрь него (Чертёж §1.5.2).

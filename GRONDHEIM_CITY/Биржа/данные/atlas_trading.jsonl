@@ -85,3 +85,4 @@
 {"ts": "2026-07-16T20:40:50.754556", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "EXIT_BELL", "pnl": -0.0056, "pnl_r": -0.5437, "symbol": "EURUSD", "timeframe": "H4"}}
 {"ts": "2026-07-16T20:40:50.936532", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "EXIT_BELL", "pnl": -0.0056, "pnl_r": -0.5437, "symbol": "EURUSD", "timeframe": "H4"}}
 {"ts": "2026-07-16T20:44:52.995499", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "MANUAL_CLOSE", "pnl": -0.0019, "pnl_r": -0.1011, "symbol": "EURUSD", "timeframe": "H4"}}
+{"ts": "2026-07-17T00:07:51.249756", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "STOP_LOSS", "pnl": -0.0078, "pnl_r": -1.0, "symbol": "EURUSD", "timeframe": "H4"}}

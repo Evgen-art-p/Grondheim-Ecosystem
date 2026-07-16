@@ -372,6 +372,9 @@ def _treyling_za_zubami(state: dict):
             if close < teeth:
                 continue
             novy = teeth
+            # TRAILING_NE_V_UBYTOK_V1: Зубы ниже входа → стоп в убыток, не тянем
+            if novy < entry:
+                continue
             if novy <= old:          # только в защиту
                 continue
             if novy >= close:        # стоп не может быть выше цены
@@ -380,6 +383,9 @@ def _treyling_za_zubami(state: dict):
             if close > teeth:
                 continue
             novy = teeth
+            # TRAILING_NE_V_UBYTOK_V1: Зубы выше входа → стоп в убыток, не тянем
+            if novy > entry:
+                continue
             if novy >= old:
                 continue
             if novy <= close:
@@ -840,23 +846,6 @@ def _settle_positions(state: dict):
         else:  # SHORT
             risk      = stop_r - entry
             pnl_price = round((ea - exit_price) * mult, 6)
-        if risk <= 0:
-            # DIAGNOSTIKA_NONE_R_V1: риск обнулился — печатаем ВСЁ для
-            # диагноза за один взгляд, не полчаса реконструкции.
-            print(
-                f"[МАЯК] ⚠️  RISK<=0 → pnl_r=None. Разбор:\n"
-                f"  trader={pos.get('trader')} dir={direction} "
-                f"entry={entry} stop(текущий)={stop}\n"
-                f"  stop_initial(сырое из pos)={pos.get('stop_initial')}"
-                f" (None → поля НЕТ, позиция СТАРАЯ, без патча)\n"
-                f"  stop_r(использован)={stop_r}  risk={risk}\n"
-                f"  entry_avg={pos.get('entry_avg')} "
-                f"lot_base={pos.get('lot_base')} lot={pos.get('lot')}\n"
-                f"  trailed={pos.get('trailed')} "
-                f"dolivok={pos.get('dolivok')} "
-                f"entry_fractal_idx={pos.get('entry_fractal_idx')} "
-                f"(если есть — была активна отложка/переезд)"
-            )
         pnl_r     = round(pnl_price / risk, 4) if risk > 0 else None
 
         record = {

@@ -609,17 +609,9 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
         # оторвалась цена — тем сильнее натянута резинка → тем неизбежнее
         # возвратный удар. Это ЧИСЛО, не приказ: СУДИ ХАРАКТЕРОМ.
         f"РЕЗИНКА (натяжение от Губ): {_rez}\n"
-        # YAZYK_DOLIVA_V1: дописаны action/new_stop/add_lot — раньше
-        # эта, самая СВЕЖАЯ строка промта молчала про ведение позиции.
-        "Выдай строго JSON {narrative, signal, diary_entry}.\n"
-        "Нет открытой позиции: signal ключи — brut_verdict "
-        "(APPROVED/REJECTED), brut_reason, brut_direction, "
-        "brut_entry, brut_stop, brut_lot.\n"
-        "Есть открытая позиция (см. блок 'position' на столе): signal "
-        "ключи — brut_action (ENTER/WAIT/HOLD/MOVE_STOP/ADD/CLOSE), "
-        "brut_reason, brut_new_stop (если MOVE_STOP), brut_add_lot "
-        "(если ADD).\n"
-        "diary_entry: input, action, result(=null). Ничего вне JSON."
+        "Выдай строго JSON {narrative, signal, diary_entry}. signal: "
+        "brut_verdict, brut_reason, brut_direction, brut_entry, brut_stop, "
+        "brut_lot. diary_entry: input, action, result(=null). Ничего вне JSON."
     )
 
     system_full = prompt

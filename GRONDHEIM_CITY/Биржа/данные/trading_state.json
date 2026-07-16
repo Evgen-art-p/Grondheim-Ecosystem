@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updated": "2026-07-16T20:47:58.499590",
+  "updated": "2026-07-17T00:11:12.664970",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1.3127,
-    "history_dna": "BEAR_DETECTED zero_point=1.3127 tf=H4 compass=BEAR spusk_V2",
-    "trend_direction": null,
+    "zero_point_price": 0.9649,
+    "history_dna": "BEAR_DETECTED zero_point=0.9649",
+    "trend_direction": "BEAR",
     "found_timeframe": null
   },
   "positions": [],
@@ -15,7 +15,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "close под Зубами — фрактал не за пастью, условие входа Брута не выполнено",
+    "reason": "",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -26,7 +26,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "Нет squat, нет компаса — неполный набор для SHORT. Риск без якоря не оправдан.",
+    "reason": "Нет приседающего. Мой опыт: без squat не вхожу, особенно против компаса BEAR.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -37,7 +37,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Чек-лист Консерватора: (1) валидированная волна 1 — нет; (2) структурированный откат волны 2 — невозможен; (3) Разворотный Бар на опоре с разрядкой AO к нулю — отсутствует.",
+    "reason": "wave_1_validated=false. Консерватор входит только на откате подтверждённой волны 1. Структуры нет.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -47,31 +47,31 @@
     "add_lot": null
   },
   "morj": {
-    "morj_status": "AWAKE",
+    "morj_status": "WAKING",
     "wave_1_validated": false,
     "tension_peak": true,
     "history_dna": "",
     "scale_timeframe": "H4",
-    "inherited_dir": null,
+    "inherited_dir": "BEAR",
     "alligator_state": {
       "sleeping": false,
-      "opening": false,
-      "mature": true,
-      "bars_open": 34
+      "opening": true,
+      "mature": false,
+      "bars_open": 4
     }
   },
   "panic": {
-    "panic_phase": "GREED",
-    "crowd_sentiment": "Все берут! Не опоздать бы — поезд уходит!",
-    "action_for_traders": "HIGH_SKEPTICISM",
+    "panic_phase": "DECEPTION",
+    "crowd_sentiment": "Дёрнули вверх без объёма — это ловушка, нас разводят как новичков!",
+    "action_for_traders": "NEUTRAL",
     "history_dna": "",
     "scale_timeframe": "H4"
   },
   "hans": {
     "fractal_valid": true,
-    "fractal_side": "LONG",
-    "fractal_price": 1.3113,
-    "absorption_ratio": 0.65,
+    "fractal_side": "SHORT",
+    "fractal_price": 0.9502,
+    "absorption_ratio": 0.3,
     "scale_timeframe": "H4",
     "history_dna": ""
   }
