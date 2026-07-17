@@ -1,46 +1,78 @@
 {
   "version": 1,
-  "updated": "2026-07-17T01:46:29.847796",
+  "updated": "2026-07-17T03:03:15.557639",
   "iskra": {
-    "t1_status": "NOT_FOUND",
-    "zero_point_price": null,
-    "history_dna": ""
+    "t1_status": "DETECTED",
+    "zero_point_price": 1.39979,
+    "history_dna": "MAX|H1|0.00706082|1.39649|2011.03.04 00:00",
+    "trend_direction": "BULL",
+    "found_timeframe": null
   },
   "positions": [],
   "feed": {
     "mode": "tester",
     "symbol": "EURUSD"
   },
-  "brut": {},
-  "avan": {},
-  "cons": {},
+  "brut": {
+    "verdict": "REJECTED",
+    "reason": "агент не ответил (Брут не смог решить: Модель не вернула content (finish_reaso)",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": null,
+    "new_stop": null,
+    "add_lot": null
+  },
+  "avan": {
+    "verdict": "REJECTED",
+    "reason": "Приседающий отсутствует. Без squat нет рукопашной, нет подтверждения смены моментума. Разворотный бар не сформирован.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "cons": {
+    "verdict": "REJECTED",
+    "reason": "нет wave_1_validated — волна 1 не подтверждена Моржом. Цена под Зубами (close 1.39547 < Teeth 1.395788) — опора пробита. Нет Разворотного Бара вверх. Резинка на пике. Консерватор ждёт структуру, а не ловит откаты без подтверждения.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
   "morj": {
     "morj_status": "AWAKE",
     "wave_1_validated": false,
     "tension_peak": true,
     "history_dna": "",
-    "scale_timeframe": "H4",
+    "scale_timeframe": "H1",
     "inherited_dir": "BULL",
     "alligator_state": {
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 29
+      "bars_open": 49
     }
   },
   "panic": {
     "panic_phase": "GREED",
-    "crowd_sentiment": "РАЗВОРОТ! Все берут! Новый тренд начался, надо успеть запрыгнуть, пока не поздно!",
+    "crowd_sentiment": "Разворот! Все берут! Надо успеть!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "H4"
+    "scale_timeframe": "H1"
   },
   "hans": {
-    "fractal_valid": true,
-    "fractal_side": "LONG",
-    "fractal_price": 0.9765,
+    "fractal_valid": false,
+    "fractal_side": null,
+    "fractal_price": null,
     "absorption_ratio": 0.6,
-    "scale_timeframe": "H4",
+    "scale_timeframe": "H1",
     "history_dna": ""
   }
 }
