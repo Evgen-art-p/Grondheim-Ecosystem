@@ -1,69 +1,21 @@
 {
   "version": 1,
-  "updated": "2026-07-17T15:58:16.440374",
+  "updated": "2026-07-17T17:51:54.027338",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1.0143,
-    "history_dna": "BEAR H12 zero=1.0143 v2_descent bar=2002.11.19 12:00",
+    "zero_point_price": 1.23988,
+    "history_dna": "BULL_DETECTED_H12_1.23988",
     "trend_direction": "BEAR",
     "found_timeframe": null
   },
-  "positions": [
-    {
-      "trader": "BRUT",
-      "magic": 100001,
-      "direction": "SHORT",
-      "entry": 1.00089,
-      "stop": 1.0174,
-      "tp": null,
-      "lot": 0.1,
-      "status": "PENDING",
-      "_ждёт_с": "2002.11.19 12:00",
-      "_ждёт_баров": 0,
-      "mode": "PAPER",
-      "opened_at": "2002.11.19 12:00",
-      "pnl": null,
-      "iskra_zero_point": 1.0143,
-      "стол_входа": {
-        "iskra": {
-          "t1_status": "DETECTED",
-          "zero_point_price": 1.0143,
-          "trend_direction": "BEAR"
-        },
-        "morj": {
-          "morj_status": "AWAKE",
-          "wave_1_validated": false,
-          "tension_peak": true
-        },
-        "panic": {
-          "panic_phase": "PANIC"
-        },
-        "hans": {
-          "fractal_valid": true,
-          "fractal_side": "SHORT",
-          "fractal_price": 1.001
-        }
-      }
-    }
-  ],
+  "positions": [],
   "feed": {
     "mode": "tester",
     "symbol": "EURUSD"
   },
   "brut": {
-    "verdict": "APPROVED",
-    "reason": "Валидный SHORT-фрактал за пастью, BEAR-якорь, PANIC-толпа. Выставляю заявку.",
-    "direction": "SHORT",
-    "entry": 1.00089,
-    "stop": 1.0174,
-    "lot": 0.1,
-    "action": "ENTER",
-    "new_stop": null,
-    "add_lot": null
-  },
-  "avan": {
     "verdict": "REJECTED",
-    "reason": "Нет приседающего и разворотного бара — только 2 из 5 пуль.",
+    "reason": "Фрактал уже пробит — отложенная заявка невозможна. Резинка на пике без приседающего — перегруз, якорь молчит. Риск ложного пробоя.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -72,9 +24,20 @@
     "new_stop": null,
     "add_lot": null
   },
+  "avan": {
+    "verdict": "APPROVED",
+    "reason": "Разворотный бар: low точно zero, close>Teeth, резинка пик 100%, Искра DETECTED. Нет squat и компаса — иду против дневника, но четыре пули из пяти дают право.",
+    "direction": "LONG",
+    "entry": 1.36694,
+    "stop": 1.35027,
+    "lot": 0.01,
+    "action": "ENTER",
+    "new_stop": null,
+    "add_lot": null
+  },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "wave_1_validated=false. Консерватор ждёт сначала утверждения волны 1 Моржом, затем отката волны 2 с разрядкой AO к нулю и Разворотным Баром на опоре (пасть или уровень волны 4). Сейчас ни структуры, ни опоры, ни РБ. Sell Stop некуда ставить осмысленно.",
+    "reason": "Нет Разворотного Бара на опоре — волна 1 не утверждена Моржем, откат волны 2 не сформирован. Цена ушла от Точки Ноль без ретеста пасти или уровня волны 4.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -94,20 +57,20 @@
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 48
+      "bars_open": 24
     }
   },
   "panic": {
-    "panic_phase": "PANIC",
-    "crowd_sentiment": "Стопы трещат! Все выходят! Обман!!!",
-    "action_for_traders": "GREEN_LIGHT_IF_GANS",
+    "panic_phase": "GREED",
+    "crowd_sentiment": "ПОЕЗД УХОДИТ! ВСЕ В ЛОНГ, НЕЛЬЗЯ ЖДАТЬ!",
+    "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
     "scale_timeframe": "H12"
   },
   "hans": {
     "fractal_valid": true,
-    "fractal_side": "SHORT",
-    "fractal_price": 1.001,
+    "fractal_side": "LONG",
+    "fractal_price": 1.36475,
     "absorption_ratio": 0.6,
     "scale_timeframe": "H12",
     "history_dna": ""
