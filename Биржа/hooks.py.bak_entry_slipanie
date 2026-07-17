@@ -753,22 +753,15 @@ def _otlozhka_entry_stop(order: dict, chain: dict):
     high = price.get("high")
     low = price.get("low")
     sp = _spread_price(chain)
-    point = md.get("point") or 0.01  # POINT_NE_OPREDELEN_V1: было не
-    # определено — NameError на КАЖДОМ вызове, падало безусловно
     punkt = 10 * float(point or 0.01)  # PUNKT_OT_POINT_V1: пункт = 10×point (любой инструмент)
 
-    # ENTRY_NE_SLIPAETSYA_V1: спред добавляется К СОБСТВЕННОМУ входу
-    # трейдера (entry уже посчитан ИМ по ЕГО канону — фрактал/
-    # разворотный бар/откат), а не заменяется общим high/low бара
-    # Совета. Иначе разные трейдеры на одном баре сливались бы в
-    # одну цену — так и было найдено (три верда LONG = один entry).
     if d == "LONG":
-        if entry is not None:
-            entry = round(entry + 2 * sp, 6)     # Buy Stop, по Ask
+        if high is not None:
+            entry = round(high + 2 * sp, 6)      # Buy Stop над баром, по Ask
         # стоп снизу по Bid — спред не мешает
     elif d == "SHORT":
-        if entry is not None:
-            entry = round(entry - 3 * punkt, 6)  # Sell Stop, запас 3 пункта
+        if low is not None:
+            entry = round(low - 3 * punkt, 6)    # Sell Stop, запас 3 пункта
         if stop is not None:
             stop = round(stop + 2 * sp, 6)       # стоп сверху по Ask
 

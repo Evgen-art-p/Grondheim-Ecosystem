@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated": "2026-07-17T03:03:15.557639",
+  "updated": "2026-07-17T04:31:29.636016",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 1.39979,
-    "history_dna": "MAX|H1|0.00706082|1.39649|2011.03.04 00:00",
+    "zero_point_price": 1.3364,
+    "history_dna": "DETECTED BEAR, zp=1.3364, compass=H12, ao=0.03038941, high=1.3364 (2006.12.08 12:00)",
     "trend_direction": "BULL",
     "found_timeframe": null
   },
@@ -15,18 +15,18 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "агент не ответил (Брут не смог решить: Модель не вернула content (finish_reaso)",
+    "reason": "ложный пробой фрактала, закрытие под Teeth, резинка на пике 100%, медвежий разворот",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "Приседающий отсутствует. Без squat нет рукопашной, нет подтверждения смены моментума. Разворотный бар не сформирован.",
+    "reason": "Нет разворотного бара, цена под Teeth, нет приседающего",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -37,7 +37,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "нет wave_1_validated — волна 1 не подтверждена Моржом. Цена под Зубами (close 1.39547 < Teeth 1.395788) — опора пробита. Нет Разворотного Бара вверх. Резинка на пике. Консерватор ждёт структуру, а не ловит откаты без подтверждения.",
+    "reason": "Нет Разворотного Бара на откате волны 2. Цена под Teeth, опора не подтверждена, AO разряжается, но бычьего РБ ещё нет.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -48,31 +48,31 @@
   },
   "morj": {
     "morj_status": "AWAKE",
-    "wave_1_validated": false,
+    "wave_1_validated": true,
     "tension_peak": true,
     "history_dna": "",
-    "scale_timeframe": "H1",
+    "scale_timeframe": "H12",
     "inherited_dir": "BULL",
     "alligator_state": {
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 49
+      "bars_open": 95
     }
   },
   "panic": {
     "panic_phase": "GREED",
-    "crowd_sentiment": "Разворот! Все берут! Надо успеть!",
+    "crowd_sentiment": "РАЗВОРОТ! Все берут, надо успеть, пока ещё ниже не улетело!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "H1"
+    "scale_timeframe": "H12"
   },
   "hans": {
-    "fractal_valid": false,
-    "fractal_side": null,
-    "fractal_price": null,
+    "fractal_valid": true,
+    "fractal_side": "LONG",
+    "fractal_price": 1.3361,
     "absorption_ratio": 0.6,
-    "scale_timeframe": "H1",
+    "scale_timeframe": "H12",
     "history_dna": ""
   }
 }

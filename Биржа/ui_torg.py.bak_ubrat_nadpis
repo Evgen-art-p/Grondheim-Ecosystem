@@ -1993,9 +1993,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         _clean_btn.on("click", lambda: _ochistit_istoriyu())
                         with _clean_btn:
                             ui.html("🧹 ОЧИСТИТЬ")
-                    # UBRAT_NADPIS_BIRZHA_V1: надпись «БИРЖА · СОВЕТ» убрана —
-                    # наезжала на кнопку ОЧИСТИТЬ, и была избыточна
-                    # (страница подписана вкладками и хедером Совета).
+                    with ui.element("div").style("display:flex; gap:6px; align-items:center; justify-content:center;"):
+                        ui.label("📊 БИРЖА · СОВЕТ").style(
+                            "color:rgba(0,204,255,0.7); font-weight:800; font-size:0.8rem; letter-spacing:0.08em;")
                     with ui.row().style("gap:8px; justify-content:flex-end;"):
                         ui.button("← Брат", on_click=lambda: ui.navigate.to("/brat")).props("flat").style(
                             "padding:6px 14px; border-radius:8px; font-size:12px; "
