@@ -1,21 +1,63 @@
 {
   "version": 1,
-  "updated": "2026-07-17T20:05:37.427160",
+  "updated": "2026-07-18T19:15:07.292825",
   "iskra": {
     "t1_status": "DETECTED",
-    "zero_point_price": 0.986,
-    "history_dna": "BULL_DETECTED: compass=BULL, descent_point=0.986, tf=H12, ao_val=-0.00863382, pivot_last=MIN(-0.01169794)",
+    "zero_point_price": 0.9097,
+    "history_dna": "DETECTED BULL zero=0.9097 | last_pivots: MAX 0.01686@0.9138(2001.08.16), MIN 0.00918@0.9123(2001.08.17), MAX 0.01014@0.9165(2001.08.20), MIN 0.00146@0.9077(2001.08.21), MAX 0.00443@0.9155(2001.08.22), MIN -0.00162@0.9115(2001.08.23) | AO=-0.00037 DOWN, AC=0.00028 DOWN",
     "trend_direction": "BULL",
+    "compass": null,
+    "soglasie": null,
+    "dlina": 68,
+    "struktura_chitaetsya": false,
     "found_timeframe": null
   },
-  "positions": [],
+  "positions": [
+    {
+      "trader": "AVANTURIST",
+      "magic": 100002,
+      "direction": "LONG",
+      "entry": 0.9146,
+      "stop": 0.9096,
+      "tp": null,
+      "lot": 0.1,
+      "status": "PENDING",
+      "_ждёт_с": "2001.08.24 12:00",
+      "_ждёт_баров": 0,
+      "mode": "PAPER",
+      "opened_at": "2001.08.24 12:00",
+      "pnl": null,
+      "iskra_zero_point": 0.9097,
+      "стол_входа": {
+        "iskra": {
+          "t1_status": "DETECTED",
+          "zero_point_price": 0.9097,
+          "trend_direction": "BULL"
+        },
+        "morj": {
+          "morj_status": "SLEEPING",
+          "wave_1_validated": false,
+          "tension_peak": true
+        },
+        "panic": {
+          "panic_phase": "TENSION"
+        },
+        "hans": {
+          "fractal_valid": true,
+          "fractal_side": "LONG",
+          "fractal_price": 0.9169
+        }
+      },
+      "symbol": "EURUSD"
+    }
+  ],
   "feed": {
     "mode": "tester",
     "symbol": "EURUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Якорь BULL — SHORT запрещён Шефом. Фрактал LONG не пробит — входа нет. Резинка на пике, жду разрядки.",
+    "reason": "резинка на пике без приседающего",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -26,18 +68,18 @@
   },
   "avan": {
     "verdict": "APPROVED",
-    "reason": "Разворотный бар конца волны C: дивергенция DETECTED, касание zero, фрактал на дне, Паникёр PANIC, резинка на пике. Компас BULL — лонг по тренду. Три пули из пяти плюс DETECTED — достаточно для раннего входа.",
+    "reason": "Четыре пули из пяти: дивергенция, zero point, фрактал, смена моментума. Приседающего нет, но tension peak и паникёр подтверждают напряжение. Риск оправдан.",
     "direction": "LONG",
-    "entry": 1.01431,
-    "stop": 1.00069,
-    "lot": 0.005,
+    "entry": 0.9146,
+    "stop": 0.9096,
+    "lot": 0.1,
     "action": "ENTER",
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Волна 1 вверх не утверждена Моржом. Цена под Teeth — пасть пробита, опора разрушена. РБ на опоре отсутствует. Два 'да' не прозвучали.",
+    "reason": "нет утверждённой Моржом волны 1 — нет структуры для отката волны 2",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -47,32 +89,32 @@
     "add_lot": null
   },
   "morj": {
-    "morj_status": "AWAKE",
+    "morj_status": "SLEEPING",
     "wave_1_validated": false,
     "tension_peak": true,
     "history_dna": "",
-    "scale_timeframe": "H12",
+    "scale_timeframe": "H4",
     "inherited_dir": "BULL",
     "alligator_state": {
-      "sleeping": false,
+      "sleeping": true,
       "opening": false,
-      "mature": true,
-      "bars_open": 66
+      "mature": false,
+      "bars_open": 0
     }
   },
   "panic": {
-    "panic_phase": "GREED",
-    "crowd_sentiment": "РАЗВОРОТ! Все берут, надо успеть!",
+    "panic_phase": "TENSION",
+    "crowd_sentiment": "Объёмы сумасшедшие, а цена еле дышит — все в истерике, вот-вот рванёт!",
     "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
-    "scale_timeframe": "H12"
+    "scale_timeframe": "H4"
   },
   "hans": {
     "fractal_valid": true,
     "fractal_side": "LONG",
-    "fractal_price": 0.9962,
-    "absorption_ratio": 0.6,
-    "scale_timeframe": "H12",
+    "fractal_price": 0.9169,
+    "absorption_ratio": 0.85,
+    "scale_timeframe": "H4",
     "history_dna": ""
   }
 }

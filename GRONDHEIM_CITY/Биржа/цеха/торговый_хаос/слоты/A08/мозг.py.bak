@@ -467,7 +467,8 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
         },
         "sensors": {
             "iskra":  {k: table["iskra"].get(k) for k in
-                       ("t1_status", "zero_point_price", "trend_direction")},
+                       ("t1_status", "zero_point_price", "trend_direction",
+                        "dlina", "struktura_chitaetsya")},
             "morj":   {k: table["morj"].get(k) for k in
                        ("morj_status", "wave_1_validated", "tension_peak")},
             "panic":  {k: table["panic"].get(k) for k in
@@ -616,3 +617,5 @@ def _my_temp():
         return None
 
 # KOMPAS_DOSTAVKA_TREYDERAM_V1 - marker
+
+# ISKRA_WAVE_MEASURE_DOSTAVKA_V1 - marker

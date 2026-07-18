@@ -219,19 +219,29 @@ def _append_diary(signal: dict, diary_entry: dict, market: dict, table: dict):
         f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
 
-def _read_recent_diary(n: int = 5) -> list:
-    """Последние n событий из личной тетради — Брут берёт их с собой на стол."""
+def _read_recent_diary(n: int = 5, as_of_bar_time=None) -> list:
+    """Последние n событий из личной тетради — Брут берёт их с собой на стол.
+
+    DNEVNIK_BEZ_BUDUSHCHEGO_V1 (18.07): те же n событий, но ДО
+    as_of_bar_time — иначе трейдер в прошлом видит исходы сделок из
+    будущего прогона (дневник копится в реальном времени, тестер его
+    не сбрасывает между запусками). as_of_bar_time=None — старое
+    поведение (последние n строк файла), для мест без известного бара.
+    """
     if not DIARY_PATH.exists():
         return []
     try:
         lines = DIARY_PATH.read_text(encoding="utf-8").strip().splitlines()
-        out = []
-        for line in lines[-n:]:
+        events = []
+        for line in lines:
             try:
-                out.append(json.loads(line))
+                events.append(json.loads(line))
             except json.JSONDecodeError:
                 continue
-        return out
+        if as_of_bar_time:
+            events = [e for e in events
+                     if (e.get("bar_time") or "") <= as_of_bar_time]
+        return events[-n:]
     except OSError:
         return []
 
@@ -513,7 +523,8 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
     knowledge = KNOWLEDGE.read_text(encoding="utf-8") if KNOWLEDGE.exists() else ""
 
     # ── 3. Личный дневник — Брут берёт прошлые события с собой ──
-    recent = _read_recent_diary(5)
+    # DNEVNIK_BEZ_BUDUSHCHEGO_V1: только события ДО текущего бара
+    recent = _read_recent_diary(5, as_of_bar_time=md.get("bar_time"))
 
     # ── 4. РАСКЛАДКА МОМЕНТА — то, что код кладёт Бруту на стол ──
     # Якорь, индикаторы, Зубы (Красная), фракталы за пастью, хозяин бара,
@@ -703,3 +714,5 @@ def _my_temp():
 # KOMPAS_DOSTAVKA_TREYDERAM_V1 - marker
 
 # ISKRA_WAVE_MEASURE_DOSTAVKA_V1 - marker
+
+# DNEVNIK_BEZ_BUDUSHCHEGO_V1 - marker
