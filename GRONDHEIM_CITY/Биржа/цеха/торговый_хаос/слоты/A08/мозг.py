@@ -60,6 +60,43 @@ DIARY_PATH   = STATE_DIR / "diary_cons.jsonl"
 
 
 # ════════════════════════════════════════════════════════════
+# VASYA_SVOY_RAZVOROT_V1 — СОБСТВЕННЫЙ ГЛАЗ ВАСИЛИЯ (откат волны 2)
+# ─────────────────────────────────────────────────────────────
+# Тот же аппарат, что у Искры (read_ao_wave_form, окно 100-140 баров,
+# §3 канона), но этажом НИЖЕ неё (Правило пятёрки, §4). На ТФ Искры
+# откат волны 2 слишком мелкий — не растягивается на фокусное окно,
+# bdb_dir там почти всегда None. Спуск на этаж ниже даёт тому же
+# движению нужный масштаб — фрактальное самоподобие (§3 canon).
+# ════════════════════════════════════════════════════════════
+
+def _read_vasya_wave(symbol: str, iskra_tf) -> dict:
+    """
+    Собственный разворотный бар Василия. Спуск на ступень ниже Искры,
+    тот же williams_core.read_ao_wave_form (через build_market_data),
+    то же окно 120. Нет этажа Искры или спускаться некуда (дно
+    лесенки) — пустая форма, Василий честно молчит (сенсор без факта).
+    """
+    from mt5_feed import step_down, pull_bars
+    from williams_core import build_market_data, _empty_wave_form
+
+    if not iskra_tf:
+        return _empty_wave_form()
+    own_tf = step_down(iskra_tf)
+    if not own_tf:
+        return _empty_wave_form()
+
+    bars, point = pull_bars(symbol, own_tf, 300)
+    if not bars or point is None:
+        return _empty_wave_form()
+    md = build_market_data(bars, symbol=symbol, timeframe=own_tf, point=point)
+    if not md:
+        return _empty_wave_form()
+    wf = dict(md.get("wave_form", _empty_wave_form()))
+    wf["timeframe"] = own_tf
+    return wf
+
+
+# ════════════════════════════════════════════════════════════
 # СТОЛ: читаем ВСЮ шину — показания пяти сенсоров
 # ════════════════════════════════════════════════════════════
 
@@ -424,6 +461,10 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
     if iskra_tf:
         timeframe = iskra_tf
 
+    # VASYA_SVOY_RAZVOROT_V1: собственный разворотный бар отката волны 2,
+    # НЕ этаж Искры — этаж НИЖЕ (Правило пятёрки, §4 канона).
+    own_wave = _read_vasya_wave(symbol, iskra_tf)
+
     from mt5_feed import _terminal, _fetch
     mt5 = _terminal()
     if mt5 is None:
@@ -476,6 +517,16 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
             "soglasie": table.get("iskra", {}).get("soglasie"),
             "found_timeframe": iskra_tf,
         },
+        # VASYA_SVOY_RAZVOROT_V1: твой СОБСТВЕННЫЙ разворотный бар,
+        # не чужой (не фрактал Ганса, не точка Искры) — на масштабе
+        # ТВОЕЙ волны 2, этажом ниже Искры.
+        "own_wave": {
+            "timeframe":            own_wave.get("timeframe"),
+            "bdb_dir":              own_wave.get("bdb_dir"),
+            "bdb_price":            own_wave.get("bdb_price"),
+            "dlina":                own_wave.get("dlina"),
+            "struktura_chitaetsya": own_wave.get("struktura_chitaetsya"),
+        },
         "sensors": {
             "iskra":  {k: table["iskra"].get(k) for k in
                        ("t1_status", "zero_point_price", "trend_direction",
@@ -523,6 +574,11 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
         f"{json.dumps(table_for_cons, ensure_ascii=False, indent=2)}\n\n"
         "=== ТВОЙ ДНЕВНИК (последние события — твоя память) ===\n"
         f"{json.dumps(recent, ensure_ascii=False, indent=2) if recent else '(пусто — первое решение)'}\n\n"
+        "=== ТВОЙ СОБСТВЕННЫЙ РАЗВОРОТНЫЙ БАР (own_wave на столе) ===\n"
+        "Это факт на масштабе ТВОЕЙ коррекции — не сигнал закрытия чужой "
+        "пирамиды и не чужая точка. bdb_dir/bdb_price — сторона и цена "
+        "твоего разворотного бара, если он уже сформирован; null — на "
+        "этом этаже пока не нашёлся, это не отказ, просто рано.\n\n"
         "Перед тобой стол и ты сам. Канон у тебя на полке (книга Котина), "
         "твоя ДНК — ниже. Решаешь только ты. По системе сигнал поздней добычи "
         "— Разворотный Бар на откате волны 2 (книга, §12): разрядка AO к нулю, "
@@ -632,3 +688,5 @@ def _my_temp():
 # ISKRA_WAVE_MEASURE_DOSTAVKA_V1 - marker
 
 # DNEVNIK_BEZ_BUDUSHCHEGO_V1 - marker
+
+# VASYA_SVOY_RAZVOROT_V1 - marker

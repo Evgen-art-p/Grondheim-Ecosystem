@@ -678,6 +678,13 @@ def _ao_divergence_at_bar(bars: list, ao_series: list, i: int, direction) -> boo
     if ao_i is None:
         return False
 
+    # AO_DIVERGENCE_GLUBZHE_V1: раньше первый попавшийся экстремум с
+    # неправильным знаком AO обрывал весь поиск (return False внутри
+    # цикла). Теперь — continue: если этот экстремум не подошёл, ищем
+    # ДАЛЬШЕ по истории, пока диапазон не кончится. Дивергенция реже
+    # экстремумов, но не настолько реже, насколько её резал обрыв на
+    # первом кандидате (замер voronka_bdb.py: 8.5% от кандидатов до
+    # патча — структурный обрыв, не редкость рынка).
     if direction == "BULL":
         if ao_i >= 0:
             return False
@@ -686,8 +693,9 @@ def _ao_divergence_at_bar(bars: list, ao_series: list, i: int, direction) -> boo
                 bars[k]["low"] < bars[k+1]["low"]):
                 ao_k = ao_series[k]
                 if ao_k is None or ao_k >= 0:
-                    return False
-                return bool(bars[i]["low"] < bars[k]["low"] and ao_i > ao_k)
+                    continue
+                if bars[i]["low"] < bars[k]["low"] and ao_i > ao_k:
+                    return True
     else:
         if ao_i <= 0:
             return False
@@ -696,8 +704,9 @@ def _ao_divergence_at_bar(bars: list, ao_series: list, i: int, direction) -> boo
                 bars[k]["high"] > bars[k+1]["high"]):
                 ao_k = ao_series[k]
                 if ao_k is None or ao_k <= 0:
-                    return False
-                return bool(bars[i]["high"] > bars[k]["high"] and ao_i < ao_k)
+                    continue
+                if bars[i]["high"] > bars[k]["high"] and ao_i < ao_k:
+                    return True
     return False
 
 
@@ -1338,3 +1347,5 @@ if __name__ == "__main__":
 # ISKRA_WORKING_TF_FIRST_V1 — маркер идемпотентности
 
 # ISKRA_WAVE_MEASURE_V1 - marker
+
+# AO_DIVERGENCE_GLUBZHE_V1 - marker
