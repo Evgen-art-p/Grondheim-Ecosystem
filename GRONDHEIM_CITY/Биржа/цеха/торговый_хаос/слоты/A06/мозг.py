@@ -527,13 +527,18 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
         # КАМЕНЬ 1: своя открытая позиция — ФАКТ (null если не в рынке).  # TRADER_SEES_POSITION_V1
         "position": _my_open_position(md),
         "anchor": {
-            # компас старшего ТФ — направление глобального тренда (этаж Искры)
-            # КОМПАС: память Искры приоритетна; если пуста —  # GLOBAL_BIAS_COMPASS_V1
-            # страховка прямо из market_data (синяя линия всегда на столе).
-            "global_trend": (table.get("iskra", {}).get("trend_direction")
+            # KOMPAS_DOSTAVKA_TREYDERAM_V1: global_trend — НАСТОЯЩИЙ компас
+            # (v2_descent.compass через trading_state), не направление
+            # точки. Раньше здесь читался trend_direction — до снятия
+            # ворот (KOMPAS_NE_VOROTA_V1) это было то же число случайно,
+            # теперь это два разных факта, и подмена тихо портила стол.
+            # Фоллбэк — global_bias из market_data, если дивера-с-якорем
+            # не было вовсе.
+            "global_trend": (table.get("iskra", {}).get("compass")
                              or (md.get("global_bias")
                                  if md.get("global_bias") in ("BULL", "BEAR")
                                  else None)),
+            "soglasie": table.get("iskra", {}).get("soglasie"),
             "found_timeframe": iskra_tf,
         },
         "sensors": {
@@ -693,3 +698,5 @@ def _my_temp():
         return temperatura_slota(_CEH, _SLOT)
     except Exception:
         return None
+
+# KOMPAS_DOSTAVKA_TREYDERAM_V1 - marker

@@ -473,10 +473,7 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
     table_for_avan = {
         "position": _my_open_position(md),
         "anchor": {
-            # KOMPAS_DOSTAVKA_TREYDERAM_V1: НАСТОЯЩИЙ компас, не
-            # направление точки — см. мозг A01/A06 за объяснением.
-            "global_trend": table.get("iskra", {}).get("compass"),
-            "soglasie": table.get("iskra", {}).get("soglasie"),
+            "global_trend": table.get("iskra", {}).get("trend_direction"),
             "found_timeframe": iskra_tf,
         },
         "sensors": {
@@ -653,5 +650,3 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
         "table": table,
         "raw": response,
     }
-
-# KOMPAS_DOSTAVKA_TREYDERAM_V1 - marker

@@ -87,16 +87,24 @@ def _save_iskra_memory(signal: dict, md: Optional[dict] = None):  # GLOBAL_BIAS_
     tstate["iskra"]["zero_point_price"] = signal.get("zero_point_price")
     tstate["iskra"]["history_dna"]      = signal.get("history_dna", "")
     # ── ISKRA_MEM_V2: два поля спуска v2 — Морж наследует масштаб ──
-    # found_timeframe берём из signal (его кладёт user_msg при found),
-    # с фоллбэком на старое имя timeframe. trend_direction = компас спуска.
-    # КОМПАС: приоритет — дивер-компас Искры (trend_direction/compass).  # GLOBAL_BIAS_COMPASS_V1
-    # Фоллбэк — global_bias из синей линии (всегда на столе), если дивер молчит.
-    _td = signal.get("trend_direction") or signal.get("compass")
+    # found_timeframe берём из signal (его кладёт user_msg при found).
+    # KOMPAS_DOSTAVKA_TREYDERAM_V1: trend_direction = НАПРАВЛЕНИЕ ТОЧКИ
+    # (что нашла Искра), НЕ компас. Раньше эти два понятия были
+    # принудительно равны (старые ворота требовали bdb_dir==compass),
+    # поэтому их можно было путать безнаказанно. Теперь они могут
+    # разойтись (точка против компаса — законный факт, не отказ), и
+    # путать их — тихо портить данные трейдерам. Компас — ОТДЕЛЬНОЕ
+    # поле, из md (живёт только внутри run_iskra, здесь фиксируется
+    # на запись). Фоллбэк на global_bias — если дивера-с-якорем не было.
+    _td = signal.get("trend_direction")
     if not _td and md:
         _gb = md.get("global_bias")
         if _gb in ("BULL", "BEAR"):
             _td = _gb
     tstate["iskra"]["trend_direction"] = _td
+    _descent = (md or {}).get("v2_descent", {})
+    tstate["iskra"]["compass"]  = _descent.get("compass")
+    tstate["iskra"]["soglasie"] = _descent.get("soglasie")
     tstate["iskra"]["found_timeframe"] = (
         signal.get("found_timeframe") or signal.get("timeframe")
     )
@@ -617,3 +625,5 @@ def _my_temp():
         return None
 
 # KOMPAS_NE_VOROTA_V1 - marker
+
+# KOMPAS_DOSTAVKA_TREYDERAM_V1 - marker
