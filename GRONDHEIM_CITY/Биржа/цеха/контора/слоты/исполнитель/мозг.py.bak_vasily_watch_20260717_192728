@@ -445,25 +445,15 @@ def _build_execution_log_facts(traders: dict) -> list:
     for key in ("brut", "avan", "cons"):
         v = traders.get(key, {})
         approved = _is_real_entry(v)
-        # VASILY_ISP_WATCH_V1: засада Консерватора — своя природа.
-        # WATCH не APPROVED и не REJECTED: трейдер назвал координаты и
-        # ждёт созревания структуры. Доносим action + опору, чтобы
-        # приёмник (hooks._persist_trading_state) родил WATCHING.
-        _action = (v.get("action") or "").upper().strip()
-        _is_watch = (_action == "WATCH")
         log.append({
             "trader":  TRADER_NAME[key],
             "magic":   MAGIC[key],
-            "action":  _action or None,
             "verdict": "APPROVED" if approved else "REJECTED",
-            "direction": (v.get("direction")
-                          if (approved or _is_watch) else None),
-            "entry":   (v.get("entry") if (approved or _is_watch) else None),
-            "stop":    (v.get("stop") if (approved or _is_watch) else None),
-            "lot":     (v.get("lot") if (approved or _is_watch) else None),
-            # координата засады — только у Васи, только при WATCH
-            "watch_opora": (v.get("watch_opora") if _is_watch else None),
-            "status":  "PAPER" if (approved or _is_watch) else "SKIPPED",
+            "direction": v.get("direction") if approved else None,
+            "entry":   v.get("entry") if approved else None,
+            "stop":    v.get("stop") if approved else None,
+            "lot":     v.get("lot") if approved else None,
+            "status":  "PAPER" if approved else "SKIPPED",
             "pnl":     None,
         })
     return log
@@ -686,5 +676,3 @@ def _my_temp():
         return temperatura_slota(_CEH, _SLOT)
     except Exception:
         return None
-
-# VASILY_ISP_WATCH_V1 — маркер идемпотентности
