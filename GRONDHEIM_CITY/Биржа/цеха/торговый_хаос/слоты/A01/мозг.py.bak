@@ -322,59 +322,40 @@ def _compass_from(form: dict):
     return None
 
 
-def _soglasie_slovami(soglasie) -> str:
-    """KOMPAS_NE_VOROTA_V1: ранг точки относительно компаса, словами
-    для промпта. Не вердикт — факт на стол."""
-    if soglasie is True:
-        return "точка ПО компасу (согласие)"
-    if soglasie is False:
-        return "точка ПРОТИВ компаса (это не отказ — просто против ветра)"
-    return "сверять не с чем"
-
-
-def _descend(symbol: str, start_tf: str, compass, top_form: dict) -> dict:
+def _descend(symbol: str, start_tf: str, compass: str, top_form: dict) -> dict:
     """
-    KOMPAS_NE_VOROTA_V1 (слово Шефа 18.07): «компас — он и есть компас,
-    для ориентира». Раньше здесь были ШОРЫ: спуск засчитывал точку
-    ТОЛЬКО если bdb_dir == compass, иначе шагал глубже до дна M5. Это
-    были жёсткие ворота — на живой истории они выкашивали до 87%
-    честных точек (замер 18.07: 15 событий без компаса против 2 с ним).
+    Спуск по лесенке с компасом в руке. ШОРЫ: на каждом этаже берём
+    ТОЛЬКО bdb_dir/bdb_price; дивер и якорь младшего ТФ игнорируем —
+    компас уже зажат на старшем (§1d, "снайпер с откалиброванным
+    компасом"). Ищем B/D/B строго В СТОРОНУ компаса.
 
-    Теперь спуск ищет ТОЧКУ ЛЮБОГО НАПРАВЛЕНИЯ. Компас снимается
-    справочно и кладётся рядом как РАНГ, не как условие прохода:
-      soglasie=True  — точка в сторону компаса («золотая»)
-      soglasie=False — точка против компаса (спекулятивная, меньшим лотом)
-      soglasie=None  — компаса нет вовсе (дивера-с-якорем не было)
-    Что делать с этим фактом — решают трейдеры, не Искра. Она сенсор.
-
-    start_tf — этаж старта. top_form — уже снятый слепок (без лишнего
-    стука в терминал на первом этаже).
+    start_tf — этаж, на котором компас УЖЕ взят.
+    top_form — УЖЕ снятый слепок старшего этажа (из run_iskra). Старший
+    этаж НЕ перемеряем — проверяем точку прямо по нему (идеал сверху),
+    в терминал стучимся только начиная со ВТОРОГО этажа. Минус один
+    вызов MT5 на каждый прогон.
 
     Возвращает:
-      {"found": bool, "timeframe": str|None, "zero_point": float|None,
-       "napravlenie": str|None, "soglasie": bool|None}
+      {"found": bool, "timeframe": str|None, "zero_point": float|None}
+    found=False → дошли до дна M5 без точки (или этажи ослепли).
     """
     from mt5_feed import step_down
 
     tf   = start_tf
     form = top_form          # старший этаж — по готовому слепку, без стука
     visited = 0
-    while tf is not None and visited < 12:   # страховка от бесконечного цикла
+    while tf is not None and visited < 12:   # 12 = страховка от бесконечного цикла
         bdb_dir = form.get("bdb_dir")
-        if bdb_dir is not None:
-            # ТОЧКА ЕСТЬ. Компас не запирает — только судит ранг.
-            soglasie = (bdb_dir == compass) if compass else None
+        if bdb_dir == compass:
             return {"found": True, "timeframe": tf,
-                    "zero_point": form.get("bdb_price"),
-                    "napravlenie": bdb_dir, "soglasie": soglasie}
+                    "zero_point": form.get("bdb_price")}
         nxt = step_down(tf)
         if nxt is None:        # дно M5 — глубже кислорода нет
             break
         tf = nxt
         form = _read_form_on(symbol, tf)   # второй этаж и ниже — стучимся
         visited += 1
-    return {"found": False, "timeframe": None, "zero_point": None,
-            "napravlenie": None, "soglasie": None}
+    return {"found": False, "timeframe": None, "zero_point": None}
 
 
 def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
@@ -426,29 +407,22 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
     # компас (дивер+горб-царь+пересечение нуля) был ВОРОТАМИ перед
     # рабочим ТФ — лишний, более редкий фильтр поверх уже пройденного
     # сита. Теперь это ЗАПАСНОЙ путь — доуточнение, не ворота.
-    # KOMPAS_NE_VOROTA_V1: компас снимается ВСЕГДА и ВСЕГДА справочно —
-    # он ориентир, не замок. Раньше «нет компаса» = «Искре нечего
-    # ловить» (спуск даже не начинался), и это было вторыми воротами
-    # поверх первых: точку убивало отсутствие ДИВЕРА-С-ЯКОРЕМ, хотя
-    # сама точка B/D/B на этаже могла быть. Теперь компас только судит
-    # ранг найденной точки (soglasie), а ищем — всегда.
-    _compass = _compass_from(_top_form)
     _working_bdb = _top_form.get("bdb_dir")
     if _working_bdb is not None:
-        # Точка прямо на рабочем этаже — главный путь, как и было.
         _descent = {"found": True, "timeframe": _start_tf,
                     "zero_point": _top_form.get("bdb_price"),
-                    "napravlenie": _working_bdb,
-                    "soglasie": (_working_bdb == _compass) if _compass else None,
-                    "compass": _compass, "start_tf": _start_tf}
+                    "compass": _working_bdb, "start_tf": _start_tf}
     else:
-        # На рабочем пусто — спускаемся и ищем точку ЛЮБОГО направления.
-        _res = _descend(symbol, _start_tf, _compass, _top_form)
-        _descent = {"found": _res["found"], "timeframe": _res["timeframe"],
-                    "zero_point": _res["zero_point"],
-                    "napravlenie": _res.get("napravlenie"),
-                    "soglasie": _res.get("soglasie"),
-                    "compass": _compass, "start_tf": _start_tf}
+        _compass = _compass_from(_top_form)
+        if _compass is None:
+            # Нет компаса (нет дивера-с-якорем) — Искре нечего ловить.
+            _descent = {"found": False, "timeframe": None,
+                        "zero_point": None, "compass": None, "start_tf": _start_tf}
+        else:
+            _res = _descend(symbol, _start_tf, _compass, _top_form)
+            _descent = {"found": _res["found"], "timeframe": _res["timeframe"],
+                        "zero_point": _res["zero_point"], "compass": _compass,
+                        "start_tf": _start_tf}
     md["v2_descent"] = _descent
     print(f"[ISKRA] 🪜 Спуск: компас={_descent['compass']} "
           f"старт={_descent['start_tf']} "
@@ -507,19 +481,13 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
 
     user_msg = (
         "=== СПУСК ПО ЛЕСЕНКЕ (Искра v2 — слепая геометрия уже отработала) ===\n"
+        f"Компас (старший этаж {md.get('v2_descent',{}).get('start_tf','?')}): "
+        f"{md.get('v2_descent',{}).get('compass') or 'нет дивера-с-якорем'}\n"
         f"Точка найдена: "
-        f"{('ДА на ' + str(md['v2_descent']['timeframe']) + ', цена ' + str(md['v2_descent']['zero_point']) + ', направление ' + str(md['v2_descent'].get('napravlenie'))) if md.get('v2_descent',{}).get('found') else 'нет — молчи (NOT_FOUND)'}\n"
-        f"Компас (ориентир со старшего этажа {md.get('v2_descent',{}).get('start_tf','?')}): "
-        f"{md.get('v2_descent',{}).get('compass') or 'компаса нет (дивера-с-якорем не было)'}"
-        f" — {_soglasie_slovami(md.get('v2_descent',{}).get('soglasie'))}\n"
-        "КОМПАС — ОРИЕНТИР, НЕ ЗАМОК. Он НЕ решает, есть точка или нет, "
-        "и НЕ задаёт её направление. Точка против компаса — это НЕ отказ, "
-        "это факт с пометкой «против ветра»: положи его на стол как есть, "
-        "трейдеры решат сами.\n"
-        "Если точка найдена — твой signal t1_status=DETECTED, "
-        "trend_direction = НАПРАВЛЕНИЕ ТОЧКИ (не компаса), "
-        "zero_point_price=цена. Если не найдена — t1_status=NOT_FOUND. "
-        "Озвучь это своим голосом.\n\n"
+        f"{('ДА на ' + str(md['v2_descent']['timeframe']) + ', цена ' + str(md['v2_descent']['zero_point'])) if md.get('v2_descent',{}).get('found') else 'нет — молчи (NOT_FOUND)'}\n"
+        "Это РЕЗУЛЬТАТ твоего спуска. Если точка найдена — твой signal "
+        "t1_status=DETECTED, trend_direction=компас, zero_point_price=цена. "
+        "Если не найдена — t1_status=NOT_FOUND. Озвучь это своим голосом.\n\n"
         "=== ТВОЯ РАБОЧАЯ ПАМЯТЬ (прошлый прогон) ===\n"
         f"prev_t1_status: {prev_status}\n"
         f"prev_zero_point_price: {prev_zero}\n"
@@ -615,5 +583,3 @@ def _my_temp():
         return temperatura_slota(_CEH, _SLOT)
     except Exception:
         return None
-
-# KOMPAS_NE_VOROTA_V1 - marker
