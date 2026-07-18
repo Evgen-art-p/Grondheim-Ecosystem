@@ -459,7 +459,10 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
     table_for_cons = {
         "position": _my_open_position(md),
         "anchor": {
-            "global_trend": table.get("iskra", {}).get("trend_direction"),
+            # KOMPAS_DOSTAVKA_TREYDERAM_V1: НАСТОЯЩИЙ компас, не
+            # направление точки — см. мозг A01/A06 за объяснением.
+            "global_trend": table.get("iskra", {}).get("compass"),
+            "soglasie": table.get("iskra", {}).get("soglasie"),
             "found_timeframe": iskra_tf,
         },
         "sensors": {
@@ -611,3 +614,5 @@ def _my_temp():
         return temperatura_slota(_CEH, _SLOT)
     except Exception:
         return None
+
+# KOMPAS_DOSTAVKA_TREYDERAM_V1 - marker

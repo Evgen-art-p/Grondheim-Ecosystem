@@ -105,6 +105,11 @@ def _save_iskra_memory(signal: dict, md: Optional[dict] = None):  # GLOBAL_BIAS_
     _descent = (md or {}).get("v2_descent", {})
     tstate["iskra"]["compass"]  = _descent.get("compass")
     tstate["iskra"]["soglasie"] = _descent.get("soglasie")
+    # ISKRA_WAVE_MEASURE_DOSTAVKA_V1: тем же путём, что компас — иначе
+    # трейдеры факты структуры не увидят вовсе (та же дыра, что была
+    # с компасом до KOMPAS_DOSTAVKA_TREYDERAM_V1).
+    tstate["iskra"]["dlina"] = _descent.get("dlina")
+    tstate["iskra"]["struktura_chitaetsya"] = _descent.get("struktura_chitaetsya")
     tstate["iskra"]["found_timeframe"] = (
         signal.get("found_timeframe") or signal.get("timeframe")
     )
@@ -372,9 +377,13 @@ def _descend(symbol: str, start_tf: str, compass, top_form: dict) -> dict:
         if bdb_dir is not None:
             # ТОЧКА ЕСТЬ. Компас не запирает — только судит ранг.
             soglasie = (bdb_dir == compass) if compass else None
+            # ISKRA_WAVE_MEASURE_DOSTAVKA_V1: факты структуры с ТОГО ЖЕ
+            # этажа, где нашлась точка — не с рабочего, слепки разные.
             return {"found": True, "timeframe": tf,
                     "zero_point": form.get("bdb_price"),
-                    "napravlenie": bdb_dir, "soglasie": soglasie}
+                    "napravlenie": bdb_dir, "soglasie": soglasie,
+                    "dlina": form.get("dlina"),
+                    "struktura_chitaetsya": form.get("struktura_chitaetsya")}
         nxt = step_down(tf)
         if nxt is None:        # дно M5 — глубже кислорода нет
             break
@@ -382,7 +391,8 @@ def _descend(symbol: str, start_tf: str, compass, top_form: dict) -> dict:
         form = _read_form_on(symbol, tf)   # второй этаж и ниже — стучимся
         visited += 1
     return {"found": False, "timeframe": None, "zero_point": None,
-            "napravlenie": None, "soglasie": None}
+            "napravlenie": None, "soglasie": None,
+            "dlina": None, "struktura_chitaetsya": False}
 
 
 def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
@@ -448,7 +458,11 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
                     "zero_point": _top_form.get("bdb_price"),
                     "napravlenie": _working_bdb,
                     "soglasie": (_working_bdb == _compass) if _compass else None,
-                    "compass": _compass, "start_tf": _start_tf}
+                    "compass": _compass, "start_tf": _start_tf,
+                    # ISKRA_WAVE_MEASURE_DOSTAVKA_V1: факты структуры
+                    # с рабочего этажа (тот же слепок, что нашёл точку).
+                    "dlina": _top_form.get("dlina"),
+                    "struktura_chitaetsya": _top_form.get("struktura_chitaetsya")}
     else:
         # На рабочем пусто — спускаемся и ищем точку ЛЮБОГО направления.
         _res = _descend(symbol, _start_tf, _compass, _top_form)
@@ -456,7 +470,9 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
                     "zero_point": _res["zero_point"],
                     "napravlenie": _res.get("napravlenie"),
                     "soglasie": _res.get("soglasie"),
-                    "compass": _compass, "start_tf": _start_tf}
+                    "compass": _compass, "start_tf": _start_tf,
+                    "dlina": _res.get("dlina"),
+                    "struktura_chitaetsya": _res.get("struktura_chitaetsya")}
     md["v2_descent"] = _descent
     print(f"[ISKRA] 🪜 Спуск: компас={_descent['compass']} "
           f"старт={_descent['start_tf']} "
@@ -520,6 +536,9 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
         f"Компас (ориентир со старшего этажа {md.get('v2_descent',{}).get('start_tf','?')}): "
         f"{md.get('v2_descent',{}).get('compass') or 'компаса нет (дивера-с-якорем не было)'}"
         f" — {_soglasie_slovami(md.get('v2_descent',{}).get('soglasie'))}\n"
+        f"Структура (горб-3→ноль-4→дивер-5, длина "
+        f"{md.get('v2_descent',{}).get('dlina')} баров): "
+        f"{'читается строго' if md.get('v2_descent',{}).get('struktura_chitaetsya') else 'не читается строго — не повод молчать, просто факт слабее'}\n"
         "КОМПАС — ОРИЕНТИР, НЕ ЗАМОК. Он НЕ решает, есть точка или нет, "
         "и НЕ задаёт её направление. Точка против компаса — это НЕ отказ, "
         "это факт с пометкой «против ветра»: положи его на стол как есть, "
@@ -627,3 +646,5 @@ def _my_temp():
 # KOMPAS_NE_VOROTA_V1 - marker
 
 # KOMPAS_DOSTAVKA_TREYDERAM_V1 - marker
+
+# ISKRA_WAVE_MEASURE_DOSTAVKA_V1 - marker
