@@ -942,14 +942,6 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                 out(f"⏸ СТОП по команде Шефа — прошёл бар {i} из {total}.")
                 break
 
-            # CURSOR_FIX_V1: "честный кран" (_fake_fetch/_fake_pull/
-            # _multi_step_down) режет историю ПО ЭТОЙ переменной, не по
-            # аргументам вызова. Без неё Искра внутри себя (её собственный
-            # pull_bars при спуске по лесенке) видела бы всегда один и тот
-            # же (самый первый) момент истории — потерялась при слиянии
-            # Сита-1/Сита-2, возвращаю на каждом баре.
-            state["cursor"] = i
-
             # ── ведение: на КАЖДОМ баре, не только между кандидатами ──
             # TESTER_SETTLE_FULL_WINDOW_V1: полное окно 300 баров.
             _settle_bar(bars_all[max(0, i - 299):i + 1], symbol, timeframe, point)
@@ -986,11 +978,6 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
             # дёшево, без лишнего похода в pull_bars.
             _cheap_trigger = None
             _tochka = proverit_tochku(md)
-            if _tochka.get("changed"):   # TOCHKA_LOG_V1: видно, когда точка родилась/умерла/подпиталась
-                _bd_log = bars_all[i].get("date", "?")
-                print(f"[ТОЧКА] бар {i} ({_bd_log}): "
-                      f"{'жива' if _tochka.get('alive') else 'МЕРТВА'} — "
-                      f"{_tochka.get('reason','?')}")
             if _tochka.get("alive"):
                 _hd = _hans_breakout(md, window)
                 if _hd is not None:

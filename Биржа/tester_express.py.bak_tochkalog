@@ -986,11 +986,6 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
             # дёшево, без лишнего похода в pull_bars.
             _cheap_trigger = None
             _tochka = proverit_tochku(md)
-            if _tochka.get("changed"):   # TOCHKA_LOG_V1: видно, когда точка родилась/умерла/подпиталась
-                _bd_log = bars_all[i].get("date", "?")
-                print(f"[ТОЧКА] бар {i} ({_bd_log}): "
-                      f"{'жива' if _tochka.get('alive') else 'МЕРТВА'} — "
-                      f"{_tochka.get('reason','?')}")
             if _tochka.get("alive"):
                 _hd = _hans_breakout(md, window)
                 if _hd is not None:

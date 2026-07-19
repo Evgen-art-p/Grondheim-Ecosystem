@@ -19,6 +19,9 @@
 import sys
 from pathlib import Path
 
+print("=== run_tester.py, версия v2 (с --list) ===")
+print(f"Реально запущен файл: {Path(__file__).resolve()}")
+
 _ROOT = Path(__file__).resolve().parent
 _BIRZHA = _ROOT / "Биржа"
 
@@ -44,4 +47,30 @@ if sys.platform == "win32":
 import tester_express  # noqa: E402  (импорт после правки sys.path — так и надо)
 
 if __name__ == "__main__":
+    # --list (или запуск вообще без аргументов) — просто показать, что
+    # реально лежит в Биржа/test_data, ничего не запуская. Полезно,
+    # когда не помнишь точное имя файла или получил "CSV не найден".
+    if len(sys.argv) < 2 or sys.argv[1] in ("--list", "-l"):
+        _td = _BIRZHA / "test_data"
+        print(f"Смотрю сюда: {_td}")
+        print("")
+        if not _td.exists():
+            print("Папки test_data вообще нет.")
+        else:
+            files = sorted(_td.rglob("*"))
+            csvs = [f for f in files if f.is_file() and f.suffix.lower() == ".csv"]
+            if not csvs:
+                print("CSV-файлов не нашёл. Вот что там есть целиком:")
+                for f in files:
+                    print(f"  {f.relative_to(_td)}")
+            else:
+                print("Нашёл эти CSV (используй путь ПОСЛЕ 'test_data/' как есть):")
+                for f in csvs:
+                    rel = f.relative_to(_td)
+                    print(f"  test_data/{rel}")
+        print("")
+        print("Пример запуска после того как увидишь нужное имя:")
+        print("  python run_tester.py test_data/ИМЯ_ФАЙЛА.csv XAUUSD H4 --signals 1")
+        sys.exit(0)
+
     tester_express.main()
