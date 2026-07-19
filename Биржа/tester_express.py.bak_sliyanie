@@ -914,112 +914,124 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
             raise RuntimeError("мозг A01 (Искра) ещё не в слоте")
 
         # ════════════════════════════════════════════════════
-        # SITO_SLIYANIE_V1 — ЕДИНЫЙ СКВОЗНОЙ ПРОХОД
+        # СИТО 1 — МАТЕМАТИКА ЯДРА (без LLM, мгновенно)
         # ─────────────────────────────────────────────────────
-        # §5р.6 диагноз: Сито-1 (весь проход целиком) → Сито-2 (второй
-        # проход по готовому списку) калечили память точки — точка c
-        # не может помнить себя «из будущего» второго прохода. Теперь
-        # ОДИН хронологический проход, бар за баром, как живой рынок:
-        #   1. ведение (settle/долив) — как раньше, каждый бар
-        #   2. дешёвая проверка ядром (без LLM): либо СВЕЖИЙ спуск на
-        #      ЭТОМ баре (старый критерий Сита-1: bdb_strong/bdb_dir),
-        #      либо точка ЖИВА (TOCHKA_ZHIVA_V1) И на этом баре пробит
-        #      фрактал Ганса ИЛИ сработал Большой палец Авантюриста
-        #      (TWR_BOLSHOY_PALEC_V1) — три триггера Совета один-в-один
-        #      с COUNCIL_GATE_TROYNOY_V1 внутри council.wake_council.
-        #   3. только если триггер сработал — зовём council.wake_council
-        #      (единая дверь, ENGINE_ONE_DOOR_V1), передаём ей уже
-        #      посчитанное окно/point, чтобы не тянуть дважды.
+        # Прочёсываем всю историю чистым ядром. На каждом баре
+        # build_market_data (питон, микросекунды) — собираем индексы,
+        # где есть разворот: divergence_ao (бычья Точка Ноль) ИЛИ
+        # exit_bell (медвежья). Модель НЕ зовём. Это отсев пустых
+        # баров ДО дорогого Совета. 24к баров → секунды → горстка
+        # кандидатов (по канону развороты редки).
         # ════════════════════════════════════════════════════
-        from hooks import proverit_tochku, _hans_breakout
-
-        out("🔀 Единый сквозной проход (SITO_SLIYANIE_V1): "
-            "бар за баром, память точки живёт между барами...")
-        out("")
-
+        out("⚙️  Сито 1: математика ядра просеивает историю (без модели)...")
+        candidates = []
         for i in range(warmup, total):
-            if _stop_requested():   # TESTER_HANDLES_V1: кнопка СТОП биржи
-                out(f"⏸ СТОП по команде Шефа — прошёл бар {i} из {total}.")
-                break
-
-            # ── ведение: на КАЖДОМ баре, не только между кандидатами ──
-            # TESTER_SETTLE_FULL_WINDOW_V1: полное окно 300 баров.
-            _settle_bar(bars_all[max(0, i - 299):i + 1], symbol, timeframe, point)
-            try:
-                _vesti_poziciyu(bars_all[max(0, i - 299):i + 1],
-                                symbol, timeframe, point, out)
-            except Exception as _ve:
-                print(f'[ВЕДЕНИЕ] ⚠️  {_ve}')
-            _last_settled = i
-            _feed_check_closures(i)   # TESTER_TRADE_FEED_V1: лента закрытий
-
-            # ── дешёвая проверка ядром (без LLM, микросекунды) ──
             end = i + 1
             start = max(0, end - 120)   # ISKRA_WORKING_TF_FIRST_V1: канон
+            # Шефа — 100-140 баров, тот же масштаб, что и read_ao_wave_form.
+            # Было 300 — рассинхрон окна с повторной проверкой Искры прятал
+            # реальные точки на ровном месте (разный "горб-царь" в разных
+            # по ширине окнах одного и того же явления).
             window = bars_all[start:end]
             md = build_market_data(window, symbol=symbol,
                                    timeframe=timeframe, point=point)
             if not md:
                 continue
-
+            # СТРОГОЕ сито: bdb_strong — Точка Ноль с тремя условиями разом
+            # (дивергенция + ангуляция 5-7 баров + B/D/B бар). По канону
+            # таких 3-4 в год. Это то, что РАЗВОРОТ, а не "кандидат".
+            # Грубые divergence_ao/exit_bell дают ~27% баров (шум) — не они.
             db = md.get("divergent_bar", {})
             wf = md.get("wave_form", {})
             if loose:
+                # мягко: любой B/D/B-направленный бар (без жёсткой ангуляции)
                 strong = wf.get("bdb_dir") or db.get("bdb_candidate")
                 side = (wf.get("bdb_dir") or db.get("direction") or "?")
             else:
+                # строго: Точка Ноль bdb_strong (дивергенция+ангуляция+B/D/B)
                 strong = db.get("bdb_strong") or wf.get("bdb_dir")
                 side = db.get("direction") or wf.get("bdb_dir") or "?"
+            if strong:
+                candidates.append((i, side))
+        mode_txt = "мягкое (bdb_dir/candidate)" if loose else "строгое (bdb_strong — Точка Ноль)"
+        out(f"⚙️  Сито 1 готово: {len(candidates)} баров-кандидатов "
+            f"из {total - warmup} · сито {mode_txt}.")
+        if not candidates:
+            hint = ("" if loose else
+                    " Попробуй мягче: добавь флаг --loose "
+                    "(ловит B/D/B без жёсткой ангуляции 5-7 баров).")
+            out("\n⚠️ Ядро не нашло строгих разворотов (Точка Ноль) на этой "
+                f"истории.{hint} Модель не звали — это честный ответ кухни.")
+            return _finish(report, report_path)
+        out("")
 
-            # SITO_SLIYANIE_V1: триггеры Б/В — точка жива И фрактал/палец
-            # на ЭТОМ баре. Считаем ОДИН РАЗ здесь (md уже посчитан) —
-            # wake_council сделает ту же проверку внутри себя как
-            # подтверждение, но решение «звать ли вообще» — здесь,
-            # дёшево, без лишнего похода в pull_bars.
-            _cheap_trigger = None
-            _tochka = proverit_tochku(md)
-            if _tochka.get("alive"):
-                _hd = _hans_breakout(md, window)
-                if _hd is not None:
-                    _cheap_trigger = ("fractal", _hd)
-                else:
-                    _thumb = md.get("thumb_trade", {}) or {}
-                    if _thumb.get("triggered"):
-                        _cheap_trigger = ("thumb", _thumb.get("direction"))
-
-            if not strong and not _cheap_trigger:
-                continue   # тихий бар — идём дальше, ведение уже сделано
-
+        # ════════════════════════════════════════════════════
+        # СИТО 2 — ЖИВОЙ СОВЕТ (с LLM, дорого, но РЕДКО)
+        # Только на кандидатах сита 1. Тут Искра подтверждает своим
+        # голосом (она судит строже ядра — может и отмести), и если
+        # сказала да — будим весь Совет и печатаем их разговор.
+        # ════════════════════════════════════════════════════
+        out(f"🎤 Сито 2: бужу живой Совет на {len(candidates)} кандидатах...")
+        out("")
+        for idx, (i, side) in enumerate(candidates):
+            if _stop_requested():   # TESTER_HANDLES_V1: кнопка СТОП биржи
+                out(f"⏸ СТОП по команде Шефа — прошёл {scanned} из {len(candidates)} кандидатов.")
+                break
+            state["cursor"] = i
+            bd = bars_all[i].get("date", "?")   # TESTER_ISKRA_BD_FIX_V1: было undefined
             scanned += 1
-            bd = bars_all[i].get("date", "?")
-            if _cheap_trigger:
-                side = _cheap_trigger[1] or side
-                _povod = f"живая точка + {_cheap_trigger[0]}"
-            else:
-                _povod = "свежий спуск ядра"
-            _emit(f"кандидат {scanned} · бар {i} ({_povod})")
+            _emit(f"кандидат {idx+1}/{len(candidates)} · бар {i}")
+
+            # TESTER_SETTLE_GAPS_V1: прокатываем settle по ВСЕМ барам от
+            # прошлого кандидата до текущего — рынок закрывает позиции
+            # ровно там, где реально дошёл до стопа/колокола, а не
+            # через годы на следующем кандидате (убивает зомби-позиции).
+            # _settle_bar мгновенно выходит на пустом столе — дёшево.
+            # VEDENIE_POZICII_V1: на каждом баре между кандидатами
+            # позиция ЖИВЁТ: код тянет стоп (в _settle_bar), а на
+            # фрактале по тренду просыпается ХОЗЯИН и решает — долить
+            # или нет. Раньше здесь была только физика: позиция
+            # умирала одним выстрелом, не дожив до решения.
+            for _b in range(_last_settled + 1, i + 1):
+                # TESTER_SETTLE_FULL_WINDOW_V1: ПОЛНОЕ окно 300 баров (было 60).
+                # exit_bell (дивергенция AO) требует большого окна —
+                # на 60 барах он не считался, позиция висела до Air Bag
+                # годами. На 300 звонок звенит вовремя (§9 Котина).
+                _settle_bar(bars_all[max(0, _b - 299):_b + 1],
+                            symbol, timeframe, point)
+                # VEDENIE_POZICII_V1: долив — только если позиция жива
+                try:
+                    _vesti_poziciyu(bars_all[max(0, _b - 299):_b + 1],
+                                    symbol, timeframe, point, out)
+                except Exception as _ve:
+                    print(f'[ВЕДЕНИЕ] ⚠️  {_ve}')
+            _last_settled = i
+            _feed_check_closures(i)   # TESTER_TRADE_FEED_V1: лента закрытий
 
             _table_before = set(_table_snapshot().keys())   # TESTER_TRADE_FEED_V1
             # ── ЕДИНАЯ ДВЕРЬ СОВЕТА (ENGINE_ONE_DOOR_V1) ──
+            # Раньше здесь была ручная лестница вызовов агентов —
+            # копия той, что в кабинете (ui_torg). Это был маскарад:
+            # две лестницы расходятся. Теперь тестер зовёт ТУ ЖЕ дверь
+            # council.wake_council, что и кабинет. Стриминг в отчёт —
+            # через on_event: печатаем голоса ровно как раньше.
+            #
+            # Ворота по спуску (COUNCIL_BY_DESCENT_V1) теперь ВНУТРИ
+            # wake_council: Искра будится первой, и если спуск не нашёл
+            # точку — Совет не собирается (on_event шлёт council_idle).
             import council
 
-            _found_flag = {"found": True}   # спуск/триггер подтверждён Советом?
+            _found_flag = {"found": True}   # спуск нашёл точку?
 
             def _on_council_event(ev):
                 etype = ev.get("type")
                 if etype == "council_idle":
                     _found_flag["found"] = False
                     _d = ev.get("descent", {}) or {}
-                    _msg = (f"кандидат {scanned} ({bd}, {side}): "
-                            f"спуск не нашёл точку (компас={_d.get('compass')})")
+                    _msg = (f"кандидат {idx+1}/{len(candidates)} ({bd}, {side}): "
+                            f"спуск не нашёл точку (компас={_d.get('compass')})")  # TESTER_ISKRA_BD_FIX_V1
                     print("  " + _msg + " — пропускаю")
-                    _emit({"type": "progress", "text": _msg})
-                    return
-                if etype == "council_triggered_by_point":
-                    _msg = (f"кандидат {scanned} ({bd}): Совет разбужен "
-                            f"дешёвым триггером {ev.get('kind')} на живой точке")
-                    print("  " + _msg)
-                    _emit({"type": "progress", "text": _msg})
+                    _emit({"type": "progress", "text": _msg})   # TESTER_TO_CABINET_V1
                     return
                 if etype != "agent":
                     return
@@ -1043,11 +1055,11 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     _t1 = (r.get("signal", {}) or {}).get("t1_status", "NOT_FOUND")
                     out("")
                     out("🎯 " + "─" * 60)
-                    out(f"🎯 бар {i} ({bd}) — ИСКРА: {_t1}")
+                    out(f"🎯 бар {i} ({bd}) — ИСКРА: {_t1}")  # TESTER_ISKRA_BD_FIX_V1
                     out("🎯 " + "─" * 60)
                     out("")
                     out(f"  ✴️ ИСКРА:\n     {narrative}")
-                    _emit_report("A01", narrative, _t1, result=r)
+                    _emit_report("A01", narrative, _t1, result=r)   # TESTER_REPORTS_V1
                     out("")
                 elif aid == "A02":
                     out(f"  🦭 МОРЖ:\n     {narrative}")
@@ -1122,14 +1134,12 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     out("")
 
             _summary = council.wake_council(symbol, timeframe,
-                                            on_event=_on_council_event,
-                                            window=window, point=point)
+                                            on_event=_on_council_event)
 
-            # Ни спуск, ни дешёвый триггер не подтвердились Советом
-            # (Искра живьём судит строже ядра) → следующий бар.
+            # Спуск не нашёл точку → Совет не собрался, следующий кандидат.
             if not _found_flag["found"] or _summary.get("idle"):
                 continue
-            found_cnt += 1   # TESTER_TO_CABINET_V1: триггер долетел до Совета
+            found_cnt += 1   # TESTER_TO_CABINET_V1: спуск долетел до Совета
 
             # TESTER_TRADE_FEED_V1: лента открытий — что появилось на столе
             # после того, как Исполнитель отработал внутри wake_council.
@@ -1161,18 +1171,10 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                     f"проверенных кандидатов — стоп.")
                 break
         else:
-            if scanned == 0:
-                hint = ("" if loose else
-                        " Попробуй мягче: добавь флаг --loose "
-                        "(ловит B/D/B без жёсткой ангуляции 5-7 баров).")
-                out("\n⚠️ Ни ядро, ни память живой точки не дали ни одного "
-                    f"триггера на всей истории.{hint} Модель почти не звали "
-                    "— честный ответ кухни.")
-            else:
-                out(f"\n⚠️ прошёл всю историю ({total - warmup} баров), "
-                    f"проверено кандидатов: {scanned}, живая Искра/Совет "
-                    f"подтвердили {caught} (искал {n_signals}). Честный "
-                    f"ответ кухни.")
+            out(f"\n⚠️ прошёл все {len(candidates)} кандидатов сита 1, "
+                f"живая Искра подтвердила {caught} "
+                f"(искал {n_signals}). Ядро видело разворот, но Искра "
+                f"живьём судит строже — это её право. Честный ответ кухни.")
 
         # TESTER_SETTLE_TAIL_V1 · Брат + Шеф · ХВОСТ СЕССИИ
         # Последняя из N пойманных сделок открывается на последнем
@@ -1215,20 +1217,16 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
         print(f"⚠️  отчёт не собрался: {_e}")
 
     # ── РАЗВИЛКА (TESTER_TO_CABINET_V1) — в кабинет через on_progress + в консоль ──
-    # SITO_SLIYANIE_V1: "candidates" списком больше не существует (слито
-    # в один проход) — считаем через "scanned" (сколько раз триггер вообще
-    # сработал за весь проход, спуском ИЛИ памятью точки).
-    _verdict = (f"РАЗВИЛКА · триггеров за проход: {scanned} · "
-                f"долетело до Совета: {found_cnt} · Совет собрался: {caught}")
+    _verdict = (f"РАЗВИЛКА · Сито 1: {len(candidates)} кандидатов · "
+                f"спуск нашёл точку: {found_cnt} · Совет собрался: {caught}")
     if found_cnt == 0:
-        _hint = ("Совет молчит — ни спуск, ни память живой точки не долетели "
-                 "до Совета. Триггеры есть, ворота исправны: редок "
-                 "дивер-компас/фрактал/палец. Следующий шаг — "
+        _hint = ("Совет молчит — спуск не нашёл точку ни у кого. Кандидаты "
+                 "есть, ворота исправны: редок дивер-компас. Следующий шаг — "
                  "подключить global_bias (синюю) к спуску.")
     else:
-        _hint = f"Триггер долетел до Совета {found_cnt} раз — ворота работают."
+        _hint = f"Спуск долетел до Совета {found_cnt} раз — ворота работают."
     _emit({"type": "verdict", "text": _verdict, "hint": _hint,
-           "candidates": scanned, "found": found_cnt, "council": caught})
+           "candidates": len(candidates), "found": found_cnt, "council": caught})
     print("")
     print("─" * 64)
     print("  " + _verdict)

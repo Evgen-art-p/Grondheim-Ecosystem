@@ -113,15 +113,6 @@ def _save_iskra_memory(signal: dict, md: Optional[dict] = None):  # GLOBAL_BIAS_
     tstate["iskra"]["found_timeframe"] = (
         signal.get("found_timeframe") or signal.get("timeframe")
     )
-    # ISKRA_ALIVE_V1: точка c родилась — зажигаем alive. Если статус
-    # ушёл обратно в NOT_FOUND — гасим сразу, честно (не ждём, пока
-    # proverit_tochku поймает слом на следующем баре в тестере/совете).
-    _t1 = signal.get("t1_status", "NOT_FOUND")
-    if _t1 == "DETECTED":
-        tstate["iskra"]["alive"] = True
-        tstate["iskra"]["rodilas_na_bare"] = (md or {}).get("bar_time")
-    elif _t1 == "NOT_FOUND":
-        tstate["iskra"]["alive"] = False
     save_trading_state(tstate)
 
 
