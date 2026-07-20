@@ -151,7 +151,6 @@ def proverit_tochku(md: dict) -> dict:
     price = md.get("price", {}) or {}
     low   = price.get("low")
     high  = price.get("high")
-    close = price.get("close")   # KALIBROVKA_POROGA_V1: слом — строго по Close
     twr   = md.get("twr", {}) or {}
     db    = md.get("divergent_bar", {}) or {}
     mfi_type = (md.get("mfi", {}) or {}).get("type")
@@ -175,46 +174,26 @@ def proverit_tochku(md: dict) -> dict:
                     "reason": f"подпитка {mfi_type}: точка обновлена → {novaya_zp}",
                     "changed": True, "direction": napr}   # TOCHKA_NAPRAVLENIE_V1
 
-    # ── 2. структурный слом — СТРОГО ПО CLOSE (KALIBROVKA_POROGA_V1):
-    # тень (High/Low) может кольнуть уровень и вернуться — это шум
-    # дикого рынка, не слом структуры. Слом — только если ЗАКРЫТИЕ
-    # бара ушло за zero_point_price против направления точки.
+    # ── 2. структурный слом (пробой БЕЗ подтверждения — не подпитка) ──
     slomana = False
-    if napr == "BULL" and close is not None and close < zp:
+    if napr == "BULL" and low is not None and low < zp:
         slomana = True
-    elif napr == "BEAR" and close is not None and close > zp:
+    elif napr == "BEAR" and high is not None and high > zp:
         slomana = True
     if slomana:
         isk["alive"] = False
-        isk["neutral_bars_count"] = 0   # KALIBROVKA_POROGA_V1: точка умерла — счётчик обнулить
         save_trading_state(tstate)
         return {"alive": False,
-                "reason": f"структурный слом (close): цена закрылась за {zp}",
+                "reason": f"структурный слом: цена пробила {zp}",
                 "changed": True, "direction": napr}   # TOCHKA_NAPRAVLENIE_V1
 
-    # ── 3. TWR нейтрален — требует 3 БАРА ПОДРЯД
-    # (KALIBROVKA_POROGA_V1): один нейтральный бар — обычная заминка,
-    # не повод хоронить структуру. Смерть — только если Ритм держит
-    # нейтраль 3 бара(ов) подряд. Любой выход из нейтрали
-    # (свежий строй появился) — счётчик сбрасывается в ноль.
+    # ── 3. TWR нейтрален (импульс угас) ──
     if twr.get("neutral") is True:
-        _n = int(isk.get("neutral_bars_count", 0) or 0) + 1
-        isk["neutral_bars_count"] = _n
-        if _n >= 3:
-            isk["alive"] = False
-            isk["neutral_bars_count"] = 0
-            save_trading_state(tstate)
-            return {"alive": False,
-                    "reason": f"TWR нейтрален {_n} бар(а) подряд — ритм угас во флэте",
-                    "changed": True, "direction": napr}   # TOCHKA_NAPRAVLENIE_V1
+        isk["alive"] = False
         save_trading_state(tstate)
-        return {"alive": True,
-                "reason": f"TWR нейтрален {_n}/3 — ещё жива, считаю",
-                "changed": False, "direction": napr}
-    else:
-        if isk.get("neutral_bars_count"):
-            isk["neutral_bars_count"] = 0   # строй вернулся — счётчик сброшен
-            save_trading_state(tstate)
+        return {"alive": False,
+                "reason": "TWR нейтрален — ритм угас во флэте",
+                "changed": True, "direction": napr}   # TOCHKA_NAPRAVLENIE_V1
 
     return {"alive": True, "reason": "жива", "changed": False, "direction": napr}   # TOCHKA_NAPRAVLENIE_V1
 

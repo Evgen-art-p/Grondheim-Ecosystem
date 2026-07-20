@@ -73,4 +73,62 @@ if __name__ == "__main__":
         print("  python run_tester.py test_data/ИМЯ_ФАЙЛА.csv XAUUSD H4 --signals 1")
         sys.exit(0)
 
+    # ── START_DATE_V1: удобный старт с конкретной даты ──────────────
+    # Вместо гадания "сколько баров пропустить, чтобы попасть в 2000-е"
+    # — просто говоришь дату, я сам считаю нужный --warmup по факту
+    # дат в файле. Пример:
+    #   python run_tester.py test_data/EURUSDH4.csv EURUSD H4 --signals 20 --start-date 2000.01.01
+    if "--start-date" in sys.argv:
+        idx = sys.argv.index("--start-date")
+        if idx + 1 >= len(sys.argv):
+            print("❌ после --start-date нужна дата, например 2000.01.01")
+            sys.exit(1)
+        _start_date = sys.argv[idx + 1]
+        # убираем флаг и его значение из аргументов — дальше их не поймёт
+        # argparse внутри tester_express (он про --start-date не знает)
+        del sys.argv[idx:idx + 2]
+
+        _csv_arg = sys.argv[1] if len(sys.argv) > 1 else None
+        if not _csv_arg:
+            print("❌ не вижу путь к CSV — --start-date должен идти после csv/symbol/tf")
+            sys.exit(1)
+
+        _full_csv = _csv_arg
+        if not Path(_full_csv).is_absolute() and not Path(_full_csv).exists():
+            _full_csv = str(_BIRZHA / _csv_arg)
+
+        from williams_core import read_mt5_csv
+        _bars = read_mt5_csv(_full_csv)
+        if not _bars:
+            print(f"❌ CSV не прочитан: {_full_csv}")
+            sys.exit(1)
+
+        _warmup_idx = None
+        for _i, _b in enumerate(_bars):
+            if _b.get("date", "") >= _start_date:
+                _warmup_idx = _i
+                break
+        if _warmup_idx is None:
+            print(f"❌ в файле нет баров после {_start_date} "
+                  f"(последний бар: {_bars[-1].get('date','?')})")
+            sys.exit(1)
+        # нужно минимум 40 баров разгона индикаторам ДО этой точки —
+        # если начало файла слишком близко к найденной дате, тестер
+        # (tester_express) сам честно скажет "недостаточно баров"
+        if _warmup_idx < 40:
+            print(f"⚠️  {_start_date} слишком рано в этом файле "
+                  f"(бар {_warmup_idx}) — индикаторам нужно хотя бы 40 "
+                  f"баров разгона до старта. Использую warmup=40.")
+            _warmup_idx = 40
+
+        print(f"📅 старт с {_start_date} → бар {_warmup_idx} "
+              f"({_bars[_warmup_idx].get('date','?')}) из {len(_bars)} "
+              f"— пропускаю всё до этого честным --warmup")
+
+        # если --warmup уже был передан руками — не спорим, убираем свой
+        if "--warmup" in sys.argv:
+            _wi = sys.argv.index("--warmup")
+            del sys.argv[_wi:_wi + 2]
+        sys.argv += ["--warmup", str(_warmup_idx)]
+
     tester_express.main()

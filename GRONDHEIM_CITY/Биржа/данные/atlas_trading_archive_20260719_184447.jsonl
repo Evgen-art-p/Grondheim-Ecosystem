@@ -1,0 +1,1 @@
+{"ts": "2026-07-19T16:03:47.152037", "entry": {"event": "POSITION_CLOSED", "trader": "AVANTURIST", "close_reason": "STOP_LOSS", "pnl": -3.048293, "pnl_r": -1.0, "symbol": "XAUUSD", "timeframe": "H4", "t1_status": "DETECTED", "morj_status": "AWAKE", "panic_phase": "TENSION", "fractal_valid": true}}

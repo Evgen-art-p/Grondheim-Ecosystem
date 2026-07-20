@@ -1,17 +1,19 @@
 {
   "version": 1,
-  "updated": "2026-07-19T16:16:59.577886",
+  "updated": "2026-07-20T05:23:20.402424",
   "iskra": {
-    "t1_status": "NOT_FOUND",
-    "zero_point_price": null,
-    "history_dna": "MAX:11.21@1224.37(2010.06.01 20:00)",
+    "t1_status": "DETECTED",
+    "zero_point_price": 1.30824,
+    "history_dna": "v2_descent found BEAR @1.30824 H4, against BULL compass, updating DETECTED from prev 1.28293; last AO pivot MIN -0.00029091 @1.30239 2012.10.22 08:00",
     "trend_direction": "BULL",
-    "compass": null,
-    "soglasie": null,
-    "dlina": null,
-    "struktura_chitaetsya": false,
+    "compass": "BULL",
+    "soglasie": false,
+    "dlina": 55,
+    "struktura_chitaetsya": true,
     "found_timeframe": null,
-    "alive": false
+    "alive": false,
+    "rodilas_na_bare": "2012.10.22 16:00",
+    "neutral_bars_count": 0
   },
   "positions": [],
   "feed": {
@@ -20,34 +22,34 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "резинка на пике, паника, нет искры, нет приседающего",
+    "reason": "агент не ответил (Брут не смог решить: OpenRouter API [402]: This request requ)",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": "WAIT",
+    "action": null,
     "new_stop": null,
     "add_lot": null
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "Нет дивергенции (Искра NOT_FOUND) и нет приседающего — разворотный набор волны C не собран. Мой опыт: без squat вход — убыток.",
+    "reason": "агент не ответил (Авантюрист не смог решить: OpenRouter API [402]: This reques)",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": "WAIT",
+    "action": null,
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Волна 1 не утверждена Моржом, Разворотный Бар отсутствует, Искра NOT_FOUND — нет ни одного подтверждения из двух необходимых",
+    "reason": "агент не ответил (Консерватор не смог решить: OpenRouter API [402]: This reque)",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": "WAIT",
+    "action": null,
     "new_stop": null,
     "add_lot": null
   },
@@ -62,20 +64,20 @@
       "sleeping": false,
       "opening": false,
       "mature": true,
-      "bars_open": 119
+      "bars_open": 32
     }
   },
   "panic": {
-    "panic_phase": "PANIC",
-    "crowd_sentiment": "Стопы трещат! Все выходят! Обман!!!",
-    "action_for_traders": "GREEN_LIGHT_IF_GANS",
+    "panic_phase": "GREED",
+    "crowd_sentiment": "РАЗВОРОТ! Все берут, поезд уходит! Я успел, я гений!",
+    "action_for_traders": "HIGH_SKEPTICISM",
     "history_dna": "",
     "scale_timeframe": "H4"
   },
   "hans": {
-    "fractal_valid": true,
-    "fractal_side": "LONG",
-    "fractal_price": 1228.62,
+    "fractal_valid": false,
+    "fractal_side": null,
+    "fractal_price": null,
     "absorption_ratio": 0.6,
     "scale_timeframe": "H4",
     "history_dna": ""

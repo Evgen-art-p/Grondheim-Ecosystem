@@ -176,9 +176,6 @@ def _call(ceh_id: str, slot: str, fn_name: str, **kw) -> dict:
 # COUNCIL_GATE_TROYNOY_V1 — дешёвая проверка триггеров Б/В (без LLM)
 # ═══════════════════════════════════════════════════════════
 
-_HANS_TO_BULL_BEAR = {"LONG": "BULL", "SHORT": "BEAR"}  # TRIGGERS_SINHRON_V1
-
-
 def _deshyovaya_proverka_tochki(symbol: str, timeframe: str,
                                 window=None, point=None) -> dict:
     """
@@ -216,20 +213,15 @@ def _deshyovaya_proverka_tochki(symbol: str, timeframe: str,
         return {"trigger": False, "kind": None, "napravlenie": None,
                 "tochka": tochka}
 
-    # TRIGGERS_SINHRON_V1: направление точки — синхронность станций c→1→2.
-    # Пробой фрактала/палец в ДРУГУЮ сторону — не наша волна, молчим.
-    _napr_tochki = tochka.get("direction")
-
-    # Триггер Б — фрактал Ганса пробит вне пасти на ЭТОМ баре,
-    # В ТУ ЖЕ сторону, что и живая точка
+    # Триггер Б — фрактал Ганса пробит вне пасти на ЭТОМ баре
     hans_dir = _hans_breakout(md, bars)
-    if hans_dir is not None and _HANS_TO_BULL_BEAR.get(hans_dir) == _napr_tochki:
+    if hans_dir is not None:
         return {"trigger": True, "kind": "fractal",
                 "napravlenie": hans_dir, "tochka": tochka}
 
-    # Триггер В — Большой палец Авантюриста, В ТУ ЖЕ сторону
+    # Триггер В — Большой палец Авантюриста сработал на ЭТОМ баре
     thumb = md.get("thumb_trade", {}) or {}
-    if thumb.get("triggered") and thumb.get("direction") == _napr_tochki:
+    if thumb.get("triggered"):
         return {"trigger": True, "kind": "thumb",
                 "napravlenie": thumb.get("direction"), "tochka": tochka}
 

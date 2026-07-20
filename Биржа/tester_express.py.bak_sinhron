@@ -78,9 +78,6 @@ def _slot_brain(ceh_id: str, slot: str):
 # ── point для теста (ТОЛЬКО здесь, ядро остаётся слепым к тикеру) ──
 # Это не возврат POINT_MAP в ядро — это локальный костыль тестера,
 # чтобы не поднимать MT5 ради одного числа. Не знаешь свой — кидай --point.
-_HANS_TO_BULL_BEAR = {"LONG": "BULL", "SHORT": "BEAR"}  # TRIGGERS_SINHRON_V1
-
-
 _TEST_POINT = {
     "XAUUSD": 0.01,   "XAGUSD": 0.001,
     "EURUSD": 0.00001, "GBPUSD": 0.00001, "USDJPY": 0.001,
@@ -995,16 +992,12 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                       f"{'жива' if _tochka.get('alive') else 'МЕРТВА'} — "
                       f"{_tochka.get('reason','?')}")
             if _tochka.get("alive"):
-                # TRIGGERS_SINHRON_V1: синхронность — пробой/палец должен
-                # смотреть в ТУ ЖЕ сторону, что и живая точка.
-                _napr_tochki = _tochka.get("direction")
                 _hd = _hans_breakout(md, window)
-                if _hd is not None and _HANS_TO_BULL_BEAR.get(_hd) == _napr_tochki:
+                if _hd is not None:
                     _cheap_trigger = ("fractal", _hd)
                 else:
                     _thumb = md.get("thumb_trade", {}) or {}
-                    if (_thumb.get("triggered")
-                            and _thumb.get("direction") == _napr_tochki):
+                    if _thumb.get("triggered"):
                         _cheap_trigger = ("thumb", _thumb.get("direction"))
 
             if not strong and not _cheap_trigger:
