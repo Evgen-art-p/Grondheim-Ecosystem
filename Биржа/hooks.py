@@ -221,6 +221,46 @@ def proverit_tochku(md: dict) -> dict:
 # TOCHKA_ZHIVA_V1 - marker
 
 
+# ═══════════════════════════════════════════════════════════
+# ZIGZAG_CORE_V1 — наблюдатель ног зигзага A-B-C (20.07)
+# ═══════════════════════════════════════════════════════════
+# Параллельный слой поверх TOCHKA_ZHIVA_V1, НИЧЕГО не гейтит и не
+# подменяет. Курс Шефа 20.07: не отсекать флэт порогом N — строить
+# саму волну (нога A → B → попытка C → подтверждённая C → архив),
+# так, что флэт исключает себя сам (C на флэте никогда не
+# подтверждается). Пока это НАБЛЮДАТЕЛЬ: событие ложится в
+# trading_state["zigzag"] и в консоль, Искра его пока не читает —
+# следующий шаг (когда канон будет готов) решит, использовать ли
+# C_CONFIRMED как ворота её поиска разворота.
+#
+# Честный no-op при любой накладке (модуль не найден/данные не те) —
+# наблюдатель не имеет права уронить торговый цикл.
+# ═══════════════════════════════════════════════════════════
+
+def proverit_nogu(md: dict) -> Optional[dict]:
+    """
+    Один шаг автомата ног (zigzag_core.on_bar_md) на баре md. Читает/
+    пишет trading_state["zigzag"] — тем же приёмом, что proverit_tochku
+    держит trading_state["iskra"]. Возвращает событие (dict) или None.
+    """
+    try:
+        from zigzag_core import ZigzagTracker, on_bar_md
+    except Exception:
+        return None
+    try:
+        tstate = load_trading_state()
+        zstate = tstate.get("zigzag") or ZigzagTracker.novoye_sostoyanie()
+        event = on_bar_md(zstate, md)
+        tstate["zigzag"] = zstate
+        save_trading_state(tstate)
+        return event
+    except Exception as e:
+        print(f"[НОГА] ⚠️  наблюдатель ног не сработал ({e}) — торговый цикл цел")
+        return None
+
+# ZIGZAG_CORE_V1 - marker
+
+
 def gate_hans(chain_data: dict) -> bool:
     """
     GATE 1 — A04 Ганс запускается только если:
@@ -312,6 +352,12 @@ def on_before_run(state: dict) -> dict:
 
     _settle_positions(state)          # закрытие позиций — стоп / exit_bell
     _print_market_summary(market_data)
+
+    # ZIGZAG_CORE_V1: наблюдатель ног — параллельно, ничего не гейтит
+    _noga_ev = proverit_nogu(market_data)
+    if _noga_ev:
+        print(f"[НОГА] {_noga_ev.get('event')}: {_noga_ev}")
+
     return state
 
 

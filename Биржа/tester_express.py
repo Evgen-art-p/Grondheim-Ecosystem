@@ -934,7 +934,7 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
         #      (единая дверь, ENGINE_ONE_DOOR_V1), передаём ей уже
         #      посчитанное окно/point, чтобы не тянуть дважды.
         # ════════════════════════════════════════════════════
-        from hooks import proverit_tochku, _hans_breakout
+        from hooks import proverit_tochku, _hans_breakout, proverit_nogu
 
         out("🔀 Единый сквозной проход (SITO_SLIYANIE_V1): "
             "бар за баром, память точки живёт между барами...")
@@ -994,6 +994,12 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
                 print(f"[ТОЧКА] бар {i} ({_bd_log}): "
                       f"{'жива' if _tochka.get('alive') else 'МЕРТВА'} — "
                       f"{_tochka.get('reason','?')}")
+
+            # ZIGZAG_CORE_V1: наблюдатель ног — параллельно, ничего не гейтит
+            _noga_ev = proverit_nogu(md)
+            if _noga_ev:
+                print(f"[НОГА] бар {i} ({bars_all[i].get('date','?')}): "
+                      f"{_noga_ev.get('event')} — {_noga_ev}")
             if _tochka.get("alive"):
                 # TRIGGERS_SINHRON_V1: синхронность — пробой/палец должен
                 # смотреть в ТУ ЖЕ сторону, что и живая точка.
