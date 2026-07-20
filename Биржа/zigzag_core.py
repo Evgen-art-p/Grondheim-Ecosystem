@@ -235,12 +235,28 @@ class ZigzagTracker:
         # ── ВЕДУ_ПОДТВЕРЖДЁННУЮ_C: волна подтверждена, ждём переплетения — архив ──
         if phase == VEDU_PODTVERZHDENNUYU_C:
             leg = state["c"]
+            # разворотный бар Вильямса — только У ИСТИННОГО ЭКСТРЕМУМА волны C
+            # (правка Шефа: иначе стреляет "на старте Василия", на теле волны).
+            # Сначала обновляем экстремум ЭТИМ баром, потом проверяем разворот —
+            # чтобы бар, поставивший новый низ, мог сам стать разворотным.
+            prev_bar = bars[i - 1] if i > 0 else None
+            leg["extreme"] = _obnovit_ekstremum(leg["extreme"], leg["dir"], bars[i])
+            _tol = abs(leg["extreme"]) * 0.0003   # ~3 пункта на форексе, масштаб-независимо
+            if not leg.get("razvorot_nayden") and \
+               razvorotnyy_bar(leg["dir"], bars[i], prev_bar,
+                               wave_extreme=leg["extreme"], tol=_tol):
+                leg["razvorot_nayden"] = True
+                return {"event": "РАЗВОРОТ_НА_C", "bar_index": i, "date": date,
+                        "c_dir": leg["dir"],
+                        "signal": "BUY" if leg["dir"] == "BEAR" else "SELL",
+                        "wave_extreme": leg["extreme"],
+                        "bar": {"open": bars[i]["open"], "high": bars[i]["high"],
+                                "low": bars[i]["low"], "close": bars[i]["close"]}}
             zhiva = (st != "sleeping" and di == leg["dir"])
             if zhiva:
-                leg["extreme"] = _obnovit_ekstremum(leg["extreme"], leg["dir"], bars[i])
                 return None
             archived = {"event": "CYCLE_ARCHIVED", "bar_index": i, "date": date,
-                       "dir": leg["dir"],
+                       "dir": leg["dir"], "razvorot_nayden": leg.get("razvorot_nayden", False),
                        "a": dict(state["a"]), "b": dict(state["b"]), "c": dict(leg)}
             state["phase"] = ISCHU_A
             state["a"] = None
@@ -286,7 +302,10 @@ def on_bar_md(state: dict, md: dict) -> Optional[dict]:
 
     st = "sleeping" if sleeping else "opening/mature"
     di = jaw_direction(jaw, teeth, lips)
-    bar = {"high": high, "low": low}
+    bar = {"open": price.get("open"), "high": high, "low": low,
+           "close": price.get("close")}
+    prev_bar = state.get("last_bar")   # для разворотного бара Вильямса
+    state["last_bar"] = dict(bar)
 
     fr = md.get("fractals", {}) or {}
     last_up = fr.get("last_up") or {}
@@ -399,10 +418,24 @@ def on_bar_md(state: dict, md: dict) -> Optional[dict]:
     # ── ВЕДУ_ПОДТВЕРЖДЁННУЮ_C ──
     if phase == VEDU_PODTVERZHDENNUYU_C:
         leg = state["c"]
-        if not sleeping and di == leg["dir"]:
+        # разворотный бар Вильямса — только У ИСТИННОГО ЭКСТРЕМУМА волны C
+        # (правка Шефа: иначе стреляет "на старте Василия"). Обновляем
+        # экстремум ЭТИМ баром до проверки — чтобы бар нового низа/верха
+        # мог сам стать разворотным.
+        if bar.get("open") is not None and bar.get("close") is not None:
             leg["extreme"] = _obnovit_ekstremum(leg["extreme"], leg["dir"], bar)
+            _tol = abs(leg["extreme"]) * 0.0003
+            if not leg.get("razvorot_nayden") and \
+               razvorotnyy_bar(leg["dir"], bar, prev_bar,
+                               wave_extreme=leg["extreme"], tol=_tol):
+                leg["razvorot_nayden"] = True
+                return {"event": "РАЗВОРОТ_НА_C", "date": date, "c_dir": leg["dir"],
+                        "signal": "BUY" if leg["dir"] == "BEAR" else "SELL",
+                        "wave_extreme": leg["extreme"], "bar": dict(bar)}
+        if not sleeping and di == leg["dir"]:
             return None
         archived = {"event": "CYCLE_ARCHIVED", "date": date, "dir": leg["dir"],
+                   "razvorot_nayden": leg.get("razvorot_nayden", False),
                    "a": dict(state["a"]), "b": dict(state["b"]), "c": dict(leg)}
         state["phase"] = ISCHU_A
         state["a"] = None
@@ -510,5 +543,55 @@ def postroit_nogi(bars: list, point: float, start_idx: int = 0, end_idx: Optiona
         if ev:
             events.append(ev)
     return events
+
+def razvorotnyy_bar(c_dir: str, bar: dict, prev_bar: dict,
+                    wave_extreme: float = None, tol: float = 0.0) -> bool:
+    """
+    Разворотный бар Билла Вильямса («Торговый хаос» / «Новые измерения»)
+    ВНУТРИ подтверждённой волны C — но только НА ВЫДОХЕ волны, у её
+    истинного экстремума, а не на любом откате внутри импульса.
+
+    Волна C шла ВНИЗ (c_dir == 'BEAR') → ждём БЫЧИЙ разворотный бар:
+        low < low предыдущего бара            (сходили ниже, прокол)
+        AND close в верхней половине диапазона (покупатели выкупили)
+            close > (high + low) / 2
+        AND бар СТОИТ У ИСТИННОГО НИЗА ВОЛНЫ (low <= wave_extreme + tol)
+
+    Волна C шла ВВЕРХ (c_dir == 'BULL') → ждём МЕДВЕЖИЙ разворотный бар:
+        high > high предыдущего бара
+        AND close в нижней половине диапазона
+            close < (high + low) / 2
+        AND бар СТОИТ У ИСТИННОГО ВЕРХА ВОЛНЫ (high >= wave_extreme - tol)
+
+    ПОЧЕМУ добавлена привязка к экстремуму (правка Шефа 20.07):
+    без неё разворотный бар стрелял "на старте Василия" — на первом же
+    выкупленном провале в начале импульса, когда настоящее дно ещё
+    впереди ("ещё левей"). Структурно это ловило не конец волны C, а
+    старт третьей волны (паттерн Котина). Привязка low<=wave_extreme
+    физически исключает эту раннюю стрельбу: в начале импульса бар не
+    может быть у самого низкого места волны — оно ещё не достигнуто.
+
+    wave_extreme — бегущий истинный экстремум волны C (leg["extreme"]).
+    Если None — привязка отключена (старое поведение, для обратной
+    совместимости). tol — допуск в цене (обычно несколько point).
+    prev_bar — предыдущий бар. Нет его → разворота быть не может.
+    """
+    if prev_bar is None:
+        return False
+    rng = bar["high"] - bar["low"]
+    if rng <= 0:
+        return False
+    mid = (bar["high"] + bar["low"]) / 2.0
+    if c_dir == "BEAR":  # волна вниз → бычий разворот
+        geom = bar["low"] < prev_bar["low"] and bar["close"] > mid
+        if wave_extreme is not None:
+            geom = geom and (bar["low"] <= wave_extreme + tol)
+        return geom
+    else:                # волна вверх → медвежий разворот
+        geom = bar["high"] > prev_bar["high"] and bar["close"] < mid
+        if wave_extreme is not None:
+            geom = geom and (bar["high"] >= wave_extreme - tol)
+        return geom
+
 
 # ZIGZAG_CORE_V1 - marker

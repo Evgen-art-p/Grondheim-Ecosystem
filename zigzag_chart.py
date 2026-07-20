@@ -57,6 +57,7 @@ _MARKERS = {
     "C_CONFIRMED":  dict(sym="*", size=260, offset=1),
     "C_DISCARDED":  dict(sym="x", size=90, offset=0),
     "CYCLE_ARCHIVED": dict(sym="s", size=60, offset=0),
+    "РАЗВОРОТ_НА_C": dict(sym="D", size=170, offset=1),
 }
 
 
@@ -142,16 +143,23 @@ def main():
         x = _parse_date(b["date"])
         kind = ev["event"]
         m = _MARKERS.get(kind, dict(sym="o", size=60, offset=0))
-        y = (b["high"] + y_span * 0.03) if kind in ("LEG_A_START", "LEG_B_START",
-                                                     "C_ATTEMPT_START", "C_CONFIRMED") \
-            else (b["low"] - y_span * 0.03)
-        ax.scatter([x], [y], marker=m["sym"], s=m["size"], zorder=5,
-                  color=("#1565c0" if "A_" in kind else
-                        "#6a1b9a" if "B_" in kind else
-                        "#e65100" if kind.startswith("C_ATTEMPT") else
-                        "#2e7d32" if kind == "C_CONFIRMED" else
-                        "#b71c1c" if kind == "C_DISCARDED" else "#757575"))
-        ax.annotate(kind, (x, y), fontsize=6, rotation=60,
+        if kind == "РАЗВОРОТ_НА_C":
+            # BUY-разворот ставим ПОД баром, SELL — НАД баром
+            is_buy = ev.get("signal") == "BUY"
+            y = (b["low"] - y_span * 0.05) if is_buy else (b["high"] + y_span * 0.05)
+            col = "#00c853" if is_buy else "#d50000"
+        else:
+            y = (b["high"] + y_span * 0.03) if kind in ("LEG_A_START", "LEG_B_START",
+                                                        "C_ATTEMPT_START", "C_CONFIRMED") \
+                else (b["low"] - y_span * 0.03)
+            col = ("#1565c0" if "A_" in kind else
+                  "#6a1b9a" if "B_" in kind else
+                  "#e65100" if kind.startswith("C_ATTEMPT") else
+                  "#2e7d32" if kind == "C_CONFIRMED" else
+                  "#b71c1c" if kind == "C_DISCARDED" else "#757575")
+        ax.scatter([x], [y], marker=m["sym"], s=m["size"], zorder=6, color=col)
+        label = f"{kind} {ev.get('signal','')}" if kind == "РАЗВОРОТ_НА_C" else kind
+        ax.annotate(label, (x, y), fontsize=6, rotation=60,
                    textcoords="offset points", xytext=(0, 6 if y > b["high"] else -12),
                    ha="left")
 
