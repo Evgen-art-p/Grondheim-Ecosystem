@@ -1,0 +1,127 @@
+{
+  "created": "2026-07-21T15:22:34.092150",
+  "dry_run": false,
+  "archive_root": "_АРХИВ_ЧИСТКИ\\torgovyy_tsekh_bak_20260721_152234",
+  "files": [
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\контора\\слоты\\исполнитель\\мозг.py.bak_otlozhka",
+      "size_bytes": 35971
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\контора\\слоты\\исполнитель\\мозг.py.bak_slepok",
+      "size_bytes": 32645
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\контора\\слоты\\исполнитель\\мозг.py.bak_vasily_watch_20260717_192728",
+      "size_bytes": 37293
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A01\\мозг.py.bak",
+      "size_bytes": 38938
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A01\\мозг.py.bak_alive",
+      "size_bytes": 40628
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A01\\мозг.py.bak_kompas2",
+      "size_bytes": 41214
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A01\\мозг.py.bak_mayatnik",
+      "size_bytes": 35384
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A02\\мозг.py.bak_mayatnik",
+      "size_bytes": 26191
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A03\\мозг.py.bak_mayatnik",
+      "size_bytes": 23313
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A04\\мозг.py.bak_mayatnik",
+      "size_bytes": 29597
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A06\\мозг.py.bak",
+      "size_bytes": 42827
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A06\\мозг.py.bak_disciplina",
+      "size_bytes": 39460
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A06\\мозг.py.bak_fixplus",
+      "size_bytes": 40375
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A06\\мозг.py.bak_memreq",
+      "size_bytes": 36180
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A06\\мозг.py.bak_pamyat_baga",
+      "size_bytes": 42322
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A06\\мозг.py.bak_rezinka",
+      "size_bytes": 38078
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A06\\мозг.py.bak_yazyk_doliva",
+      "size_bytes": 41728
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A06\\мозг.py.bak_zayavka_rule",
+      "size_bytes": 40386
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A06\\промпт.md.bak_stanciya",
+      "size_bytes": 7650
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A07\\мозг.py.bak",
+      "size_bytes": 37690
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A07\\мозг.py.bak_yazyk_doliva",
+      "size_bytes": 36717
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A08\\мозг.py.bak",
+      "size_bytes": 34752
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A08\\мозг.py.bak_disciplina",
+      "size_bytes": 30627
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A08\\мозг.py.bak_fixplus",
+      "size_bytes": 31542
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A08\\мозг.py.bak_memreq",
+      "size_bytes": 27347
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A08\\мозг.py.bak_pamyat_baga",
+      "size_bytes": 33450
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A08\\мозг.py.bak_rezinka",
+      "size_bytes": 29245
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A08\\мозг.py.bak_yazyk_doliva",
+      "size_bytes": 32895
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A08\\мозг.py.bak_zayavka_rule",
+      "size_bytes": 31553
+    },
+    {
+      "relative_path": "GRONDHEIM_CITY\\Биржа\\цеха\\торговый_хаос\\слоты\\A08\\промпт.md.bak_stanciya",
+      "size_bytes": 9206
+    }
+  ]
+}
