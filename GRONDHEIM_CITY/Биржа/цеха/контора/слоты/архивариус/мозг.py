@@ -36,6 +36,7 @@
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -68,9 +69,131 @@ STATS_PATH   = STATE_DIR / "arkhiv_stats.json"
 # (общий котёл контора/журналы/ + метка цеха) — отдельный заход,
 # см. БИРЖА.md §3 и §7б («нить, что торчит наружу»).
 ATLAS_PATH   = Path(__file__).resolve().parents[4] / "данные" / "atlas_trading.jsonl"   # ARKHIV_ATLAS_PATH_ABS_V1: тот же файл, что пишет hooks._write_atlas
+PNL_PATH     = Path(__file__).resolve().parents[4] / "данные" / "trading_pnl.jsonl"     # та же лента закрытий, что atlas_trading.jsonl
 
 # Грани лица момента — сумма голосов сенсоров (CHAIN_CONTRACT v1.7).
 SIGNATURE_KEYS = ("t1_status", "morj_status", "panic_phase", "fractal_valid")
+
+
+# ═══════════════════════════════════════════════════════════
+# РАБОЧИЙ ДВИЖОК АРХИВАРИУСА — что он умеет со своим складом.
+# ARKHIV_ATLAS_CARE_V1 (21.07, решение Шефа): «он же ищет в атласе
+# информацию для столов — вот пусть и чистит, и проверяет».
+# Перенесено дословно из proverit_atlas.py (инспектор) и
+# ochistit_atlas.py (чистка) — те же формулы, тот же смысл, только
+# как функции его роли, не отдельные CLI-скрипты. Вызывать ТОЛЬКО
+# через rezident_menedzher.vyzvat("контора", "архивариус", ...) —
+# решение Шефа, никто не лезет в мозг напрямую в обход двери.
+# ═══════════════════════════════════════════════════════════
+
+def _naiti_dublikaty(path: Path, label: str) -> dict:
+    """
+    Честная картина одного файла (тот же приём, что proverit_atlas.py):
+    всего строк, битых (не JSON), уникальных сделок по ключу
+    (symbol, timeframe, trader, opened_at), дублей, расхождений pnl_r
+    между копиями дубля, разброс дат.
+    """
+    if not path.exists():
+        return {"label": label, "path": str(path), "exists": False}
+
+    total = 0
+    bad = 0
+    by_key: dict = {}
+    dates = []
+
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            total += 1
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                bad += 1
+                continue
+
+            sym = rec.get("symbol")
+            tf = rec.get("timeframe")
+            trader = rec.get("trader")
+            opened = rec.get("opened_at")
+            if opened:
+                dates.append(str(opened))
+
+            if rec.get("pnl_r") is not None or rec.get("pnl") is not None:
+                key = (sym, tf, trader, opened)
+                by_key.setdefault(key, []).append(rec)
+
+    dup_keys = {k: v for k, v in by_key.items() if len(v) > 1}
+    total_closed = sum(len(v) for v in by_key.values())
+
+    dup_examples = []
+    for key, recs in list(dup_keys.items())[:5]:
+        r_values = [r.get("pnl_r") for r in recs]
+        dup_examples.append({
+            "key": key,
+            "count": len(recs),
+            "pnl_r_values": r_values,
+            "protivorechat": len(set(r_values)) > 1,
+        })
+
+    return {
+        "label": label,
+        "path": str(path),
+        "exists": True,
+        "total_lines": total,
+        "bad_lines": bad,
+        "closed_total": total_closed,
+        "unique_trades": len(by_key),
+        "duplicated_trades": len(dup_keys),
+        "dup_examples": dup_examples,
+        "dates_range": (min(dates), max(dates)) if dates else None,
+        "unique_dates": len(set(dates)) if dates else 0,
+    }
+
+
+def proverit_atlas() -> dict:
+    """
+    ИНСПЕКТОР — ничего не меняет, не пишет. Честная картина
+    atlas_trading.jsonl и trading_pnl.jsonl: дубли сделок, расхождения
+    pnl_r между прогонами, разброс дат. Вызывается через
+    rezident_menedzher (действие "proverit_atlas").
+    """
+    return {
+        "pnl":   _naiti_dublikaty(PNL_PATH, "trading_pnl.jsonl (полная лента закрытий)"),
+        "atlas": _naiti_dublikaty(ATLAS_PATH, "atlas_trading.jsonl (память Архивариуса)"),
+    }
+
+
+def _ochistit_odin(path: Path, label: str) -> dict:
+    """Архивирует один файл целиком (с меткой времени), обнуляет. Не удаляет."""
+    if not path.exists():
+        return {"label": label, "ok": False, "reason": "файл не найден — нечего чистить"}
+
+    n_lines = sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+    if n_lines == 0:
+        return {"label": label, "ok": False, "reason": "и так пуст — чистить нечего"}
+
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive = path.with_name(f"{path.stem}_archive_{stamp}{path.suffix}")
+    archive.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+    path.write_text("", encoding="utf-8")
+
+    return {"label": label, "ok": True, "archived_lines": n_lines,
+            "archived_to": str(archive)}
+
+
+def pochistit_atlas() -> dict:
+    """
+    ЧИСТКА — архивирует atlas_trading.jsonl и trading_pnl.jsonl целиком
+    (переименовывает с меткой времени, НЕ удаляет), затем обнуляет оба.
+    НЕ трогает trading_state.json (открытые позиции — своя забота).
+    Вызывается через rezident_menedzher (действие "pochistit_atlas").
+    """
+    return {
+        "atlas": _ochistit_odin(ATLAS_PATH, "atlas_trading.jsonl (память Архивариуса)"),
+        "pnl":   _ochistit_odin(PNL_PATH, "trading_pnl.jsonl (лента закрытий)"),
+    }
 
 
 def _confidence(sample_size: int, success_rate: float) -> str:
