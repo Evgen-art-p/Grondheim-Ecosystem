@@ -28,7 +28,7 @@ import re
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent
+REPO = Path(__file__).resolve().parents[4]   # PERENOS_V_TSEH_V1: файл теперь в цеха/торговый_хаос/
 BIRZHA = REPO / "Биржа"
 TEST_DATA = BIRZHA / "test_data"
 

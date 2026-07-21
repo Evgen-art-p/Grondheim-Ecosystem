@@ -25,7 +25,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent
+REPO = Path(__file__).resolve().parents[4]   # PERENOS_V_TSEH_V1: файл теперь в цеха/торговый_хаос/
 BIRZHA = REPO / "Биржа"
 TEST_DATA = BIRZHA / "test_data"
 WORD_TO_TF = {"MN1": "Monthly", "W1": "Weekly", "D1": "Daily", "H1": "Hourly"}

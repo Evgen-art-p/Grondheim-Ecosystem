@@ -27,7 +27,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]   # PERENOS_V_KARTRIDZH_V1: файл теперь в GRONDHEIM_CITY/Биржа/, ROOT остаётся корнем репо
 SKIP = {".git", "__pycache__", ".venv", "venv", "node_modules", "_ARCHIVE", "_OLD"}
 
 # следы, по которым узнаём писателя позиции

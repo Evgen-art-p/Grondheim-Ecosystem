@@ -36,7 +36,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]   # PERENOS_V_KARTRIDZH_V1: файл теперь в GRONDHEIM_CITY/Биржа/, ROOT остаётся корнем репо
 PNL = ROOT / "GRONDHEIM_CITY" / "Биржа" / "данные" / "trading_pnl.jsonl"
 
 

@@ -28,8 +28,7 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent
 _BIRZHA = _ROOT / "Биржа"
 if not _BIRZHA.exists():
-    print(f"ОШИБКА: не нашёл папку Биржа рядом с этим файлом ({_BIRZHA})")
-    sys.exit(1)
+    _BIRZHA = _ROOT   # PERENOS_V_DVIZHOK_V1: файл теперь может жить прямо в Биржа/
 sys.path.insert(0, str(_BIRZHA))
 
 import matplotlib

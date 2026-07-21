@@ -14,7 +14,9 @@ import json
 import sys
 from pathlib import Path
 
-STATE = Path("GRONDHEIM_CITY") / "Биржа" / "данные" / "trading_state.json"
+STATE = Path(__file__).resolve().parent / "данные" / "trading_state.json"
+# PERENOS_V_KARTRIDZH_V1: файл теперь лежит прямо в GRONDHEIM_CITY/Биржа/,
+# рядом с папкой данные/ — путь больше не зависит от того, откуда запущен.
 
 
 def main():
