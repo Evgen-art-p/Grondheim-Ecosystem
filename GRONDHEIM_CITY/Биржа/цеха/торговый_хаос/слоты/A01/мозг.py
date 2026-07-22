@@ -588,7 +588,7 @@ def run_iskra(symbol: str = "XAUUSD", timeframe: str = "H4",
         "ac":            md.get("ac", {}),
         "divergence_ao": md.get("divergence_ao"),   # флаг движка (2 послед. пивота)
         "exit_bell":     md.get("exit_bell"),
-        "divergent_bar": md.get("divergent_bar", {}),
+        "necron_bar":    md.get("necron_bar", {}),   # NECRON_DIVERGENCE_V1: разворотный бар (Necron)
         "price":         md.get("price", {}),
     }
 

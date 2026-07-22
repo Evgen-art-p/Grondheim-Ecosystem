@@ -153,7 +153,9 @@ def proverit_tochku(md: dict) -> dict:
     high  = price.get("high")
     close = price.get("close")   # KALIBROVKA_POROGA_V1: слом — строго по Close
     twr   = md.get("twr", {}) or {}
-    db    = md.get("divergent_bar", {}) or {}
+    # NECRON_DIVERGENCE_V1: "divergent_bar"/bdb_strong снята целиком —
+    # направление разворотного бара теперь читаем из wave_form.bdb_dir.
+    wf    = md.get("wave_form", {}) or {}
     mfi_type = (md.get("mfi", {}) or {}).get("type")
 
     # ── 1. подпитка той же стороной — ПРОВЕРЯЕТСЯ ПЕРВОЙ ──
@@ -161,7 +163,7 @@ def proverit_tochku(md: dict) -> dict:
     # zero_point_price свежим баром той же стороны с GREEN/SQUAT —
     # это НЕ слом, это новая, более глубокая версия ТОЙ ЖЕ точки.
     # Слом — только когда пробой ничем не подтверждён.
-    if db.get("direction") == napr and mfi_type in ("GREEN", "SQUAT"):
+    if wf.get("bdb_dir") == napr and mfi_type in ("GREEN", "SQUAT"):
         novaya_zp = None
         if napr == "BULL" and low is not None:
             novaya_zp = min(zp, low)      # новое, более глубокое дно
@@ -2020,14 +2022,21 @@ def scan_for_feed(bars: list, symbol: str, timeframe: str, point: float) -> dict
         if not md:
             continue
 
-        db       = md.get("divergent_bar", {})
+        # NECRON_DIVERGENCE_V1: "divergent_bar" (старая bdb_strong) снята
+        # целиком. Разворотный бар теперь читаем из wave_form.bdb_dir —
+        # то же поле, что использует живой спуск Искры. "bdb_candidate"
+        # больше не существует как отдельное понятие (новая формула не
+        # различает кандидата и подтверждённого — либо сошлось всё сразу,
+        # либо нет), поле оставлено в сигнале как синоним bdb_strong,
+        # чтобы не ломать формат для читателей дашборда.
+        wf       = md.get("wave_form", {})
         sleeping = bool(md.get("alligator", {}).get("sleeping", True))
         ao       = md.get("ao", {})
 
         # Искра
-        bdb_strong    = bool(db.get("bdb_strong"))
-        bdb_candidate = bool(db.get("bdb_candidate"))
-        direction     = db.get("direction")
+        bdb_strong    = bool(wf.get("bdb_dir"))
+        bdb_candidate = bdb_strong
+        direction     = wf.get("bdb_dir")
         confirmed     = bool(ao.get("crossed_zero") and ao.get("zero_dir") == "UP")
 
         # Морж: только что проснулся
@@ -2043,7 +2052,6 @@ def scan_for_feed(bars: list, symbol: str, timeframe: str, point: float) -> dict
         prev_sleeping = sleeping
 
         # Значимый бар = есть хоть один РЕДКИЙ событийный сигнал.
-        # bdb_candidate (~44% баров) сам по себе не триггерит.
         any_flag = (bdb_strong or confirmed or alligator_wake or fractal_outside)
         if not any_flag:
             continue

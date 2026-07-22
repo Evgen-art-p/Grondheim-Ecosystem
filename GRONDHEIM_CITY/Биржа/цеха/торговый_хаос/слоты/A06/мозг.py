@@ -582,7 +582,7 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
     # ═══ REZINKA_DZHASTIN_V1 ═══
     # Число на стол, не да/нет. Трое по тренду = три РАЗНЫХ порога
     # доверия (Закон Дежурства §7) — пусть каждый судит своим характером.
-    _db = md.get("divergent_bar", {}) or {}
+    _db = md.get("rubber_band", {}) or {}   # NECRON_DIVERGENCE_V1: резинка живёт отдельно от разворотного бара
     _tr = _db.get("tension_ratio")
     if _tr is None:
         _rez = "нет данных (нет направления — не от чего отрываться)"

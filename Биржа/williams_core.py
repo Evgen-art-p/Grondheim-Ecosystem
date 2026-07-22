@@ -15,7 +15,6 @@
 #   BWMFI:    MarketFacilitationIndex.mq5
 # ─────────────────────────────────────────────────────────────
 
-import math
 from pathlib import Path
 from typing import Optional
 
@@ -159,6 +158,7 @@ def compute_alligator(highs: list[float], lows: list[float],
         "opening":      opening,
         "mature":       mature,
         "bars_open":    bars_open,
+        "jaw_series":   jaw_s,          # NECRON_DIVERGENCE_V1: нужна для отрыва от ВСЕХ трёх линий
         "teeth_series": teeth_s,
         "lips_series":  lips_s,
     }
@@ -572,257 +572,89 @@ def _find_ao_pivots(ao_series: list, bars: list[dict]) -> list[dict]:
     return pivots
 
 
-def detect_divergent_bar(
-    bars:         list[dict],
-    ao_series:    list,
+def _shifted_series(series: list, shift: int) -> list:
+    """
+    Значение на баре i = сырой SMMA на баре (i-shift) — имитация того,
+    что MT4/MT5 iAlligator отдаёт уже СМЕЩЁННОЕ (отображаемое) значение
+    линии, а не сырое текущее. Нужно для NECRON_DIVERGENCE_V1 — старая
+    resinka Джастин (compute_rubber_band) сознательно брала СЫРЫЕ линии
+    ("без смещения") — это другой, отдельный расчёт, не путать.
+    """
+    n = len(series)
+    out = [None] * n
+    for i in range(n):
+        j = i - shift
+        if j >= 0:
+            out[i] = series[j]
+    return out
+
+
+def detect_necron_bar(
+    bars:         list,
+    jaw_series:   Optional[list],
     teeth_series: Optional[list],
-    point:        Optional[float] = None,
-    lips_series:  Optional[list] = None,   # REZINKA_DZHASTIN_V1
+    lips_series:  Optional[list],
 ) -> dict:
     """
-    Расходящийся бар (BuDB/BDB) по Profitunity Trading Group — Bill Williams.
+    NECRON_DIVERGENCE_V1 (21-22.07, канон-сессия): разворотный бар по
+    формуле стороннего проверенного индикатора iDivergenceBar.mq4
+    (Dmitry Zhebrak aka Necron, 2010, mqlcoder.ru) — подтверждена на
+    истории БЕЗ ПОДГОНКИ на трёх разных инструментах/ТФ разом (см.
+    ИСКРА_ПЕРЕДЕЛКА_СПЕК.md, правки 14/20):
+      XAUUSD H4  (2010-2026): 2407 сделок, винрейт 31%, +159.76R
+      EURUSD H1  (2010-2017): 4702 сделки, винрейт 31%, +54.49R
+      SP500 Daily(2010-2022): 225 сделок,  винрейт 37%, +83.25R
 
-    BuDB (бычий, оценивается ПОСЛЕДНИЙ бар окна):
-      lower_low   — low[i] < low[i-1]            (ниже предыдущего бара)
-      upper_close — close > (high + low) / 2     (закрытие в верхней половине)
-      → bdb_candidate (локальный факт)
+    ЭТО НЕ detect_divergent_bar (та формула — старая, ungated,
+    искала разворот на любом баре без привязки к тому, что было до
+    этого; отдельная попытка усилить её дивергенцией AO/ангуляцией/
+    Squat/Zone честно не улучшила результат — правки 12, 18-19).
 
-    bdb_strong:
-      + дивергенция AO под нулём (цена ниже, AO выше предыдущего лоу, оба < 0)
-      + НАСТОЯЩАЯ ангуляция (WILLIAMS_REAL_ANGULATION_V1): угол расхождения
-        между краем цены и линией Teeth, окно ДО 20 баров с момента
-        пересечения close/Teeth, порог угла ~20° (канон Profitunity/MQL5:
-        окно по умолчанию 20 баров, порог 22° — см. официальный MQL5
-        индикатор "Angulation"). Раньше здесь было САМОДЕЛЬНОЕ жёсткое
-        окно "bars_since_cross ∈ [5,7]" — не соответствует канону и
-        отсеивало почти все реальные сигналы.
+    Условие (дословно из первоисточника):
+      up = max(lips, teeth, jaw)   dn = min(lips, teeth, jaw)
+      SELL: high[i]>high[i-1] И close[i]<середина бара И low[i]>up
+             (весь бар целиком ВЫШЕ всех трёх линий Аллигатора разом)
+      BUY:  low[i]<low[i-1]  И close[i]>середина бара И high[i]<dn
+             (весь бар целиком НИЖЕ всех трёх линий Аллигатора разом)
 
-    Зеркально BDB (медвежий): higher_high + lower_close, AO над нулём.
+    Линии Аллигатора берутся СО СДВИГОМ +8/+5/+3 (Зубы/Челюсть/Губы) —
+    как MT4/MT5 iAlligator отдаёт уже отображаемое (смещённое) значение,
+    не сырой текущий SMMA. Это ДРУГОЙ расчёт линий, чем resinka Джастин
+    (compute_rubber_band), которая сознательно берёт линии БЕЗ сдвига —
+    два разных, оба законных употребления одного и того же Аллигатора.
 
-    teeth_series — SMMA(8) медианы (линия баланса Аллигатора), из compute_alligator.
-    point — шаг цены, нужен для безразмерного угла (единицы point, не сырая цена).
+    Возвращает {"direction": "BULL"|"BEAR"|None, "price": float|None}.
+    direction="BULL" на BUY-баре (входим вверх), "BEAR" на SELL-баре.
+    price — low бара для BULL, high бара для BEAR (тот же контракт,
+    что старый bdb_price в read_ao_wave_form).
     """
-    i = len(bars) - 1
-    if i < 1 or teeth_series is None:
-        return _empty_divergent_bar()
+    empty = {"direction": None, "price": None}
+    if not jaw_series or not teeth_series or not lips_series:
+        return empty
 
-    b   = bars[i]
-    bp  = bars[i - 1]
+    i = len(bars) - 1
+    if i < 1:
+        return empty
+
+    jaw_sh   = _shifted_series(jaw_series, 8)
+    teeth_sh = _shifted_series(teeth_series, 5)
+    lips_sh  = _shifted_series(lips_series, 3)
+
+    j, t, l = jaw_sh[i], teeth_sh[i], lips_sh[i]
+    if j is None or t is None or l is None:
+        return empty
+
+    up = max(l, t, j)
+    dn = min(l, t, j)
+
+    b, p = bars[i], bars[i - 1]
     mid = (b["high"] + b["low"]) / 2
 
-    lower_low   = b["low"]   < bp["low"]
-    upper_close = b["close"] > mid
-    higher_high = b["high"]  > bp["high"]
-    lower_close = b["close"] < mid
-
-    bull_candidate = lower_low and upper_close
-    bear_candidate = higher_high and lower_close
-
-    direction = "BULL" if bull_candidate else "BEAR" if bear_candidate else None
-
-    cross_idx = _teeth_cross_index(bars, teeth_series, direction)
-    bars_since_cross = (i - cross_idx) if cross_idx is not None else None
-
-    angulation_deg = None
-    angulation_ok = False
-    if (cross_idx is not None and bars_since_cross is not None
-            and bars_since_cross <= _ANGULATION_LOOKBACK):
-        angulation_deg = _angulation_angle(
-            bars, teeth_series, cross_idx, i, direction, point)
-        if angulation_deg is not None:
-            angulation_ok = angulation_deg >= _ANGULATION_MIN_DEG
-
-    ao_diver = _ao_divergence_at_bar(bars, ao_series, i, direction)
-
-    bdb_candidate = bull_candidate or bear_candidate
-
-    # ═══ REZINKA_DZHASTIN_V1 — КАНОН ВМЕСТО УГЛА ═══
-    # Книга Моржа §3: «ГЛАВНОЕ — НЕ СЧИТАТЬ УГОЛ. Угол субъективен.»
-    # Джастин заменила угол ПУСТОТОЙ между Губами и экстремумом цены.
-    # Порог — не число, а «максимум за ЖИЗНЬ ДВИЖЕНИЯ» (is_peak).
-    # Оттого метод и не зависит от актива/ТФ: пустота нормируется сама
-    # на себя. Старый угол давал медиану 0.9° при скачке к 179.9° —
-    # это была подпись сломанной формулы, а не редкость рынка.
-    #
-    # is_peak = TRUE в момент Искры  → АНГУЛЯЦИЯ ИСТИННАЯ
-    # is_peak = FALSE                → натяжение есть, но не на пике. РАНО.
-    rb = compute_rubber_band(bars, lips_series, teeth_series,
-                             direction, point)
-    tension_ratio = rb.get("tension_ratio")
-    is_peak       = bool(rb.get("is_peak"))
-
-    bdb_strong = bool(bdb_candidate and is_peak and ao_diver)
-
-    return {
-        "direction":        direction,
-        "lower_low":        lower_low   if direction == "BULL" else False,
-        "upper_close":      upper_close if direction == "BULL" else False,
-        "higher_high":      higher_high if direction == "BEAR" else False,
-        "lower_close":      lower_close if direction == "BEAR" else False,
-        "bars_since_cross": bars_since_cross,
-        "angulation_deg":   round(angulation_deg, 1) if angulation_deg is not None else None,
-        "angulation_ok":    angulation_ok,
-        "ao_divergence":    ao_diver,
-        "bdb_candidate":    bdb_candidate,
-        "bdb_strong":       bdb_strong,
-        # REZINKA_DZHASTIN_V1: ЧИСЛО на стол трейдеру, не да/нет.
-        # Трое по тренду = три РАЗНЫХ порога доверия (Закон
-        # Дежурства §7). Отдать им одно да/нет — стереть разницу.
-        # Авантюрист войдёт при 0.85, Консерватор ждёт пик.
-        "tension_ratio":    tension_ratio,   # 0..1 — доля от пика
-        "is_peak":          is_peak,         # резинка ЗВЕНИТ
-        "distance_now":     rb.get("distance_now"),
-        "distance_max":     rb.get("distance_max"),
-        # угол ОСТАВЛЕН как факт (angulation_deg выше), но он
-        # БОЛЬШЕ НЕ ЗАТВОР. Не удаляю — пусть видно, что он врал.
-    }
-
-
-def _empty_divergent_bar() -> dict:
-    return {
-        "direction": None, "lower_low": False, "upper_close": False,
-        "higher_high": False, "lower_close": False,
-        "bars_since_cross": None, "angulation_deg": None, "angulation_ok": False,
-        "ao_divergence": False, "bdb_candidate": False, "bdb_strong": False,
-        # REZINKA_DZHASTIN_V1: те же поля и в пустом — иначе
-        # читатель словит KeyError на холодном старте
-        "tension_ratio": None, "is_peak": False,
-        "distance_now": None, "distance_max": None,
-    }
-
-
-# WILLIAMS_REAL_ANGULATION_V1: канон Profitunity/MQL5 — окно поиска
-# ангуляции ДО 20 баров, порог угла по умолчанию 22° (официальный
-# MQL5-индикатор "Angulation"). Берём порог чуть мягче (20°) — запас
-# на округления/разные символы; можно подстроить по факту статистики.
-_ANGULATION_LOOKBACK = 20
-_ANGULATION_MIN_DEG  = 20.0
-
-
-def _teeth_cross_index(bars: list, teeth_series: list, direction) -> Optional[int]:
-    """
-    АБСОЛЮТНЫЙ индекс бара, где close последний раз пересёк линию Teeth
-    в сторону, ОТКУДА начинается импульс, который B/D/B потом развернёт.
-    BULL: пересечение сверху вниз (close был >= teeth, стал < teeth).
-    BEAR: снизу вверх. Возвращает индекс бара или None.
-
-    (WILLIAMS_REAL_ANGULATION_V1: раньше была _bars_since_teeth_cross,
-    возвращавшая только РАССТОЯНИЕ в барах — этого недостаточно для
-    угла, нужен сам индекс начала окна.)
-    """
-    i = len(bars) - 1
-    if direction is None:
-        return None
-    for k in range(i, 0, -1):
-        t  = teeth_series[k]   if k   < len(teeth_series) else None
-        tp = teeth_series[k-1] if k-1 < len(teeth_series) else None
-        if t is None or tp is None:
-            continue
-        c  = bars[k]["close"]
-        cp = bars[k-1]["close"]
-        if direction == "BULL":
-            if cp >= tp and c < t:
-                return k
-        else:
-            if cp <= tp and c > t:
-                return k
-    return None
-
-
-def _angulation_angle(bars: list, teeth_series: list, cross_idx: int,
-                      i: int, direction: Optional[str],
-                      point: Optional[float]) -> Optional[float]:
-    # PYLANCE_GIGIENA_V1: direction реально бывает None (нет
-    # направления — не от чего мерить). Тип врал.
-    #
-    # ⚠ ЭТО КОД МЁРТВОГО ОРГАНА. Угол выброшен из затвора
-    # (REZINKA_DZHASTIN_V1) — bdb_strong его больше не
-    # спрашивает. Книга Моржа §3: «ГЛАВНОЕ — НЕ СЧИТАТЬ УГОЛ.»
-    # Оставлен в раскладке как факт: пусть видно, что он врал
-    # (медиана 0.9° при максимуме 179.9°).
-    """
-    НАСТОЯЩАЯ ангуляция (WILLIAMS_REAL_ANGULATION_V1) — угол расхождения
-    (в градусах) между краем цены и линией Teeth от cross_idx до i.
-
-    Канон Profitunity: "растягиваем резинку" между линией цены и линией
-    Аллигатора — чем больше угол разрыва, тем сильнее ангуляция (сигнал
-    надёжнее). Меряем в единицах point (безразмерно, любой инструмент),
-    горизонталь — количество баров (тот же принцип, что в официальном
-    MQL5-индикаторе "Angulation").
-
-    BULL: край цены — LOW баров (нижняя кромка последнего движения вниз
-          перед разворотом). BEAR: край цены — HIGH баров.
-    Без point (не передан) угол посчитать нельзя — честно возвращает None.
-    """
-    if point is None or point <= 0:
-        return None
-    span = i - cross_idx
-    if span <= 0:
-        return None
-
-    if direction == "BULL":
-        price_edge_cross = bars[cross_idx]["low"]
-        price_edge_now   = bars[i]["low"]
-    else:
-        price_edge_cross = bars[cross_idx]["high"]
-        price_edge_now   = bars[i]["high"]
-
-    teeth_cross = teeth_series[cross_idx] if cross_idx < len(teeth_series) else None
-    teeth_now   = teeth_series[i]         if i         < len(teeth_series) else None
-    if teeth_cross is None or teeth_now is None:
-        return None
-
-    price_slope = (price_edge_now - price_edge_cross) / point / span
-    teeth_slope = (teeth_now - teeth_cross) / point / span
-    price_angle = math.degrees(math.atan(price_slope))
-    teeth_angle = math.degrees(math.atan(teeth_slope))
-    return abs(price_angle - teeth_angle)
-
-
-def _ao_divergence_at_bar(bars: list, ao_series: list, i: int, direction) -> bool:
-    """
-    Дивергенция AO на баре i относительно ПРЕДЫДУЩЕГО ценового экстремума.
-    BULL: цена сделала более низкий лоу, AO на баре i ВЫШЕ чем на том лоу,
-          оба значения AO < 0.
-    BEAR: зеркально, оба AO > 0.
-    """
-    if direction is None or i >= len(ao_series):
-        return False
-    ao_i = ao_series[i]
-    if ao_i is None:
-        return False
-
-    # AO_DIVERGENCE_GLUBZHE_V1: раньше первый попавшийся экстремум с
-    # неправильным знаком AO обрывал весь поиск (return False внутри
-    # цикла). Теперь — continue: если этот экстремум не подошёл, ищем
-    # ДАЛЬШЕ по истории, пока диапазон не кончится. Дивергенция реже
-    # экстремумов, но не настолько реже, насколько её резал обрыв на
-    # первом кандидате (замер voronka_bdb.py: 8.5% от кандидатов до
-    # патча — структурный обрыв, не редкость рынка).
-    if direction == "BULL":
-        if ao_i >= 0:
-            return False
-        for k in range(i - 2, 1, -1):
-            if (bars[k]["low"] < bars[k-1]["low"] and
-                bars[k]["low"] < bars[k+1]["low"]):
-                ao_k = ao_series[k]
-                if ao_k is None or ao_k >= 0:
-                    continue
-                if bars[i]["low"] < bars[k]["low"] and ao_i > ao_k:
-                    return True
-    else:
-        if ao_i <= 0:
-            return False
-        for k in range(i - 2, 1, -1):
-            if (bars[k]["high"] > bars[k-1]["high"] and
-                bars[k]["high"] > bars[k+1]["high"]):
-                ao_k = ao_series[k]
-                if ao_k is None or ao_k <= 0:
-                    continue
-                if bars[i]["high"] > bars[k]["high"] and ao_i < ao_k:
-                    return True
-    return False
-
+    if b["high"] > p["high"] and b["close"] < mid and b["low"] > up:
+        return {"direction": "BEAR", "price": round(b["high"], 6)}
+    if b["low"] < p["low"] and b["close"] > mid and b["high"] < dn:
+        return {"direction": "BULL", "price": round(b["low"], 6)}
+    return empty
 
 
 
@@ -846,7 +678,7 @@ def compute_rubber_band(
     волны). По Джастин: натяжение достигает ПИКА на дивергентном баре —
     поэтому is_peak = текущая дистанция это максимум за жизнь движения.
 
-    direction приходит снаружи (из divergent_bar.direction или наклона
+    direction приходит снаружи (из necron_bar.direction или наклона
     Аллигатора). Если None — резинка не натянута (нет тренда для отрыва).
 
     ЗАКОН: ядро только МЕРЯЕТ. «Натянута/вяло» — факт физики, не команда.
@@ -1071,6 +903,7 @@ def read_ao_wave_form(
                                 # 100-140 баров, экран рисует волну и
                                 # 3-ю волну AO наиболее адекватно
     point:        Optional[float] = None,
+    jaw_series:   Optional[list] = None,   # NECRON_DIVERGENCE_V1
 ) -> dict:
     """
     ЧИТАЛКА ФОРМЫ AO — глаз Искры. Кладёт ФАКТЫ структуры, НЕ вердикты.
@@ -1090,8 +923,9 @@ def read_ao_wave_form(
       zero_cross_after_min — AO пересёк ноль ВВЕРХ после нижнего царя (4-я шорта).
       divergence_dir — КОМПАС: есть дивер AO и какой (BULL/BEAR/None).
                        Показывает СТОРОНУ зоны разворота. Грубо. Из detect_ao_divergence.
-      bdb_dir        — ТОЧКА: есть B/D/B бар Вильямса и какой (BULL/BEAR/None).
-                       Конкретный бар цены. Из detect_divergent_bar (bdb_strong).
+      bdb_dir        — ТОЧКА: есть разворотный бар и какой (BULL/BEAR/None).
+                       Конкретный бар цены. Из detect_necron_bar (формула
+                       iDivergenceBar.mq4, Necron — см. NECRON_DIVERGENCE_V1).
       bdb_price      — цена этого бара (low для BULL, high для BEAR) или None.
       bar_date       — дата последнего бара окна.
 
@@ -1111,6 +945,9 @@ def read_ao_wave_form(
     # REZINKA_DOBIVKA_V1: Губы режем тем же окном, что Зубы —
     # без них резинка не считается и bdb_strong ВСЕГДА False
     lips_w = lips_series[off:] if lips_series else None
+    # NECRON_DIVERGENCE_V1: Челюсть тем же окном — нужна для отрыва
+    # от ВСЕХ трёх линий разом (формула iDivergenceBar.mq4)
+    jaw_w = jaw_series[off:] if jaw_series else None
 
     # ── пивоты AO в окне (локальные экстремумы, как _find_ao_pivots) ──
     pv = []  # (local_idx, type, ao_value)
@@ -1147,23 +984,20 @@ def read_ao_wave_form(
     div_dir = "BULL" if div.get("bullish") else "BEAR" if div.get("bearish") else None
 
     # ── B/D/B бар-ТОЧКА (факт, из ядра) ──
+    # NECRON_DIVERGENCE_V1 (21-22.07): была detect_divergent_bar+bdb_strong
+    # (искала разворот НА ЛЮБОМ баре, без привязки к тому, что было до
+    # этого — баг §0 канона). Заменена на detect_necron_bar — формула
+    # стороннего проверенного индикатора (iDivergenceBar.mq4, Necron),
+    # подтверждена на истории без подгонки на трёх инструментах/ТФ разом
+    # (ИСКРА_ПЕРЕДЕЛКА_СПЕК.md правки 14/20). Три честные попытки усилить
+    # её дивергенцией AO/Squat/Zone не улучшили результат (правки 12,
+    # 18-19) — оставляем как есть, без добавок.
     bdb_dir = None
     bdb_price = None
-    if teeth_w is not None:
-        # REZINKA_DOBIVKA_V1: ВОТ ОНА, ДЫРА. Без lips_series
-        # резинка не считалась → is_peak=False ВСЕГДА →
-        # bdb_strong=False ВСЕГДА → bdb_dir=None ВСЕГДА →
-        # спуск Искры (_descend ищет bdb_dir == compass)
-        # не находил НИЧЕГО. 454 кандидата, 0 подтверждений.
-        db = detect_divergent_bar(bars_w, ao_w, teeth_w,
-                                  point=point,
-                                  lips_series=lips_w)  # WILLIAMS_REAL_ANGULATION_V1
-        if db.get("bdb_strong"):
-            bdb_dir = db.get("direction")
-            if bdb_dir == "BULL":
-                bdb_price = round(bars_w[-1]["low"], 6)
-            elif bdb_dir == "BEAR":
-                bdb_price = round(bars_w[-1]["high"], 6)
+    if jaw_w is not None and teeth_w is not None and lips_w is not None:
+        nb = detect_necron_bar(bars_w, jaw_w, teeth_w, lips_w)
+        bdb_dir = nb.get("direction")
+        bdb_price = nb.get("price")
 
     # ISKRA_WAVE_MEASURE_V1: факты структуры, НЕ фильтр. Меряется по
     # ПОЛНОМУ (не windowed) ao_series/bars — окно read_ao_wave_form
@@ -1301,13 +1135,18 @@ def build_market_data(
     # REZINKA_DZHASTIN_V1: Губы (SMMA-5) — от них меряется пустота.
     # Раньше мерили от Зубов (SMMA-8) через угол. Канон — Губы.
     _lips_series = alligator.get("lips_series")
-    divergent_bar = detect_divergent_bar(bars, ao_series, teeth_series,
-                                         point=_point,
-                                         lips_series=_lips_series)  # WILLIAMS_REAL_ANGULATION_V1
+    _jaw_series  = alligator.get("jaw_series")
+    # NECRON_DIVERGENCE_V1 (21-22.07): старая detect_divergent_bar (bdb_strong,
+    # искала разворот на любом баре без привязки к структуре) полностью
+    # снята. Разворотный бар теперь — только формула iDivergenceBar.mq4
+    # (Necron), подтверждённая на истории без подгонки (ИСКРА_ПЕРЕДЕЛКА_СПЕК.md
+    # правки 14/20). Раньше поле называлось "divergent_bar" — переименовано
+    # в "necron_bar", чтобы имя не тянуло за собой старую формулу.
+    necron_bar = detect_necron_bar(bars, _jaw_series, teeth_series, _lips_series)
     lips_series   = alligator.get("lips_series")
-    # Резинка Джастин: направление берём из дивергентного бара,
+    # Резинка Джастин: направление берём из разворотного бара Necron,
     # а если он молчит — из наклона Аллигатора (Губы vs Зубы).
-    _rb_dir = divergent_bar.get("direction")
+    _rb_dir = necron_bar.get("direction")
     if _rb_dir is None and alligator.get("lips") is not None:
         _rb_dir = "BULL" if alligator["lips"] > alligator["teeth"] else "BEAR"
     rubber_band = compute_rubber_band(
@@ -1315,7 +1154,11 @@ def build_market_data(
 
     # Читалка формы AO — факты структуры для Искры v2 (окно 140-150).
     # Сенсор кладёт факты (дивер-компас, B/D/B-точка, горб-царь), не вердикты.
-    wave_form = read_ao_wave_form(bars, ao_series, teeth_series, point=_point, lips_series=_lips_series)  # WILLIAMS_REAL_ANGULATION_V1
+    # NECRON_DIVERGENCE_V1: jaw_series теперь тоже нужен — bdb_dir внутри
+    # считается формулой Necron (все три линии Аллигатора), не старой bdb_strong.
+    _jaw_series = alligator.get("jaw_series")
+    wave_form = read_ao_wave_form(bars, ao_series, teeth_series, point=_point,
+                                  lips_series=_lips_series, jaw_series=_jaw_series)  # WILLIAMS_REAL_ANGULATION_V1
 
     # Компас глобального фона из синей линии (Jaw).  # GLOBAL_BIAS_COMPASS_V1
     # Факт направления, всегда на столе (не зависит от дивера/терминала).
@@ -1412,7 +1255,7 @@ def build_market_data(
         "divergence_ao": divergence["bullish"],  # Точка Ноль
         "exit_bell":     divergence["bearish"],  # Конец импульса
 
-        "divergent_bar": divergent_bar,          # BuDB/BDB по Profitunity
+        "necron_bar":    necron_bar,            # разворотный бар (Necron, iDivergenceBar.mq4)
         "rubber_band":   rubber_band,            # резинка Джастин (глаза Моржа)
         "wave_form":     wave_form,            # факты формы AO (глаз Искры v2)
         "global_bias":   global_bias,          # компас фона из синей (GLOBAL_BIAS_COMPASS_V1)

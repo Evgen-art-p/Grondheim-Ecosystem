@@ -973,14 +973,15 @@ def run_tester(csv_path: str, symbol: str, timeframe: str,
             if not md:
                 continue
 
-            db = md.get("divergent_bar", {})
+            # NECRON_DIVERGENCE_V1: "divergent_bar"/bdb_strong снята
+            # целиком — разворотный бар теперь только formula Necron,
+            # одно условие без деления на "кандидат"/"подтверждённый".
+            # loose/strict больше не различаются НА ЭТОМ гейте (флаг
+            # --loose оставлен в интерфейсе — может пригодиться другим
+            # ситам позже, здесь просто не на что ему опираться).
             wf = md.get("wave_form", {})
-            if loose:
-                strong = wf.get("bdb_dir") or db.get("bdb_candidate")
-                side = (wf.get("bdb_dir") or db.get("direction") or "?")
-            else:
-                strong = db.get("bdb_strong") or wf.get("bdb_dir")
-                side = db.get("direction") or wf.get("bdb_dir") or "?"
+            strong = wf.get("bdb_dir")
+            side = wf.get("bdb_dir") or "?"
 
             # SITO_SLIYANIE_V1: триггеры Б/В — точка жива И фрактал/палец
             # на ЭТОМ баре. Считаем ОДИН РАЗ здесь (md уже посчитан) —
@@ -1285,7 +1286,8 @@ def main():
     ap.add_argument("--warmup", type=int, default=60,
                     help="сколько баров пропустить на разгон индикаторов")
     ap.add_argument("--loose", action="store_true",
-                    help="мягкое сито (если строгое bdb_strong дало ноль)")
+                    help="мягкое сито (сейчас не влияет на разворотный бар — "
+                         "формула Necron одна на оба режима; оставлен на будущее)")
     ap.add_argument("--learn", action="store_true",   # TESTER_STERILE_V1
                     help="учебный прогон: ДНК агентов мутирует "
                          "(по умолчанию стерильно — смотрим, не калеча)")
