@@ -20,10 +20,22 @@
 # сделка не считается взятой. Держим до стопа или до следующего
 # противоположного сигнала (флип), как в прошлых прогонах.
 #
-# ЗАПУСК:
+# СПРЕД (--spread, правка 22 ИСКРА_ПЕРЕДЕЛКА_СПЕК.md): необязательный,
+# в пунктах. Реальный вход BUY по ASK (цена входа хуже уровня триггера
+# на спред), SELL по BID (тоже хуже на спред). Выход по флипу — тоже
+# через спред (закрываем по рыночной цене, невыгодно). Выход по стопу
+# спредом не трогаем (стоп срабатывает по той же цене, от которой мерили
+# риск — упрощение, не идеальная симуляция, но честная и не в свою пользу).
+#
+# СИМВОЛ/POINT — можно не указывать: угадываются по имени файла
+# (XAUUSD/EURUSD/GBPUSD/SP500 по первым буквам). Если угадать не
+# получилось или нужен свой — передай явно (позиционно или --symbol/--point).
+#
+# ЗАПУСК — работает любой из вариантов:
+#   py test_idivergence_bar.py Биржа/test_data/XAUUSDH4.csv
 #   py test_idivergence_bar.py Биржа/test_data/XAUUSDH4.csv XAUUSD 0.01
-#   py test_idivergence_bar.py Биржа/test_data/EURUSDH1.csv EURUSD 0.00001 \
-#       --start 2010.01.01 --end 2017.12.31
+#   py test_idivergence_bar.py Биржа/test_data/GBPUSDH1.csv \
+#       --start 2026.02.01 --end 2026.06.30 --spread 2.0
 # ─────────────────────────────────────────────────────────────
 
 import sys
@@ -43,6 +55,24 @@ if sys.platform == "win32":
         pass
 
 from williams_core import read_mt5_csv, _smma_series  # noqa: E402
+
+# автоопределение point по первым буквам имени файла/символа —
+# правь/дополняй список, если добавишь новый инструмент
+_POINT_BY_PREFIX = [
+    ("XAUUSD", 0.01),
+    ("SP500",  0.01),
+    ("EURUSD", 0.00001),
+    ("GBPUSD", 0.00001),
+    ("USDJPY", 0.001),
+]
+
+
+def guess_symbol_and_point(csv_path: str):
+    name = Path(csv_path).stem.upper()   # "GBPUSDH1" из "GBPUSDH1.csv"
+    for prefix, point in _POINT_BY_PREFIX:
+        if name.startswith(prefix):
+            return prefix, point
+    return None, None
 
 
 def shifted(series: list, shift: int) -> list:
@@ -86,7 +116,11 @@ def find_divergence_bars(bars: list) -> list:
     return events
 
 
-def backtest(bars: list, events: list, point: float) -> list:
+def backtest(bars: list, events: list, point: float, spread: float = 0.0) -> list:
+    """
+    spread — в ЦЕНЕ (уже умножено на point*пункты), не в пунктах.
+    spread=0 — старое поведение, без изменений (спред не учитывается).
+    """
     n = len(bars)
     trades = []
     for k, e in enumerate(events):
@@ -95,17 +129,20 @@ def backtest(bars: list, events: list, point: float) -> list:
         if side == "BUY":
             entry_level = bars[i]["high"] + point
             stop_level = bars[i]["low"] - point
+            real_entry = entry_level + spread   # BUY исполняется по ASK = BID+spread
         else:
             entry_level = bars[i]["low"] - point
             stop_level = bars[i]["high"] + point
+            real_entry = entry_level - spread   # SELL исполняется по BID (хуже на спред)
 
-        risk = abs(entry_level - stop_level)
+        risk = abs(real_entry - stop_level)
         if risk <= 0:
             continue
 
         next_i = events[k + 1]["bar_index"] if k + 1 < len(events) else n - 1
 
-        # ждём заполнения отложенного ордера
+        # ждём заполнения отложенного ордера (уровень триггера — БЕЗ спреда,
+        # спред входит в реальную цену исполнения, не в момент триггера)
         fill_i = None
         for j in range(i + 1, min(next_i, n)):
             if side == "BUY" and bars[j]["high"] >= entry_level:
@@ -131,22 +168,56 @@ def backtest(bars: list, events: list, point: float) -> list:
         if exit_price is None:
             exit_i = min(next_i, n - 1)
             exit_price = bars[exit_i]["close"]
+            # выход по флипу — рыночный ордер, тоже через спред (невыгодно)
+            exit_price = exit_price - spread if side == "BUY" else exit_price + spread
             exit_reason = "FLIP"
 
-        pnl = (exit_price - entry_level) if side == "BUY" else (entry_level - exit_price)
+        pnl = (exit_price - real_entry) if side == "BUY" else (real_entry - exit_price)
         r = pnl / risk
         trades.append({"date": bars[fill_i]["date"], "side": side,
-                       "entry": entry_level, "stop": stop_level,
+                       "entry": real_entry, "stop": stop_level,
                        "exit": exit_price, "reason": exit_reason, "r": r})
     return trades
 
 
 def main():
     args = sys.argv[1:]
-    csv_path, symbol, point = args[0], args[1], float(args[2])
+    if not args:
+        print("py test_idivergence_bar.py <csv> [символ] [point] "
+             "[--start ...] [--end ...] [--spread пункты] "
+             "[--symbol ...] [--point ...]")
+        sys.exit(1)
 
     def opt(name, d=None):
         return args[args.index(name) + 1] if name in args else d
+
+    csv_path = args[0]
+    rest = args[1:]
+
+    # символ/point — позиционно (старый способ) ИЛИ через --symbol/--point
+    # ИЛИ угадываем по имени файла, если ничего не дано
+    pos_symbol = rest[0] if rest and not rest[0].startswith("--") else None
+    pos_point = None
+    if pos_symbol is not None and len(rest) > 1 and not rest[1].startswith("--"):
+        pos_point = rest[1]
+
+    symbol = opt("--symbol", pos_symbol)
+    point_arg = opt("--point", pos_point)
+
+    guessed_symbol, guessed_point = guess_symbol_and_point(csv_path)
+    if symbol is None:
+        symbol = guessed_symbol or "?"
+    if point_arg is None:
+        point = guessed_point
+        if point is None:
+            print(f"Не смог угадать point по имени файла «{csv_path}» — "
+                 f"передай явно: --point 0.01 (или третьим аргументом).")
+            sys.exit(1)
+    else:
+        point = float(point_arg)
+
+    spread_points = float(opt("--spread", 0) or 0)
+    spread = spread_points * point
 
     full = csv_path
     if not Path(full).is_absolute() and not Path(full).exists():
@@ -165,9 +236,11 @@ def main():
         en = pd(end) if end else None
         events = [e for e in events if (not s or pd(e["date"]) >= s) and (not en or pd(e["date"]) <= en)]
 
-    print(f"{symbol}: баров={len(bars)}  дивергентных баров найдено={len(events)}")
+    spread_note = f"  спред={spread_points}п" if spread_points else ""
+    print(f"{symbol} (point={point}{spread_note}): баров={len(bars)}  "
+         f"дивергентных баров найдено={len(events)}")
 
-    trades = backtest(bars, events, point)
+    trades = backtest(bars, events, point, spread)
     if not trades:
         print("  -> сделок не взято")
         return
