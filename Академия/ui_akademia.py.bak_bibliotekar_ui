@@ -32,8 +32,7 @@ from nicegui import ui, app
 
 _HERE = Path(__file__).resolve().parent           # Академия/
 _REPO = _HERE.parent                              # корень репо
-# PATCH_AKADEMIA_BIBLIOTEKAR_UI_V1: ГОРОД в пути — там rezidenty.py
-for _p in (_REPO, _REPO / "ГОРОД", _HERE):
+for _p in (_REPO, _HERE):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
@@ -438,17 +437,29 @@ def page_akademia() -> None:
         m = _mesto_row(mesta, state["активное_место"])
         avatar_ref["element"].clear()
         with avatar_ref["element"]:
-            # PATCH_AKADEMIA_BIBLIOTEKAR_UI_V1: аватар — ЧИСТОЕ ЛИЦО.
-            # Ни имени, ни места, ни курса поверх фото (так в кабинете
-            # Брата: "аватар — чистое лицо, без подписи"). Всё словами
-            # уехало в панель ПОД аватаром — update_vitals().
             av = _avatar_url(m["дом"]) if (m and m["занято"]) else ""
-            if av:
-                ui.html(f'<img src="{av}" style="width:100%;height:100%;'
-                        f'object-fit:cover;border-radius:19px;opacity:0.9;" '
-                        f'onerror="this.style.display=\'none\'">')
-            else:
-                ui.html('<div style="font-size:3rem; color:rgba(0,255,136,0.35);">⬡</div>')
+            img = (f'<img src="{av}" style="width:100%;height:100%;object-fit:cover;'
+                   f'border-radius:12px;opacity:0.85;" onerror="this.style.display=\'none\'">'
+                   if av else "")
+            imya = m["имя"] if (m and m["занято"]) else "—"
+            kurs = (m or {}).get("курс", "") or "курс не назначен"
+            note = "" if (m and m["занято"]) else (
+                '<div style="font-size:0.65rem;color:rgba(255,80,80,0.6);">'
+                'место свободно</div>')
+            ui.html(f'''
+                <div style="position:relative; width:100%; height:100%; min-height:200px;">
+                    {img}
+                    <div style="position:absolute; bottom:0; left:0; right:0;
+                                padding:15px; background:linear-gradient(transparent, rgba(0,0,0,0.8));
+                                border-radius:0 0 12px 12px;">
+                        <div style="font-size:0.65rem; color:rgba(255,255,255,0.5);
+                                    letter-spacing:0.15em;">СТУДЕНТ · МЕСТО {m["место"] if m else "—"}</div>
+                        <div style="font-size:1.3rem; font-weight:700; color:#00ff88;">{imya}</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.8);">{kurs}</div>
+                        {note}
+                    </div>
+                </div>
+            ''')
 
     def update_vitals():
         if not vitals_ref["element"]:
@@ -456,29 +467,12 @@ def page_akademia() -> None:
         vitals_ref["element"].clear()
         m = _mesto_row(mesta, state["активное_место"])
         with vitals_ref["element"]:
-            # PATCH_AKADEMIA_BIBLIOTEKAR_UI_V1: подпись студента живёт
-            # ЗДЕСЬ, под аватаром — не поверх лица.
             if m and m["занято"]:
                 p = _read_json(m["дом"] / "passport.json", {}) or {}
-                kurs = (m.get("курс", "") or "курс не назначен")
-                ui.html(
-                    f'<div style="padding:12px 16px 4px 16px;">'
-                    f'<div style="font-size:0.6rem;color:rgba(255,255,255,0.45);'
-                    f'letter-spacing:0.14em;text-transform:uppercase;">'
-                    f'студент · место {m["место"]}</div>'
-                    f'<div style="font-size:1.15rem;font-weight:800;color:#00ff88;'
-                    f'line-height:1.3;">{m["имя"]}</div>'
-                    f'<div style="font-size:0.72rem;color:rgba(255,255,255,0.6);">'
-                    f'{kurs}</div></div>')
                 ui.html(_bar_html(float(p.get("_charge", 0.0) or 0.0)))
             else:
-                ui.html(
-                    f'<div style="padding:12px 16px;">'
-                    f'<div style="font-size:0.6rem;color:rgba(255,255,255,0.45);'
-                    f'letter-spacing:0.14em;text-transform:uppercase;">'
-                    f'место {m["место"] if m else "—"}</div>'
-                    f'<div style="font-size:0.8rem;color:rgba(255,80,80,0.55);'
-                    f'margin-top:2px;">свободно</div></div>')
+                ui.html('<div style="color:rgba(255,255,255,0.3); font-size:10px; '
+                        'padding:8px 16px;">— место свободно, показывать нечего —</div>')
 
     def update_bubbles():
         for n, el in bubbles["elements"].items():
@@ -698,42 +692,16 @@ def page_akademia() -> None:
         state["чат"].append({"role": "user", "content": msg})
         update_chat()
 
-        # PATCH_AKADEMIA_BIBLIOTEKAR_UI_V1: говорит БИБЛИОТЕКАРЬ.
-        # Личность его — из паспорта того, кто на посту; роль — из
-        # bibliotekar.py. Две разные вещи, склеенные в момент работы.
-        try:
-            import bibliotekar as _bib
-        except Exception as _e:
+        m = _mesto_row(mesta, state["активное_место"])
+        if not (m and m["занято"]):
             state["чат"].append({
                 "role": "assistant", "кто": "СИСТЕМА",
-                "content": f"движок библиотекаря не поднялся: {_e}"})
-            update_chat()
-            return
-
-        _imya_bib = ""
-        try:
-            _promt, _imya_bib = _bib.sobrat_promt(msg, "Шеф")
-        except Exception:
-            _promt = ""
-
-        if not _promt:
+                "content": "Место свободно — отвечать некому. Запиши сюда студента."})
+        else:
             state["чат"].append({
-                "role": "assistant", "кто": "СИСТЕМА",
-                "content": ("Библиотекаря в городе пока нет — пост свободен. "
-                            "Посади кого-нибудь: Брат → Роль → библиотекарь.")})
-            update_chat()
-            return
-
-        state["чат"].append({"role": "assistant", "кто": _imya_bib,
-                             "content": "…ищу на полках"})
-        update_chat()
-        try:
-            _otvet = await _bib.sprosit(msg, state["чат"][:-2], "Шеф")
-        except Exception as _e:
-            _otvet = f"⚠ библиотекарь не отозвался: {_e}"
-        state["чат"].pop()          # снимаем «ищу»
-        state["чат"].append({"role": "assistant", "кто": _imya_bib,
-                             "content": _otvet})
+                "role": "assistant", "кто": m["имя"],
+                "content": ("живой разговор с учеником — следующий слой. "
+                            "Сейчас стоит только экран, и врать я не буду.")})
         update_chat()
 
     # ═══ LAYOUT — калька Биржи ═══════════════════════════════
