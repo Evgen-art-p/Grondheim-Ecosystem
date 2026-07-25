@@ -128,37 +128,6 @@ def _akademia_ucheniki_chitat() -> dict:
         return {"места": []}
 
 
-# ── PATCH_AKADEMIA_KURSY_SCAN_V1 — курсы: живой скан, не список в коде ──
-# Тот же Закон Картриджа, что у Биржи с цехами: курс сам заявляет о
-# себе (manifest.json в своей папке), Брат только читает по требованию.
-# Курсов пока нет — функция честно вернёт [], диалог покажет "пусто",
-# не выдумает заглушку.
-AKADEMIA_KURSY_DIR = Path("GRONDHEIM_CITY/Академия/курсы")
-
-
-def list_kursy() -> list:
-    """Курсы Академии — папка GRONDHEIM_CITY/Академия/курсы/{id}/.
-    Название — из manifest.json ("название" или "title"), нет файла
-    или полей — берём имя папки как есть. Возвращает [{"id","title"}]."""
-    out = []
-    if not AKADEMIA_KURSY_DIR.exists():
-        return out
-    import json
-    for d in sorted(AKADEMIA_KURSY_DIR.iterdir()):
-        if not d.is_dir():
-            continue
-        title = d.name
-        mf = d / "manifest.json"
-        if mf.exists():
-            try:
-                m = json.loads(mf.read_text(encoding="utf-8"))
-                title = m.get("название") or m.get("title") or d.name
-            except Exception:
-                pass
-        out.append({"id": d.name, "title": title})
-    return out
-
-
 def zapisat_studenta(zid: str, kurs: str = ""):
     """Пишет тип «студент», активирует маску работы на Академию,
     занимает первое свободное место (1..10). Полные 10 — честный
@@ -1125,23 +1094,13 @@ def page_brat():
                             ui.html('<div style="color:rgba(255,255,255,0.45); font-size:0.68rem; '
                                     'margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em;">'
                                     'курс (необязательно)</div>')
-                            # PATCH_AKADEMIA_KURSY_SCAN_V1: живой список, не текст руками
-                            _kursy_spisok = list_kursy()
-                            if _kursy_spisok:
-                                _kurs_opts = {"": "— без курса —"}
-                                _kurs_opts.update({k["id"]: k["title"] for k in _kursy_spisok})
-                                kurs = ui.select(_kurs_opts, value="").props("dark outlined").style(
-                                    "width:100%; font-size:0.8rem;")
-                            else:
-                                ui.html('<div style="color:rgba(255,255,255,0.35); font-size:0.7rem; '
-                                        'margin-bottom:4px;">курсов пока нет — запишется без курса</div>')
-                                kurs = None
+                            kurs = ui.input("Курс").props("dark outlined").style(
+                                "width:100%; font-size:0.8rem;")
 
                             async def _confirm():
-                                _kurs_val = (kurs.value or "").strip() if kurs is not None else ""
                                 ok, msg = zapisat_studenta(
                                     pick["zhitel"].get("ID_Object", ""),
-                                    _kurs_val,
+                                    (kurs.value or "").strip(),
                                 )
                                 if ok:
                                     ui.notify(f"🎓 {zn}: записан(а) в Академию ({msg})", color="positive")

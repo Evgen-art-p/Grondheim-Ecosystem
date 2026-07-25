@@ -34,7 +34,7 @@ from pathlib import Path
 # Чтобы "from ui_brat import ..." и т.п. работали без __init__.py и без
 # превращения папок в формальные пакеты — добавляем их в sys.path.
 _ROOT = Path(__file__).resolve().parent
-for _sub in ("Брат", "жители", "ГОРОД", "Биржа", "Академия"):
+for _sub in ("Брат", "жители", "ГОРОД", "Биржа"):
     _p = str(_ROOT / _sub)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -110,16 +110,6 @@ def _zhitel(zid: str = ""):
 @ui.page("/zhitel")
 def _zhitel0():
     page_zhitel("")
-
-
-# ── АКАДЕМИЯ — Замок Сов (школа города) ── AKADEMIA_KABINET_V1
-# Самостоятельный модуль, как Биржа и Студия. Житель рождается человеком,
-# профессию осваивает здесь.
-from ui_akademia import page_akademia
-
-@ui.page("/akademia")
-def _akademia():
-    page_akademia()
 
 
 # ── СТОЛ ЦЕХА — Совет Биржи (Закон Пары: слот -> резидент) ── TORG_STOL_V1

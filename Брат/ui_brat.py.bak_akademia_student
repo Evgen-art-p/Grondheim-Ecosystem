@@ -107,117 +107,6 @@ def naznachit_rol(zid: str, tip: str, workshop_id: str,
         return False, str(e)
 
 
-# ── PATCH_AKADEMIA_STUDENT_V1 — Брат записывает жителя студентом ──
-# Тип "студент" — не воркер (не садится в цех), а пришедший поучиться
-# в Академию. Пишет тип в паспорт (та же рука, что naznachit_rol),
-# активирует маску «работа» с Workshop_ID="Академия", и занимает
-# первое свободное место в GRONDHEIM_CITY/Академия/ученики.json —
-# том же файле, что читает кабинет Академии (Закон Картриджа: одна
-# правда о местах, не два реестра).
-AKADEMIA_MEST_VSEGO = 10
-AKADEMIA_UCHENIKI = Path("GRONDHEIM_CITY/Академия/ученики.json")
-
-
-def _akademia_ucheniki_chitat() -> dict:
-    import json
-    if not AKADEMIA_UCHENIKI.exists():
-        return {"места": []}
-    try:
-        return json.loads(AKADEMIA_UCHENIKI.read_text(encoding="utf-8"))
-    except Exception:
-        return {"места": []}
-
-
-# ── PATCH_AKADEMIA_KURSY_SCAN_V1 — курсы: живой скан, не список в коде ──
-# Тот же Закон Картриджа, что у Биржи с цехами: курс сам заявляет о
-# себе (manifest.json в своей папке), Брат только читает по требованию.
-# Курсов пока нет — функция честно вернёт [], диалог покажет "пусто",
-# не выдумает заглушку.
-AKADEMIA_KURSY_DIR = Path("GRONDHEIM_CITY/Академия/курсы")
-
-
-def list_kursy() -> list:
-    """Курсы Академии — папка GRONDHEIM_CITY/Академия/курсы/{id}/.
-    Название — из manifest.json ("название" или "title"), нет файла
-    или полей — берём имя папки как есть. Возвращает [{"id","title"}]."""
-    out = []
-    if not AKADEMIA_KURSY_DIR.exists():
-        return out
-    import json
-    for d in sorted(AKADEMIA_KURSY_DIR.iterdir()):
-        if not d.is_dir():
-            continue
-        title = d.name
-        mf = d / "manifest.json"
-        if mf.exists():
-            try:
-                m = json.loads(mf.read_text(encoding="utf-8"))
-                title = m.get("название") or m.get("title") or d.name
-            except Exception:
-                pass
-        out.append({"id": d.name, "title": title})
-    return out
-
-
-def zapisat_studenta(zid: str, kurs: str = ""):
-    """Пишет тип «студент», активирует маску работы на Академию,
-    занимает первое свободное место (1..10). Полные 10 — честный
-    отказ, не перезаписываем чужое место. Возвращает (успех, сообщение)."""
-    p, dom = find_dom(zid)
-    if p is None or dom is None:
-        return False, "житель не найден"
-    try:
-        import json
-
-        data = _akademia_ucheniki_chitat()
-        zapisi = data.get("места", []) or []
-        zanyato = {int(z.get("место", 0)) for z in zapisi
-                  if str(z.get("место", "")).isdigit()}
-        mesto = next((n for n in range(1, AKADEMIA_MEST_VSEGO + 1)
-                     if n not in zanyato), None)
-        if mesto is None:
-            return False, "все 10 мест в Академии заняты"
-
-        # ── тип в паспорт (та же рука, что naznachit_rol) ──
-        passport_path = dom / "passport.json"
-        p["тип"] = "студент"
-        passport_path.write_text(
-            json.dumps(p, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        # ── маска «работа» — Академия, не цех ──
-        mask_path = dom / "маски" / "работа" / "mask.json"
-        mask_path.parent.mkdir(parents=True, exist_ok=True)
-        mask = {}
-        if mask_path.exists():
-            try:
-                mask = json.loads(mask_path.read_text(encoding="utf-8"))
-            except Exception:
-                mask = {}
-        mask["_note"] = ("маска 'работа' (слой 2 паспорта). "
-                         "Активирована Братом — студент Академии.")
-        mask["_активна"] = True
-        mask["Workshop_ID"] = "Академия"
-        mask["Turbo_Role"] = "студент"
-        mask["Core_Phrase"] = mask.get("Core_Phrase", "")
-        mask_path.write_text(
-            json.dumps(mask, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        # ── место в Академии ──
-        zapisi.append({
-            "место": mesto,
-            "житель": p.get("Official_Name", ""),
-            "курс": kurs,
-        })
-        data["места"] = zapisi
-        AKADEMIA_UCHENIKI.parent.mkdir(parents=True, exist_ok=True)
-        AKADEMIA_UCHENIKI.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        return True, f"место {mesto}"
-    except Exception as e:
-        return False, str(e)
-
-
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
 PROXY_URL        = os.getenv("PROXY_URL", "") or None
 
@@ -1063,7 +952,7 @@ def page_brat():
             ui.notify("Жителей ещё нет — роди их в Странице Жизни", color="warning")
             return
 
-        TIPY = ["резидент", "хранитель", "воркер", "студент"]  # PATCH_AKADEMIA_STUDENT_V1
+        TIPY = ["резидент", "хранитель", "воркер"]
         pick: dict = {"zhitel": None, "tip": None}
 
         with ui.dialog() as dlg, ui.card().style(
@@ -1119,56 +1008,26 @@ def page_brat():
                         ui.html(f'<div style="color:rgba(255,255,255,0.9); font-weight:700; '
                                 f'font-size:0.9rem; margin-bottom:10px; letter-spacing:0.08em;">'
                                 f'⚙ {zn} · {pick["tip"]}</div>')
-                        if pick["tip"] == "студент":
-                            # PATCH_AKADEMIA_STUDENT_V1: студент — не цех,
-                            # а Академия. Цех/слот/фраза здесь не нужны.
-                            ui.html('<div style="color:rgba(255,255,255,0.45); font-size:0.68rem; '
-                                    'margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em;">'
-                                    'курс (необязательно)</div>')
-                            # PATCH_AKADEMIA_KURSY_SCAN_V1: живой список, не текст руками
-                            _kursy_spisok = list_kursy()
-                            if _kursy_spisok:
-                                _kurs_opts = {"": "— без курса —"}
-                                _kurs_opts.update({k["id"]: k["title"] for k in _kursy_spisok})
-                                kurs = ui.select(_kurs_opts, value="").props("dark outlined").style(
-                                    "width:100%; font-size:0.8rem;")
+                        ws = ui.input("Цех (Workshop_ID)").props("dark outlined").style(
+                            "width:100%; font-size:0.8rem; margin-bottom:8px;")
+                        role = ui.input("Слот роли (Turbo_Role)").props("dark outlined").style(
+                            "width:100%; font-size:0.8rem; margin-bottom:8px;")
+                        phrase = ui.input("Коронная фраза (Core_Phrase)").props(
+                            "dark outlined").style("width:100%; font-size:0.8rem;")
+
+                        async def _confirm():
+                            ok, msg = naznachit_rol(
+                                pick["zhitel"].get("ID_Object", ""),
+                                pick["tip"],
+                                (ws.value or "").strip(),
+                                (role.value or "").strip(),
+                                (phrase.value or "").strip(),
+                            )
+                            if ok:
+                                ui.notify(f"⚙ {zn}: роль назначена ({pick['tip']})", color="positive")
+                                dlg.close()
                             else:
-                                ui.html('<div style="color:rgba(255,255,255,0.35); font-size:0.7rem; '
-                                        'margin-bottom:4px;">курсов пока нет — запишется без курса</div>')
-                                kurs = None
-
-                            async def _confirm():
-                                _kurs_val = (kurs.value or "").strip() if kurs is not None else ""
-                                ok, msg = zapisat_studenta(
-                                    pick["zhitel"].get("ID_Object", ""),
-                                    _kurs_val,
-                                )
-                                if ok:
-                                    ui.notify(f"🎓 {zn}: записан(а) в Академию ({msg})", color="positive")
-                                    dlg.close()
-                                else:
-                                    ui.notify(f"⚠ {msg}", color="negative")
-                        else:
-                            ws = ui.input("Цех (Workshop_ID)").props("dark outlined").style(
-                                "width:100%; font-size:0.8rem; margin-bottom:8px;")
-                            role = ui.input("Слот роли (Turbo_Role)").props("dark outlined").style(
-                                "width:100%; font-size:0.8rem; margin-bottom:8px;")
-                            phrase = ui.input("Коронная фраза (Core_Phrase)").props(
-                                "dark outlined").style("width:100%; font-size:0.8rem;")
-
-                            async def _confirm():
-                                ok, msg = naznachit_rol(
-                                    pick["zhitel"].get("ID_Object", ""),
-                                    pick["tip"],
-                                    (ws.value or "").strip(),
-                                    (role.value or "").strip(),
-                                    (phrase.value or "").strip(),
-                                )
-                                if ok:
-                                    ui.notify(f"⚙ {zn}: роль назначена ({pick['tip']})", color="positive")
-                                    dlg.close()
-                                else:
-                                    ui.notify(f"⚠ {msg}", color="negative")
+                                ui.notify(f"⚠ {msg}", color="negative")
 
                         def _back_t():
                             pick["tip"] = None
