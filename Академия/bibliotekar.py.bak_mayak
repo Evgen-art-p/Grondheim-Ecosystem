@@ -225,42 +225,6 @@ def sobrat_promt(zapros: str = "", dlya_kogo: str = "Шеф") -> tuple:
     return dusha + rol + polka_txt, p.get("Official_Name", "")
 
 
-# PATCH_GOROD_MAYAK_V1 — библиотекарь умеет выйти за стены
-# Полки ВСЕГДА первее: сперва смотрим своё, наружу идём только когда
-# на полке пусто или спрашивают про внешний мир. Маяк общегородской —
-# библиотека им пользуется, но не владеет.
-
-async def iskat_shire(zapros: str, skolko: int = 4) -> str:
-    """Сходить на Маяк за тем, чего нет на полках.
-
-    Возвращает готовый кусок для промпта. Маяк тёмный (нет ключа) —
-    вернёт это словами, и библиотекарь честно скажет, что за стены
-    выйти не может, вместо выдуманных ссылок.
-    """
-    try:
-        import mayak
-    except ImportError:
-        return "(Маяка в городе нет — модуль ГОРОД/mayak.py не найден)"
-    try:
-        rez = await mayak.poisk(zapros, skolko)
-        try:
-            mayak.zapisat_vizit("библиотекарь", zapros, rez.get("ok", False))
-        except Exception:
-            pass
-        return mayak.dlya_promta(rez, skolko)
-    except Exception as e:
-        return f"(Маяк не отозвался: {e})"
-
-
-def mayak_gorit() -> bool:
-    """Горит ли Маяк — можно ли вообще выходить наружу."""
-    try:
-        import mayak
-        return mayak.gorit()
-    except Exception:
-        return False
-
-
 def est_bibliotekar() -> bool:
     """Занят ли пост. Нужен UI, чтобы не звать пустоту."""
     try:
@@ -293,17 +257,6 @@ async def sprosit(vopros: str, istoria: list = None,
                 "Посади кого-нибудь через Брата: Роль → библиотекарь.")
     if not OPENROUTER_KEY:
         return "⚠ OPENROUTER_API_KEY не задан. Положи ключ в .env."
-
-    # PATCH_GOROD_MAYAK_V1: на полках пусто — выходим на Маяк.
-    # Порядок жёсткий: СВОЁ первее. Наружу только когда дома нечего дать.
-    if not nayti_knigi(vopros) and mayak_gorit():
-        _snaruzhi = await iskat_shire(vopros)
-        promt += ("\n\n=== ТЫ СХОДИЛ(А) НА МАЯК ПРОБУЖДЕНИЯ ===\n"
-                  "На полках по этому запросу пусто, и ты вышел(шла) за стены. "
-                  "Вот что принёс луч из внешнего мира:\n"
-                  f"{_snaruzhi}\n"
-                  "Скажи прямо, что на полках этого нет и что это принесено "
-                  "снаружи. Не выдавай найденное за книгу библиотеки.\n")
 
     messages = [{"role": "system", "content": promt}]
     for m in (istoria or [])[-10:]:

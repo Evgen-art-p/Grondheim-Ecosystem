@@ -1186,87 +1186,6 @@ def page_brat():
             render()
         dlg.open()
 
-    # PATCH_BRAT_TIK_V1 — суточный тик из кабинета
-    async def do_tik():
-        """Город выдыхает. Та же рука, что `python tik.py`.
-
-        Логику не повторяем: берём nayti_doma() и Dvizhok из самого
-        tik.py. Меняется он — меняется и кнопка, расхождения не будет.
-        Отчёт кладём в чат: правую панель затирает таймер.
-        """
-        import sys as _sys
-        _root = str(Path(__file__).resolve().parent.parent)
-        if _root not in _sys.path:
-            _sys.path.insert(0, _root)
-        try:
-            import tik as _tik
-        except Exception as ex:
-            ui.notify(f"⚠ tik.py не поднялся: {ex}", color="negative")
-            return
-
-        try:
-            doma = _tik.nayti_doma()
-        except Exception as ex:
-            ui.notify(f"⚠ жителей не обошёл: {ex}", color="negative")
-            return
-        if not doma:
-            ui.notify("Жителей не нашёл — остужать некого", color="warning")
-            return
-
-        ui.notify(f"⏱ выдох города — {len(doma)} жител(ей)...", color="info")
-
-        stroki = ["⏱ СУТОЧНЫЙ ТИК — город выдохнул", ""]
-        stroki.append(f"{'житель':14s} {'было':>8s} {'стало':>8s} {'тишины':>9s}")
-        stroki.append("─" * 45)
-
-        dvinulos = 0
-        for dom in doma:
-            try:
-                d = _tik.Dvizhok(dom)
-            except Exception as ex:
-                stroki.append(f"{dom.name[:14]:14s}  ⚠ {ex}")
-                continue
-
-            imya = d.p.get("Official_Name") or dom.name
-            try:
-                r = d.ostyt_po_vremeni()
-            except Exception as ex:
-                stroki.append(f"{str(imya)[:14]:14s}  ⚠ {ex}")
-                continue
-
-            if not r.get("остыл"):
-                stroki.append(f"{str(imya)[:14]:14s} {r['было']:>+8.3f} "
-                              f"{'—':>8s} {'—':>9s}  ({r.get('причина','')})")
-                continue
-
-            try:
-                d.sохранить()      # осадка на диск — как в консоли
-            except Exception as ex:
-                stroki.append(f"{str(imya)[:14]:14s}  ⚠ не осело: {ex}")
-                continue
-            dvinulos += 1
-
-            znak = ""
-            if abs(r["было"]) > 0.8 and abs(r["стало"]) <= 0.8:
-                znak = "  ← архив закрылся, отпустило"
-            elif abs(r["стало"]) < 0.001:
-                znak = "  ← покой"
-            sutok = r["часов"] / 24.0
-            stroki.append(f"{str(imya)[:14]:14s} {r['было']:>+8.3f} "
-                          f"{r['стало']:>+8.3f} {sutok:>8.1f}д{znak}")
-
-        stroki.append("─" * 45)
-        stroki.append(f"выдохнули: {dvinulos} из {len(doma)}")
-        if dvinulos == 0:
-            stroki.append("")
-            stroki.append("Время не шло — остужать нечего. Это не ошибка.")
-
-        state["chat"].append({"role": "assistant",
-                              "content": "\n".join(stroki)})
-        update_chat()
-        ui.notify(f"⏱ выдохнули: {dvinulos} из {len(doma)}",
-                  color="positive" if dvinulos else "info")
-
     async def do_propiska():
         """Брат связывает жителя и локацию: диалог житель → локация →
         домашний промпт → запись в паспорт жителя."""
@@ -1397,12 +1316,6 @@ def page_brat():
                     'background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.08)) !important; '
                     'border: 1px solid rgba(201,168,76,0.55); color:#c9a84c;')
                 ui.element("div").style("flex:1")
-                ui.button("⏱ Тик",
-                          on_click=do_tik  # PATCH_BRAT_TIK_V1
-                          ).props("flat no-caps").style(
-                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
-                    "background:linear-gradient(135deg,rgba(80,200,140,0.15),rgba(80,200,140,0.08)); "
-                    "border:1px solid rgba(80,200,140,0.35); color:#fff;")
                 ui.button("Прописка",
                           on_click=do_propiska  # PATCH_PROPISKA_BRAT
                           ).props("flat no-caps").style(

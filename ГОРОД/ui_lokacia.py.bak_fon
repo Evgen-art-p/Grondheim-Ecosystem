@@ -184,16 +184,6 @@ def page_lokacia(lid: str = ""):
         pass
 
     ui.add_head_html(f"<style>{LOKACIA_CSS}</style>")
-
-    # PATCH_LOKACIA_FON_V1: образ места — ФОНОМ страницы.
-    # Тот же приём, что в Бирже и в кабинете жителя: картинка не только
-    # в карточке слева, но и за всем окном. Нет image.* — фон остаётся
-    # цветом, как было (честно пусто, а не битая ссылка).
-    _bg_lok = _image_url(dom, p or {}) if dom is not None else ""
-    if _bg_lok:
-        ui.add_head_html(
-            f"<style>#lbg{{background-image:url('{_bg_lok}')!important;}}</style>")
-
     ui.html('<div id="lbg"></div>')
 
     # ── локация не найдена → список выбора ──
