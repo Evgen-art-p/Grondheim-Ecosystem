@@ -56,18 +56,6 @@ OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
 PROXY_URL = os.getenv("PROXY_URL", "") or None
 
-# MAYAK_MODEL_SEL_V1: тот же каталог, что в кабинете Брата (ui_brat.py) —
-# один список моделей на весь город, не плодим второй источник правды.
-MODELS_CATALOG = [
-    {"id": "google/gemini-2.5-flash",          "name": "Gemini 2.5 Flash",  "price": "$0.15/$0.60"},
-    {"id": "anthropic/claude-haiku-4-5",       "name": "Claude Haiku 4.5",  "price": "$1/$5"},
-    {"id": "deepseek/deepseek-chat",           "name": "DeepSeek V3",       "price": "$0.14/$0.28"},
-    {"id": "openai/gpt-4o-mini-2024-07-18",              "name": "GPT-4o mini",      "price": "$0,15 / $0,60"},
-    {"id": "meta-llama/llama-3.3-70b-instruct","name": "Llama 3.3 70B",     "price": "$0.10/$0.32"},
-    {"id": "anthropic/claude-sonnet-4-5",      "name": "Claude Sonnet 4.5", "price": "$3/$15"},
-]
-DEFAULT_MODEL = OPENROUTER_MODEL or MODELS_CATALOG[0]["id"]
-
 # как рисуем род в гнезде: (знак, цвет)
 ZNAKI = {
     gnezda.ROD_KANAL:      ("🛰", "rgba(0,229,222,0.95)"),
@@ -257,10 +245,6 @@ body{ width:100vw; height:100vh; overflow:hidden !important;
   border:1px solid rgba(255,255,255,0.10); }
 .mbtn:hover{ color:rgba(255,255,255,0.9); border-color:rgba(0,229,222,0.35); }
 
-/* MAYAK_MODEL_SEL_V1 — калька .brat-model-sel из ui_brat.py, бирюзовый акцент */
-.mmodel-sel .q-field__control{ background:rgba(255,255,255,0.06)!important;
-  border:1px solid rgba(0,229,222,0.20)!important; border-radius:10px!important; }
-
 .nicegui-content{ overflow:hidden !important; height:100% !important; }
 .area-stage{ overflow:hidden !important; }
 .area-stage > *{ overflow:hidden !important; min-height:0 !important; max-height:100% !important; }
@@ -289,12 +273,9 @@ def page_mayak() -> None:
     _gn = gnezda.spisok()
     _pervoe = next((g["номер"] for g in _gn if g["занято"]), 1)
 
-    state = {"гнездо": _pervoe, "чат": [], "смыслы": [], "модель": DEFAULT_MODEL}
+    state = {"гнездо": _pervoe, "чат": [], "смыслы": []}
     refs = {"чат": None, "отчёт": None, "ввод": None,
             "лево": None, "право": None, "шапка": None}
-
-    def on_model_change(e):
-        state["модель"] = e.value
 
     ui.add_head_html(f"<style>{MAYAK_CSS}</style>")
     _bg = _bg_url()
@@ -494,7 +475,7 @@ def page_mayak() -> None:
                 r = await c.post("https://openrouter.ai/api/v1/chat/completions",
                                  headers={"Authorization": f"Bearer {OPENROUTER_KEY}",
                                           "Content-Type": "application/json"},
-                                 json={"model": state.get("модель", DEFAULT_MODEL), "messages": msgs})
+                                 json={"model": OPENROUTER_MODEL, "messages": msgs})
                 r.raise_for_status()
                 return r.json()["choices"][0]["message"]["content"]
         except Exception as e:
@@ -607,10 +588,6 @@ def page_mayak() -> None:
                     "display:flex;align-items:center;gap:8px;flex:1;overflow-x:auto;")
                 update_shapka()
                 with ui.row().style("gap:6px;align-items:center;"):
-                    with ui.element("div").classes("mmodel-sel").style("margin-right:6px;"):
-                        _opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
-                        ui.select(_opts, value=state["модель"], on_change=on_model_change) \
-                            .props('dense borderless dark options-dense').style("min-width:180px;")
                     for podpis, deystvie in (
                         ("✕ ГАСИТЬ", pogasit),
                         ("🏙 ГОРОД", lambda: ui.navigate.to("/grondheim")),

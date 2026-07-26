@@ -23,27 +23,12 @@ GRONDHEIM_CITY/Академия/ученики.json (Закон Картридж
 
 `шесть·проверено·до·корня`
 """
-import os
 import sys
 import json
 from pathlib import Path
 from datetime import datetime, timezone
 
 from nicegui import ui, app
-
-# AKADEMIA_MODEL_SEL_V1: тот же каталог, что в кабинете Брата (ui_brat.py) —
-# один список моделей на весь город, не плодим второй источник правды.
-# bibliotekar.py уже принимает model=... в sprosit() — только UI не давал выбрать.
-_OPENROUTER_MODEL_ENV = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
-MODELS_CATALOG = [
-    {"id": "google/gemini-2.5-flash",          "name": "Gemini 2.5 Flash",  "price": "$0.15/$0.60"},
-    {"id": "anthropic/claude-haiku-4-5",       "name": "Claude Haiku 4.5",  "price": "$1/$5"},
-    {"id": "deepseek/deepseek-chat",           "name": "DeepSeek V3",       "price": "$0.14/$0.28"},
-    {"id": "openai/gpt-4o-mini-2024-07-18",              "name": "GPT-4o mini",      "price": "$0,15 / $0,60"},
-    {"id": "meta-llama/llama-3.3-70b-instruct","name": "Llama 3.3 70B",     "price": "$0.10/$0.32"},
-    {"id": "anthropic/claude-sonnet-4-5",      "name": "Claude Sonnet 4.5", "price": "$3/$15"},
-]
-DEFAULT_MODEL = _OPENROUTER_MODEL_ENV or MODELS_CATALOG[0]["id"]
 
 _HERE = Path(__file__).resolve().parent           # Академия/
 _REPO = _HERE.parent                              # корень репо
@@ -371,10 +356,6 @@ body{
   border:1px solid rgba(255,255,255,0.10);
 }
 
-/* AKADEMIA_MODEL_SEL_V1 — калька .brat-model-sel из ui_brat.py */
-.amodel-sel .q-field__control{ background:rgba(255,255,255,0.06)!important;
-  border:1px solid rgba(255,255,255,0.12)!important; border-radius:10px!important; }
-
 .nicegui-content { overflow: hidden !important; height: 100% !important; }
 .area-stage { overflow: hidden !important; }
 .area-stage > * { overflow: hidden !important; min-height: 0 !important; max-height: 100% !important; }
@@ -409,11 +390,7 @@ def page_akademia() -> None:
         "чат": [],
         "руда": [],          # что принял загрузчик за эту сессию
         "отчёт": "",
-        "model": DEFAULT_MODEL,
     }
-
-    def on_model_change(e):
-        state["model"] = e.value
 
     chat_ref   = {"element": None}
     viewer_ref = {"element": None}
@@ -751,8 +728,7 @@ def page_akademia() -> None:
                              "content": "…ищу на полках"})
         update_chat()
         try:
-            _otvet = await _bib.sprosit(msg, state["чат"][:-2], "Шеф",
-                                        model=state.get("model"))
+            _otvet = await _bib.sprosit(msg, state["чат"][:-2], "Шеф")
         except Exception as _e:
             _otvet = f"⚠ библиотекарь не отозвался: {_e}"
         state["чат"].pop()          # снимаем «ищу»
@@ -788,10 +764,6 @@ def page_akademia() -> None:
                         bubbles["elements"][n] = b
 
                 with ui.row().style("gap:6px; align-items:center;"):
-                    with ui.element("div").classes("amodel-sel").style("margin-right:6px;"):
-                        _opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
-                        ui.select(_opts, value=state["model"], on_change=on_model_change) \
-                            .props('dense borderless dark options-dense').style("min-width:180px;")
                     _b1 = ui.element("div").classes("akad-btn")
                     _b1.on("click", lambda: idti_v_biblioteku())
                     with _b1:

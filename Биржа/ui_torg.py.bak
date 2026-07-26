@@ -46,22 +46,6 @@ for _p in (_REPO, _HERE):
         sys.path.insert(0, str(_p))
 
 import cartridge_registry as reg
-import llm  # BIRZHA_MODEL_SEL_V1: переключатель модели -- set_model()/get_model()
-
-# BIRZHA_MODEL_SEL_V1: тот же каталог, что в кабинете Брата (ui_brat.py).
-# Дефолт -- GPT-4o mini (решение Шефа, 26.07: "одну оставить, проще" --
-# она и график по числам Вильямса читает, и считает, vision не нужен
-# никому в Совете сейчас -- ни один агент картинку не видит, llm.chat_with_images
-# существует, но не подключён ни к одному слоту).
-MODELS_CATALOG = [
-    {"id": "openai/gpt-4o-mini-2024-07-18",    "name": "GPT-4o mini",      "price": "$0.15/$0.60"},
-    {"id": "google/gemini-2.5-flash",          "name": "Gemini 2.5 Flash",  "price": "$0.15/$0.60"},
-    {"id": "anthropic/claude-haiku-4-5",       "name": "Claude Haiku 4.5",  "price": "$1/$5"},
-    {"id": "deepseek/deepseek-chat",           "name": "DeepSeek V3",       "price": "$0.14/$0.28"},
-    {"id": "meta-llama/llama-3.3-70b-instruct","name": "Llama 3.3 70B",     "price": "$0.10/$0.32"},
-    {"id": "anthropic/claude-sonnet-4-5",      "name": "Claude Sonnet 4.5", "price": "$3/$15"},
-]
-DEFAULT_MODEL = MODELS_CATALOG[0]["id"]
 
 import importlib.util
 from typing import Any  # UI_TORG_TYPING_V1
@@ -567,14 +551,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         "arkhiv_signal": {},
         "arkhiv_stats": {},
         "arkhiv_digest": {},
-        "model": DEFAULT_MODEL,   # BIRZHA_MODEL_SEL_V1
     }
-
-    llm.set_model(state["model"])  # BIRZHA_MODEL_SEL_V1: применяем сразу при открытии кабинета
-
-    def on_model_change(e):        # BIRZHA_MODEL_SEL_V1
-        state["model"] = e.value
-        llm.set_model(e.value)
 
     chat_log_ref: dict[str, Any] = {"element": None}
     toolbar_refs: dict[str, Any] = {}
@@ -1852,13 +1829,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             if not occupied:
                                 ui.label(old_id).style("font-size: 9px")
                         avatars_ref["elements"][old_id] = avatar
-                with ui.element("div").style(
-                    "margin-right:10px; background:rgba(255,255,255,0.06); "
-                    "border:1px solid rgba(255,255,255,0.12); border-radius:10px;"
-                ):
-                    _opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
-                    ui.select(_opts, value=state["model"], on_change=on_model_change) \
-                        .props('dense borderless dark options-dense').style("min-width:190px;")
                 ui.button("← Город", on_click=lambda: ui.navigate.to("/grondheim")).props("flat").style(
                     "color:rgba(255,255,255,0.5);")
 
