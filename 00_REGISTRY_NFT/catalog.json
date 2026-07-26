@@ -887,7 +887,7 @@
   {
     "Rarity": "Mythic",
     "Object_Type_Class": "location",
-    "ID_Object": "0006_GRONDHEIM_ARCHIVE",
+    "ID_Object": "0015_GRONDHEIM_ARCHIVE",
     "Official_Name": "Архив Города",
     "Object_Type": "Location",
     "Author_Signature": "[JAM] 6F-Origin",
@@ -933,7 +933,7 @@
     "Map_Y": 786,
     "Map_W": 307,
     "Map_H": 254,
-    "_timestamp": "2026-07-26T22:56:51.275398",
+    "_timestamp": "2026-07-26T23:51:39.466848",
     "_Creator_Seal_Hash": "43e04cd19d88de5a497ec87b7cfb97bd478fc6a3f2563a34716866efeff3a5bf"
   }
 ]
