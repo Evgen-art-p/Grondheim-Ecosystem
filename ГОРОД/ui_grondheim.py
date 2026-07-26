@@ -342,6 +342,7 @@ def _canvas_html(locations: list, zhiteli: "list | None" = None) -> str:
 # ── ВРАТА РАБОЧИХ КАБИНЕТОВ — локация -> свой кабинет (не паспорт) ──
 # Закон Пары: локация сама заявляет о кабинете. Нет записи -> /lokacia/{id}.
 LOCATION_GATES = {
+    "0005_LIGHTHOUSE_AWAKENING": "/mayak",  # Маяк -> кабинет (ui_mayak.py)
     "0014_EXCHANGE": "/torg",       # Биржа -> стол Совета (ui_torg.py)
     "0008_OWL_CASTLE": "/akademia", # Замок Сов -> кабинет Академии (ui_akademia.py)
 }
