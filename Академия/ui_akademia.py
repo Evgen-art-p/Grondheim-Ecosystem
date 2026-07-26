@@ -710,7 +710,80 @@ def page_akademia() -> None:
     def idti_v_gorod():
         ui.navigate.to("/grondheim")
 
-    # ── чат с учеником (честная заглушка первого слоя) ─────
+    # ── чат с учеником: активируется по клику на пузырёк ───
+    # PATCH_AKADEMIA_UCHENIK_CHAT_V1: раньше чат ВСЕГДА говорил
+    # библиотекарем, кто бы ни был выбран пузырьком — место просто
+    # красилось активным, но с ним никто не разговаривал. Теперь
+    # активное место и есть собеседник: клик по пузырьку меняет
+    # switch_mesto() -> state["активное_место"], и чат обращается
+    # именно к этому жителю (его личность — rezidenty.sobrat_dushu,
+    # та же развязка личность/роль, что у библиотекаря). Маяк
+    # подключён тем же способом: если горит — собеседник получает
+    # свежий кусок из внешнего мира.
+
+    async def _mayak_kusok(vopros: str) -> str:
+        """Сходить на Маяк, если он горит. Пустая строка — Маяк не
+        нужен или не отозвался, вызывающий просто ничего не добавит."""
+        try:
+            import mayak
+        except ImportError:
+            return ""
+        try:
+            if not mayak.gorit():
+                return ""
+            rez = await mayak.poisk(vopros, 4)
+            try:
+                mayak.zapisat_vizit("академия-ученик", vopros, rez.get("ok", False))
+            except Exception:
+                pass
+            return mayak.dlya_promta(rez, 4)
+        except Exception:
+            return ""
+
+    async def _sprosit_uchenika(dom, vopros: str, istoria: list, model: str) -> str:
+        p = _read_json(dom / "passport.json", {}) or {}
+        if not p:
+            return "⚠ паспорт не читается — не могу собрать личность."
+        try:
+            import rezidenty
+            dusha = rezidenty.sobrat_dushu(p)
+        except Exception:
+            dusha = f"Ты — {p.get('Official_Name','житель')}, житель Грондхейма.\n"
+
+        rol = ("\n=== ТЫ СЕЙЧАС В АКАДЕМИИ (Замок Сов) ===\n"
+               "Сидишь за партой, разговариваешь с Шефом. Говоришь своим "
+               "голосом и характером, не как ассистент.\n")
+
+        snaruzhi = await _mayak_kusok(vopros)
+        if snaruzhi:
+            rol += ("\n=== СХОДИЛ(А) НА МАЯК ===\n"
+                    f"{snaruzhi}\nЕсли пригодится — упомяни честно, что это "
+                    "принесено извне, не выдавай за своё знание.\n")
+
+        promt = dusha + rol
+        _key = os.getenv("OPENROUTER_API_KEY", "")
+        if not _key:
+            return "⚠ OPENROUTER_API_KEY не задан. Положи ключ в .env."
+
+        messages = [{"role": "system", "content": promt}]
+        for m in (istoria or [])[-10:]:
+            r = "user" if m.get("role") == "user" else "assistant"
+            messages.append({"role": r, "content": m.get("content", "")})
+        messages.append({"role": "user", "content": vopros})
+
+        import httpx
+        headers = {"Authorization": f"Bearer {_key}", "Content-Type": "application/json"}
+        payload = {"model": model or DEFAULT_MODEL, "messages": messages}
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                r = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers, json=payload)
+                r.raise_for_status()
+                return r.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            return f"⚠ не отозвался(лась): {e}"
+
     async def send_message():
         if not input_ref["element"]:
             return
@@ -718,45 +791,30 @@ def page_akademia() -> None:
         if not msg:
             return
         input_ref["element"].value = ""
+
+        m = _mesto_row(mesta, state["активное_место"])
+        if not (m and m["занято"]):
+            state["чат"].append({"role": "user", "content": msg})
+            state["чат"].append({
+                "role": "assistant", "кто": "СИСТЕМА",
+                "content": "Это место свободно — здесь некому ответить. "
+                          "Кликни на занятый пузырёк."})
+            update_chat()
+            return
+
         state["чат"].append({"role": "user", "content": msg})
         update_chat()
 
-        # PATCH_AKADEMIA_BIBLIOTEKAR_UI_V1: говорит БИБЛИОТЕКАРЬ.
-        # Личность его — из паспорта того, кто на посту; роль — из
-        # bibliotekar.py. Две разные вещи, склеенные в момент работы.
-        try:
-            import bibliotekar as _bib
-        except Exception as _e:
-            state["чат"].append({
-                "role": "assistant", "кто": "СИСТЕМА",
-                "content": f"движок библиотекаря не поднялся: {_e}"})
-            update_chat()
-            return
-
-        _imya_bib = ""
-        try:
-            _promt, _imya_bib = _bib.sobrat_promt(msg, "Шеф")
-        except Exception:
-            _promt = ""
-
-        if not _promt:
-            state["чат"].append({
-                "role": "assistant", "кто": "СИСТЕМА",
-                "content": ("Библиотекаря в городе пока нет — пост свободен. "
-                            "Посади кого-нибудь: Брат → Роль → библиотекарь.")})
-            update_chat()
-            return
-
-        state["чат"].append({"role": "assistant", "кто": _imya_bib,
-                             "content": "…ищу на полках"})
+        state["чат"].append({"role": "assistant", "кто": m["имя"],
+                             "content": "…думает"})
         update_chat()
         try:
-            _otvet = await _bib.sprosit(msg, state["чат"][:-2], "Шеф",
-                                        model=state.get("model"))
+            _otvet = await _sprosit_uchenika(m["дом"], msg, state["чат"][:-2],
+                                             state.get("model"))
         except Exception as _e:
-            _otvet = f"⚠ библиотекарь не отозвался: {_e}"
-        state["чат"].pop()          # снимаем «ищу»
-        state["чат"].append({"role": "assistant", "кто": _imya_bib,
+            _otvet = f"⚠ не отозвался(лась): {_e}"
+        state["чат"].pop()
+        state["чат"].append({"role": "assistant", "кто": m["имя"],
                              "content": _otvet})
         update_chat()
 

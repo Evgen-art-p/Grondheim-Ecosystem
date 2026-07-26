@@ -984,6 +984,9 @@ def page_zhitel(zid: str = ""):
                     _opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
                     ui.select(_opts, value=state["model"], on_change=on_model_change) \
                         .props('dense borderless dark options-dense').style("min-width:190px;")
+                # ZHITEL_UCHEBA_BTN_V1
+                ui.button("🎓 учёба", on_click=lambda: ui.navigate.to(f"/rektor/{p.get('ID_Object','')}")) \
+                    .props("flat no-caps").classes("zback").style("margin-right:8px;")
                 ui.button("карта", on_click=lambda: ui.navigate.to("/grondheim")) \
                     .props("flat no-caps").classes("zback").style("margin-right:8px;")
                 ui.button("← Брат", on_click=lambda: ui.navigate.to("/brat")) \

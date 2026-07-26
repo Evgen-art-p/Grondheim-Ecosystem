@@ -34,7 +34,7 @@ from pathlib import Path
 # Чтобы "from ui_brat import ..." и т.п. работали без __init__.py и без
 # превращения папок в формальные пакеты — добавляем их в sys.path.
 _ROOT = Path(__file__).resolve().parent
-for _sub in ("Брат", "жители", "ГОРОД", "Биржа", "Академия", "Маяк", "Архив"):
+for _sub in ("Брат", "жители", "ГОРОД", "Биржа", "Академия"):
     _p = str(_ROOT / _sub)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -129,28 +129,6 @@ from ui_akademia import page_akademia
 @ui.page("/akademia")
 def _akademia():
     page_akademia()
-
-
-# ── РЕКТОР АКАДЕМИИ — приёмная комиссия, зачисление, оценки, диплом ──
-# AKADEMIA_REKTOR_ROUTE_V1
-from ui_rektor import page_rektor
-
-@ui.page("/rektor/{zid}")
-def _rektor(zid: str = ""):
-    page_rektor(zid)
-
-@ui.page("/rektor")
-def _rektor0():
-    page_rektor()
-
-
-# ── АРХИВ ГОРОДА — Хранитель (сейчас Лока) ── ARKHIV_MAIN_ROUTE_V1
-# Самостоятельный модуль, как Академия и Биржа.
-from ui_arkhiv import page_arkhiv
-
-@ui.page("/arkhiv")
-def _arkhiv():
-    page_arkhiv()
 
 
 # ── СТОЛ ЦЕХА — Совет Биржи (Закон Пары: слот -> резидент) ── TORG_STOL_V1
