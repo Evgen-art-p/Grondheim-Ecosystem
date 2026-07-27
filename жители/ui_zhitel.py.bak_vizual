@@ -30,7 +30,6 @@ import json
 import os
 import sys
 import asyncio
-import base64  # PATCH_ZHITEL_VIZUAL_V1: кодируем картинку в data URL для мультимодального вызова
 from pathlib import Path
 from datetime import datetime
 
@@ -512,39 +511,6 @@ RUDA_PODPAPKA       = "руда_входящее"   # как у Брата — �
 PROCHITANO_PODPAPKA = "прочитано"       # полка: прочитано — второй раз не переваривается
 CHTENIE_LIMIT       = 50000             # как у Брата (_read limit=50000)
 
-# PATCH_ZHITEL_VIZUAL_V1: та же граница расширений, что у Академии/Архива
-KARTINKA_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-_KARTINKA_MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                  ".webp": "image/webp", ".gif": "image/gif"}
-
-
-def _prompt_chtenia_kartinka(imya_fajla: str, linza: str,
-                             lok_imya: str, professia: str = "") -> str:
-    """PATCH_ZHITEL_VIZUAL_V1: та же линза МЕСТО × РОЛЬ, что у
-    _prompt_chtenia, но для изображения — вопрос без CONTENT (картинка
-    идёт отдельным куском мультимодального сообщения)."""
-    if linza == "работа":
-        _rol = f"как {professia}" if professia else "как профессионал"
-        gde = (f"Ты сейчас на месте — {lok_imya}, ты здесь {_rol}." if lok_imya
-               else f"Ты сейчас за делом, {_rol}.")
-        zadacha = (f"Посмотри на это изображение {_rol}: вытащи структурную "
-                   "пользу — что видно, какие детали, схемы, приёмы пополнят "
-                   "твой профессиональный арсенал.")
-    else:
-        gde = ("Ты сейчас дома, смотришь для себя, в своём ритме."
-               if not lok_imya
-               else f"Ты сейчас на «{lok_imya}», но роли тебе тут не дано — "
-                    "ты здесь гость и смотришь для себя, в своём ритме.")
-        zadacha = ("Посмотри на это изображение как человек для себя: что "
-                   "видно, что тронуло, какие мысли и смыслы отозвались.")
-    return (
-        f"{gde}\nТебе принесли изображение: {imya_fajla}\n\n"
-        f"{zadacha}\n"
-        f"Напиши концентрат увиденного от первого лица: 5–12 плотных строк — "
-        f"суть плюс твой личный отклик. Не выдумывай того, чего не видно. "
-        f"Без строк MEMORY_REQUEST."
-    )
-
 
 def _chel_razmer(n) -> str:
     """ZHITEL_CHTENIE_V1: размер по-человечески (калька _human_size Брата)."""
@@ -877,33 +843,14 @@ def page_zhitel(zid: str = ""):
         dusha = _dusha_chtenia(p)
         prochitano_dir = dom / PROCHITANO_PODPAPKA
         for fp in fajly:
-            # PATCH_ZHITEL_VIZUAL_V1: изображение — визуальный разбор той
-            # же линзой; текст — как раньше, через _prochitat_fail.
-            if fp.suffix.lower() in KARTINKA_EXT:
-                try:
-                    _img_data = fp.read_bytes()
-                except Exception as _e:
-                    ui.notify(f"⚠ {fp.name}: не прочитать файл — {_e}", color="negative")
-                    continue
-                _mime = _KARTINKA_MIME.get(fp.suffix.lower(), "image/png")
-                _url = f"data:{_mime};base64,{base64.b64encode(_img_data).decode('ascii')}"
-                messages = [
-                    {"role": "system", "content": dusha},
-                    {"role": "user", "content": [
-                        {"type": "text", "text": _prompt_chtenia_kartinka(
-                            fp.name, linza, lok_imya, professia)},
-                        {"type": "image_url", "image_url": {"url": _url}},
-                    ]},
-                ]
-            else:
-                tekst = _prochitat_fail(fp)
-                if not tekst.strip():
-                    ui.notify(f"⚠ {fp.name}: пусто или не текст — пропускаю", color="warning")
-                    continue
-                messages = [
-                    {"role": "system", "content": dusha},
-                    {"role": "user", "content": _prompt_chtenia(fp.name, tekst, linza, lok_imya, professia)},  # ZHITEL_CHTENIE_MASKA_V1
-                ]
+            tekst = _prochitat_fail(fp)
+            if not tekst.strip():
+                ui.notify(f"⚠ {fp.name}: пусто или не текст — пропускаю", color="warning")
+                continue
+            messages = [
+                {"role": "system", "content": dusha},
+                {"role": "user", "content": _prompt_chtenia(fp.name, tekst, linza, lok_imya, professia)},  # ZHITEL_CHTENIE_MASKA_V1
+            ]
             vyzhimka = await call_zhitel_llm(messages, state.get("model"))
             if not vyzhimka or vyzhimka.startswith("⚠"):
                 ui.notify(f"⚠ {fp.name}: {(vyzhimka or 'пустой ответ')[:90]}", color="negative")
@@ -933,13 +880,6 @@ def page_zhitel(zid: str = ""):
             _dv.sохранить()  # заряд оседает в паспорт — прочитанное пережито
         except Exception:
             pass
-        # PATCH_ZHITEL_FIX_WAITING_V1: эти три строки случайно потерялись
-        # при вставке do_prosev() более ранним патчем -- без них
-        # state["waiting"] оставался True навсегда после "Прочитать",
-        # и send()/do_prosev() молча переставали отвечать.
-        state["waiting"] = False
-        update_files()
-        update_chat()
 
     async def do_prosev():
         """PROSEV_ZHIZNENNYI_V1: житель осмысляет накопленные личные
@@ -964,17 +904,6 @@ def page_zhitel(zid: str = ""):
         state["waiting"] = True
         ui.notify(f"🪞 {name} осмысляет {len(momenty)} момент(ов)", color="info")
         spisok = "\n".join(f"— [{m['тонус']}] {m['факт']}" for m in momenty)
-        # PATCH_ZHITEL_PROSEV_POKAZYVAET_V1: видимость -- Шеф видит, ЧТО
-        # именно ушло в осмысление, до самого вывода. Иконка отличает
-        # изображение от текста по расширению файла в самом факте.
-        _KARTINKA_ZNAKI = (".png", ".jpg", ".jpeg", ".webp", ".gif")
-        def _ikonka(fakt: str) -> str:
-            return "🖼" if any(e in fakt.lower() for e in _KARTINKA_ZNAKI) else "📄"
-        _spisok_pokaz = "\n".join(
-            f"{_ikonka(m['факт'])} [{m['тонус']}] {m['факт'][:100]}" for m in momenty)
-        state["chat"].append({"role": "zhitel",
-                              "content": f"🪞 Осмысляю по этим моментам:\n{_spisok_pokaz}"})
-        update_chat()
         dusha = _dusha_chtenia(p)
         prompt = (
             f"Вот моменты из твоей жизни за последнее время, которые тебя "

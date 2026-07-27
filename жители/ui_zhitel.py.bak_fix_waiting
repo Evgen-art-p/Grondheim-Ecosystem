@@ -933,13 +933,6 @@ def page_zhitel(zid: str = ""):
             _dv.sохранить()  # заряд оседает в паспорт — прочитанное пережито
         except Exception:
             pass
-        # PATCH_ZHITEL_FIX_WAITING_V1: эти три строки случайно потерялись
-        # при вставке do_prosev() более ранним патчем -- без них
-        # state["waiting"] оставался True навсегда после "Прочитать",
-        # и send()/do_prosev() молча переставали отвечать.
-        state["waiting"] = False
-        update_files()
-        update_chat()
 
     async def do_prosev():
         """PROSEV_ZHIZNENNYI_V1: житель осмысляет накопленные личные
@@ -964,17 +957,6 @@ def page_zhitel(zid: str = ""):
         state["waiting"] = True
         ui.notify(f"🪞 {name} осмысляет {len(momenty)} момент(ов)", color="info")
         spisok = "\n".join(f"— [{m['тонус']}] {m['факт']}" for m in momenty)
-        # PATCH_ZHITEL_PROSEV_POKAZYVAET_V1: видимость -- Шеф видит, ЧТО
-        # именно ушло в осмысление, до самого вывода. Иконка отличает
-        # изображение от текста по расширению файла в самом факте.
-        _KARTINKA_ZNAKI = (".png", ".jpg", ".jpeg", ".webp", ".gif")
-        def _ikonka(fakt: str) -> str:
-            return "🖼" if any(e in fakt.lower() for e in _KARTINKA_ZNAKI) else "📄"
-        _spisok_pokaz = "\n".join(
-            f"{_ikonka(m['факт'])} [{m['тонус']}] {m['факт'][:100]}" for m in momenty)
-        state["chat"].append({"role": "zhitel",
-                              "content": f"🪞 Осмысляю по этим моментам:\n{_spisok_pokaz}"})
-        update_chat()
         dusha = _dusha_chtenia(p)
         prompt = (
             f"Вот моменты из твоей жизни за последнее время, которые тебя "

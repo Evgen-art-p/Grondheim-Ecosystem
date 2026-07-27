@@ -14,7 +14,6 @@ studio/workshop/styles.py): app-container grid, area-left/stage/right.
 """
 import os
 import asyncio
-import base64  # PATCH_BRAT_VIZUAL_V1: кодируем картинку в data URL для мультимодального вызова
 from pathlib import Path
 from datetime import datetime
 
@@ -888,50 +887,8 @@ def load_chat(fp: Path) -> list:
     return json.loads(fp.read_text(encoding="utf-8"))
 
 
-# PATCH_BRAT_VIZUAL_V1: расширения-картинки — та же граница, что у
-# Академии/Архива (KARTINKA_EXT), не заводим четвёртое название набора.
-BRAT_KARTINKA_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-_BRAT_KARTINKA_MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                       ".webp": "image/webp", ".gif": "image/gif"}
-
-
-async def _analiz_kartinki_brata(fp: Path, model: str) -> str:
-    """Визуальный просев -- та же оптика (зерно/пластик), что у
-    текстового sift_file, только смотрит, а не читает. НЕ редактирует
-    файл -- чистый анализ."""
-    if not OPENROUTER_KEY:
-        return "⚠ OPENROUTER_API_KEY не задан. Положи ключ в .env."
-    try:
-        data = fp.read_bytes()
-    except Exception as e:
-        return f"⚠ не прочитать файл: {e}"
-    mime = _BRAT_KARTINKA_MIME.get(fp.suffix.lower(), "image/png")
-    url = f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"
-    soul = build_brat_soul()
-    vopros = (
-        f"Шеф принёс изображение на просев: {fp.name}\n\n"
-        f"Пропусти через свою призму, ту же, что для текста. Напиши просев-отчёт:\n"
-        f"1. ЗЕРНО — что здесь живое, настоящее, держит смысл\n"
-        f"2. ПЛАСТИК — что красиво выглядит, но пусто\n"
-        f"3. СВЯЗИ — как это перекликается с Грондхеймом\n"
-        f"4. ВЫВОД — одна строка: что делать с этим дальше\n"
-        f"Говори коротко и точно. Не выдумывай того, чего не видно на снимке."
-    )
-    messages = [
-        {"role": "system", "content": soul},
-        {"role": "user", "content": [
-            {"type": "text", "text": vopros},
-            {"type": "image_url", "image_url": {"url": url}},
-        ]},
-    ]
-    return await call_brat_llm(messages, model)
-
-
 async def sift_file(fp: Path, model: str) -> str:
-    """Прогоняет файл через философию Брата. Возвращает просев-отчёт.
-    PATCH_BRAT_VIZUAL_V1: изображение — визуальным разбором, текст — как раньше."""
-    if fp.suffix.lower() in BRAT_KARTINKA_EXT:
-        return await _analiz_kartinki_brata(fp, model)
+    """Прогоняет файл через философию Брата. Возвращает просев-отчёт."""
     soul = build_brat_soul()
     content = _read(fp, limit=50000)
     prompt = (

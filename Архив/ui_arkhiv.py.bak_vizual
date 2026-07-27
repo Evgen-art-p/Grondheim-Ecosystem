@@ -29,7 +29,6 @@
 import os
 import sys
 import json
-import base64  # PATCH_ARKHIV_VIZUAL_V1: кодируем картинку в data URL для мультимодального вызова
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -46,47 +45,6 @@ MODELS_CATALOG = [
     {"id": "anthropic/claude-sonnet-4-5",      "name": "Claude Sonnet 4.5", "price": "$3/$15"},
 ]
 DEFAULT_MODEL = _OPENROUTER_MODEL_ENV or MODELS_CATALOG[0]["id"]
-
-# ═══════════════════════════════════════════════════════════
-# PATCH_ARKHIV_VIZUAL_V1 -- визуальный разбор изображения. НЕ
-# редактирование -- только анализ. Самодостаточная функция (свой
-# os.getenv) -- Закон Двух Стандартов, копия не ссылка.
-# ═══════════════════════════════════════════════════════════
-_KARTINKA_MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                  ".webp": "image/webp", ".gif": "image/gif"}
-
-
-async def _analiz_kartinki(path: Path, model: str = "", vopros: str = "") -> str:
-    """Мультимодальный вызов той же LLM: картинка вместо/вместе с текстом
-    в content сообщения. Честно про ошибки."""
-    _key = os.getenv("OPENROUTER_API_KEY", "")
-    if not _key:
-        return "⚠ OPENROUTER_API_KEY не задан. Положи ключ в .env."
-    try:
-        data = path.read_bytes()
-    except Exception as e:
-        return f"⚠ не прочитать файл: {e}"
-    mime = _KARTINKA_MIME.get(path.suffix.lower(), "image/png")
-    url = f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"
-    vopros = vopros or "Опиши, что на изображении, коротко и по делу."
-    messages = [{
-        "role": "user",
-        "content": [
-            {"type": "text", "text": vopros},
-            {"type": "image_url", "image_url": {"url": url}},
-        ],
-    }]
-    import httpx
-    headers = {"Authorization": f"Bearer {_key}", "Content-Type": "application/json"}
-    payload = {"model": model or DEFAULT_MODEL, "messages": messages}
-    try:
-        async with httpx.AsyncClient(timeout=120) as client:
-            r = await client.post("https://openrouter.ai/api/v1/chat/completions",
-                                  headers=headers, json=payload)
-            r.raise_for_status()
-            return r.json()["choices"][0]["message"]["content"]
-    except Exception as e:
-        return f"⚠ разбор не удался: {e}"
 
 _HERE = Path(__file__).resolve().parent           # Архив/
 _REPO = _HERE.parent                              # корень репо
@@ -627,28 +585,11 @@ def page_arkhiv() -> None:
             "когда": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         })
         update_ruda_list()
-        if vid != "изображение":
-            state["чат"].append({
-                "role": "assistant", "кто": "ЗАГРУЗЧИК",
-                "content": f"📄 Принял «{imya_f}» — лежит на просеве, "
-                          f"в архив не легло само (Хранитель решает руками)."})
-            update_chat()
-            ui.notify(f"Принято на просев: {imya_f}", type="positive")
-        else:
-            # PATCH_ARKHIV_VIZUAL_V1: реальный разбор вместо простого приёма
-            state["чат"].append({"role": "assistant", "кто": "ЗАГРУЗЧИК",
-                                 "content": f"🖼 Принял «{imya_f}» — смотрю…"})
-            ui.notify(f"🖼 Принято: {imya_f} — смотрю...", type="info")
-            update_chat()
-            razbor = await _analiz_kartinki(
-                dest, state.get("model"),
-                "Опиши, что на изображении: структура, детали, текст если "
-                "есть. Коротко и по делу, не выдумывай того, чего не видно.")
-            state["чат"][-1] = {"role": "assistant", "кто": "ЗАГРУЗЧИК",
-                                "content": f"🖼 «{imya_f}»: {razbor} "
-                                          f"(в архив не легло само — Хранитель решает руками)"}
-            ui.notify(f"🖼 разобрано: {imya_f}", type="positive")
-            update_chat()
+        state["чат"].append({"role": "assistant", "кто": "ЗАГРУЗЧИК",
+                             "content": f"{'📄' if vid=='текст' else '🖼'} Принял «{imya_f}» — лежит на просеве, "
+                                       f"в архив не легло само (Хранитель решает руками)."})
+        update_chat()
+        ui.notify(f"Принято на просев: {imya_f}", type="positive")
 
         up = ruda_ref.get("uploader")
         if up:
