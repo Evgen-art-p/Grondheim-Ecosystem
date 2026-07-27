@@ -107,49 +107,6 @@ def naznachit_rol(zid: str, tip: str, workshop_id: str,
         return False, str(e)
 
 
-# PATCH_POST_CHEREZ_ROL_V1 -- та же дверь «Роль», но для ПОСТОВ
-# (библиотекарь/хранитель_архива/ректор). Это не Закон Пары -- пост
-# живёт в GRONDHEIM_CITY/посты/{id}/хранитель.json, отдельно от
-# mask.json жителя. Тип в паспорт пишем для вида в списке жителей
-# (та же рука, что naznachit_rol/zapisat_studenta), а само место --
-# rezidenty.posadit().
-def naznachit_post_iz_roli(zid: str, post_id: str, tip_label: str):
-    """Сажает жителя на пост через rezidenty.posadit(). Пост ещё не
-    заведён цехом (Академия/Архив ни разу не открывались) -- заводим
-    сами, вакансией, чтобы не блокировать назначение порядком открытия
-    кабинетов. Возвращает (успех: bool, сообщение: str)."""
-    p, dom = find_dom(zid)
-    if p is None or dom is None:
-        return False, "житель не найден"
-    imya = p.get("Official_Name", "")
-    if not imya:
-        return False, "у жителя нет имени -- не могу посадить"
-    try:
-        import json
-        import rezidenty
-        if not rezidenty.get_post(post_id):
-            rezidenty.zavesti_post(post_id, tip_label.replace("_", " ").capitalize())
-        ok, msg = rezidenty.posadit(post_id, imya, zid)
-        if ok:
-            passport_path = dom / "passport.json"
-            p["тип"] = tip_label
-            passport_path.write_text(
-                json.dumps(p, ensure_ascii=False, indent=2), encoding="utf-8")
-        return ok, msg
-    except Exception as e:
-        return False, str(e)
-
-
-def list_posty_dlya_ui() -> list:
-    """Все посты города -- нужно новой ветке "Роли", чтобы показать,
-    свободен пост или занят. Пусто -- ни одного поста не заведено."""
-    try:
-        import rezidenty
-        return rezidenty.list_posty()
-    except Exception:
-        return []
-
-
 # ── PATCH_AKADEMIA_STUDENT_V1 — Брат записывает жителя студентом ──
 # Тип "студент" — не воркер (не садится в цех), а пришедший поучиться
 # в Академию. Пишет тип в паспорт (та же рука, что naznachit_rol),
@@ -335,8 +292,7 @@ body{
   grid-template-areas:
     "header header header"
     "left   stage  right";
-  column-gap: 20px;
-  row-gap: 8px;
+  gap: 20px;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -732,31 +688,14 @@ body{
 .chat-msg-brat{ background:rgba(201,168,76,0.08); border-left:3px solid rgba(201,168,76,0.6);
                 padding:8px 12px; margin:8px 0; border-radius:0 8px 8px 0; }
 /* Врата — одинаковые кнопки: фикс-ширина, тонкий шрифт, белый текст */
-/* PATCH_GOROD_BIRZHA_STYLE — как кнопка РЫНОК в Бирже, высота +1/3 */
-.brat-gate{ min-height:45px !important; padding:10px 22px !important;
-            border-radius:8px 8px 0 0 !important;
-            min-width:150px !important; width:auto !important; max-width:none !important;
-            background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,204,255,0.10)) !important;
-            border-top: 1px solid rgba(0,255,136,0.35) !important;
-            border-left: 1px solid rgba(0,255,136,0.35) !important;
-            border-right: 1px solid rgba(0,255,136,0.35) !important;
-            border-bottom: none !important;
-            color: rgba(255,255,255,0.9) !important; font-weight:700 !important; font-size:0.85rem !important;
+.brat-gate{ width:130px !important; min-width:130px !important; max-width:130px !important;
+            min-height:34px !important; padding:6px 0 !important; border-radius:8px !important;
+            background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.08)) !important;
+            border: 1px solid rgba(201,168,76,0.35) !important;
+            color: #ffffff !important; font-weight:400 !important; font-size:0.78rem !important;
             text-transform:none !important; }
 .brat-gate .q-btn__content{ width:100% !important; justify-content:center !important; }
-.brat-gate:hover{ background: linear-gradient(135deg, rgba(0,255,136,0.24), rgba(0,204,255,0.16)) !important; }
-
-/* PATCH_BIRZHA_HEADER_STYLE — кнопки хедера Брата в стиле кнопки
-   "РЫНОК" из Биржи (Биржа/ui_torg.py, stage-toolbar, второй ряд). */
-.birzha-header-btn{
-    padding: 8px 18px !important; border-radius: 8px !important;
-    background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,204,255,0.10)) !important;
-    border: 1px solid rgba(0,255,136,0.35) !important;
-    color: rgba(255,255,255,0.9) !important; font-weight: 700 !important;
-}
-.birzha-header-btn:hover{
-    background: linear-gradient(135deg, rgba(0,255,136,0.24), rgba(0,204,255,0.16)) !important;
-}
+.brat-gate:hover{ background: linear-gradient(135deg, rgba(201,168,76,0.24), rgba(201,168,76,0.14)) !important; }
 """
 
 
@@ -1124,17 +1063,7 @@ def page_brat():
             ui.notify("Жителей ещё нет — роди их в Странице Жизни", color="warning")
             return
 
-        TIPY = ["резидент", "хранитель", "воркер", "студент",
-                "библиотекарь", "хранитель_архива", "ректор"]  # PATCH_AKADEMIA_STUDENT_V1 + PATCH_POST_CHEREZ_ROL_V1
-        # PATCH_POST_CHEREZ_ROL_V1: тип -> id поста в rezidenty.py.
-        # Библиотекарь/Архив/Ректор — это ПОСТЫ (GRONDHEIM_CITY/посты/),
-        # не Закон Пары. Выбрал такой тип — полей Цех/Слот/Фраза не
-        # будет, посадка идёт сразу, одним кликом «назначить».
-        TIP_TO_POST = {
-            "библиотекарь": "bibliotekar",
-            "хранитель_архива": "khranitel_arkhiva",
-            "ректор": "rektor",
-        }
+        TIPY = ["резидент", "хранитель", "воркер", "студент"]  # PATCH_AKADEMIA_STUDENT_V1
         pick: dict = {"zhitel": None, "tip": None}
 
         with ui.dialog() as dlg, ui.card().style(
@@ -1216,32 +1145,6 @@ def page_brat():
                                 )
                                 if ok:
                                     ui.notify(f"🎓 {zn}: записан(а) в Академию ({msg})", color="positive")
-                                    dlg.close()
-                                else:
-                                    ui.notify(f"⚠ {msg}", color="negative")
-                        elif pick["tip"] in TIP_TO_POST:
-                            # PATCH_POST_CHEREZ_ROL_V1: пост -- полей нет,
-                            # только подтверждение. Личность и роль
-                            # развязаны (закон rezidenty.py), Брат просто
-                            # сажает жителя на готовый пост.
-                            _post_id = TIP_TO_POST[pick["tip"]]
-                            _post_info = next((p2 for p2 in list_posty_dlya_ui()
-                                              if p2["id"] == _post_id), None)
-                            if _post_info and _post_info.get("занят"):
-                                ui.html(f'<div style="color:rgba(255,180,60,0.85); font-size:0.75rem; '
-                                        f'margin-bottom:10px;">Сейчас на посту: '
-                                        f'{_post_info.get("житель","?")} -- назначишь, сменит(ся).</div>')
-                            else:
-                                ui.html('<div style="color:rgba(255,255,255,0.45); font-size:0.75rem; '
-                                        'margin-bottom:10px;">Пост свободен -- полей заполнять не надо, '
-                                        'просто подтверди.</div>')
-
-                            async def _confirm():
-                                ok, msg = naznachit_post_iz_roli(
-                                    pick["zhitel"].get("ID_Object", ""),
-                                    _post_id, pick["tip"])
-                                if ok:
-                                    ui.notify(f"🪑 {zn}: {msg}", color="positive")
                                     dlg.close()
                                 else:
                                     ui.notify(f"⚠ {msg}", color="negative")
@@ -1486,32 +1389,42 @@ def page_brat():
                         'врата · различение смысла и пластика</div>')
                 ui.element("div").style("flex:1")
                 # ГРОНДХЕЙМ — по центру хедера (перенесена из тулбара, стиль не тронут)
-                with ui.element("div").style(
-                    "display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;"
-                ):
-                    ui.button("ГРОНДХЕЙМ",
-                              on_click=lambda: ui.navigate.to("/karta")  # PATCH_KARTA_BTN
-                              ).props("flat no-caps").classes("birzha-header-btn")
-                    ui.button("⏱ Тик",
-                              on_click=do_tik  # PATCH_BRAT_TIK_V1
-                              ).props("flat no-caps").classes("birzha-header-btn")
-                    ui.button("Прописка",
-                              on_click=do_propiska  # PATCH_PROPISKA_BRAT
-                              ).props("flat no-caps").classes("birzha-header-btn")
-                    ui.button("Роль",
-                              on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
-                              ).props("flat no-caps").classes("birzha-header-btn")
-                    ui.button("Страница Жизни",
-                              on_click=lambda: ui.navigate.to("/registry")  # PATCH_ROZH_BTN
-                              ).props("flat no-caps").classes("birzha-header-btn")
+                ui.button("ГРОНДХЕЙМ",
+                          on_click=lambda: ui.navigate.to("/karta")  # PATCH_KARTA_BTN
+                          ).props("flat no-caps").style(
+                    'padding:10px 40px; border-radius:10px; font-size:1.1rem; '
+                    'font-weight:900; letter-spacing:0.16em; '
+                    'background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.08)) !important; '
+                    'border: 1px solid rgba(201,168,76,0.55); color:#c9a84c;')
                 ui.element("div").style("flex:1")
-                with ui.element("div").style(
-                    "margin-right:10px; background:rgba(255,255,255,0.06); "
-                    "border:1px solid rgba(255,255,255,0.12); border-radius:10px;"
-                ):
+                ui.button("⏱ Тик",
+                          on_click=do_tik  # PATCH_BRAT_TIK_V1
+                          ).props("flat no-caps").style(
+                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
+                    "background:linear-gradient(135deg,rgba(80,200,140,0.15),rgba(80,200,140,0.08)); "
+                    "border:1px solid rgba(80,200,140,0.35); color:#fff;")
+                ui.button("Прописка",
+                          on_click=do_propiska  # PATCH_PROPISKA_BRAT
+                          ).props("flat no-caps").style(
+                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
+                    "background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08)); "
+                    "border:1px solid rgba(201,168,76,0.35); color:#fff;")
+                ui.button("Роль",
+                          on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
+                          ).props("flat no-caps").style(
+                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
+                    "background:linear-gradient(135deg,rgba(120,168,201,0.15),rgba(120,168,201,0.08)); "
+                    "border:1px solid rgba(120,168,201,0.35); color:#fff;")
+                ui.button("Страница Жизни",
+                          on_click=lambda: ui.navigate.to("/registry")  # PATCH_ROZH_BTN
+                          ).props("flat no-caps").style(
+                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
+                    "background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08)); "
+                    "border:1px solid rgba(201,168,76,0.35); color:#fff;")
+                with ui.element("div").classes("brat-model-sel"):
                     opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
                     ui.select(opts, value=state["model"], on_change=on_model_change) \
-                        .props('dense borderless dark options-dense').style("min-width:190px;")
+                        .props('dense borderless dark options-dense').style("min-width:210px;")
 
         # LEFT: загрузчик + руда
         with ui.element("div").classes("area-left"):
@@ -1573,8 +1486,8 @@ def page_brat():
                 # теперь идут кликом по локации на самой карте, без кнопок.
                 with ui.element("div").classes("stage-toolbar").style(
                     "flex-shrink:0; grid-template-columns:1fr; justify-items:center; "
-                    "align-items:end !important; height:55px !important; "
-                    "padding:9px 12px 6px !important; "
+                    "align-items:end !important; height:auto !important; "
+                    "padding:6px 12px 6px !important; "
                     "background:transparent !important; border-bottom:none !important; "
                     "backdrop-filter:none !important;"
                 ):
@@ -1585,7 +1498,7 @@ def page_brat():
                                   on_click=lambda: ui.navigate.to("/grondheim")
                                   ).props("flat").classes("brat-gate")  # PATCH_GRONDHEIM_VISUAL_MAP
                 with ui.element("div").classes("stage-content").style(
-                    "padding-top:0 !important; padding-bottom:105px;"):
+                    "padding-top:0 !important; padding-bottom:90px;"):
                     with ui.element("div").classes("split-view"):
                         refs["chat"] = ui.element("div").classes("chat-log")
                         update_chat()

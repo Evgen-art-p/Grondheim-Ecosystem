@@ -1585,7 +1585,7 @@ def page_brat():
                                   on_click=lambda: ui.navigate.to("/grondheim")
                                   ).props("flat").classes("brat-gate")  # PATCH_GRONDHEIM_VISUAL_MAP
                 with ui.element("div").classes("stage-content").style(
-                    "padding-top:0 !important; padding-bottom:105px;"):
+                    "padding-top:0 !important; padding-bottom:90px;"):
                     with ui.element("div").classes("split-view"):
                         refs["chat"] = ui.element("div").classes("chat-log")
                         update_chat()

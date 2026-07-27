@@ -335,8 +335,7 @@ body{
   grid-template-areas:
     "header header header"
     "left   stage  right";
-  column-gap: 20px;
-  row-gap: 8px;
+  gap: 20px;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -732,31 +731,14 @@ body{
 .chat-msg-brat{ background:rgba(201,168,76,0.08); border-left:3px solid rgba(201,168,76,0.6);
                 padding:8px 12px; margin:8px 0; border-radius:0 8px 8px 0; }
 /* Врата — одинаковые кнопки: фикс-ширина, тонкий шрифт, белый текст */
-/* PATCH_GOROD_BIRZHA_STYLE — как кнопка РЫНОК в Бирже, высота +1/3 */
-.brat-gate{ min-height:45px !important; padding:10px 22px !important;
-            border-radius:8px 8px 0 0 !important;
-            min-width:150px !important; width:auto !important; max-width:none !important;
-            background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,204,255,0.10)) !important;
-            border-top: 1px solid rgba(0,255,136,0.35) !important;
-            border-left: 1px solid rgba(0,255,136,0.35) !important;
-            border-right: 1px solid rgba(0,255,136,0.35) !important;
-            border-bottom: none !important;
-            color: rgba(255,255,255,0.9) !important; font-weight:700 !important; font-size:0.85rem !important;
+.brat-gate{ width:130px !important; min-width:130px !important; max-width:130px !important;
+            min-height:34px !important; padding:6px 0 !important; border-radius:8px !important;
+            background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.08)) !important;
+            border: 1px solid rgba(201,168,76,0.35) !important;
+            color: #ffffff !important; font-weight:400 !important; font-size:0.78rem !important;
             text-transform:none !important; }
 .brat-gate .q-btn__content{ width:100% !important; justify-content:center !important; }
-.brat-gate:hover{ background: linear-gradient(135deg, rgba(0,255,136,0.24), rgba(0,204,255,0.16)) !important; }
-
-/* PATCH_BIRZHA_HEADER_STYLE — кнопки хедера Брата в стиле кнопки
-   "РЫНОК" из Биржи (Биржа/ui_torg.py, stage-toolbar, второй ряд). */
-.birzha-header-btn{
-    padding: 8px 18px !important; border-radius: 8px !important;
-    background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,204,255,0.10)) !important;
-    border: 1px solid rgba(0,255,136,0.35) !important;
-    color: rgba(255,255,255,0.9) !important; font-weight: 700 !important;
-}
-.birzha-header-btn:hover{
-    background: linear-gradient(135deg, rgba(0,255,136,0.24), rgba(0,204,255,0.16)) !important;
-}
+.brat-gate:hover{ background: linear-gradient(135deg, rgba(201,168,76,0.24), rgba(201,168,76,0.14)) !important; }
 """
 
 
@@ -1486,32 +1468,42 @@ def page_brat():
                         'врата · различение смысла и пластика</div>')
                 ui.element("div").style("flex:1")
                 # ГРОНДХЕЙМ — по центру хедера (перенесена из тулбара, стиль не тронут)
-                with ui.element("div").style(
-                    "display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;"
-                ):
-                    ui.button("ГРОНДХЕЙМ",
-                              on_click=lambda: ui.navigate.to("/karta")  # PATCH_KARTA_BTN
-                              ).props("flat no-caps").classes("birzha-header-btn")
-                    ui.button("⏱ Тик",
-                              on_click=do_tik  # PATCH_BRAT_TIK_V1
-                              ).props("flat no-caps").classes("birzha-header-btn")
-                    ui.button("Прописка",
-                              on_click=do_propiska  # PATCH_PROPISKA_BRAT
-                              ).props("flat no-caps").classes("birzha-header-btn")
-                    ui.button("Роль",
-                              on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
-                              ).props("flat no-caps").classes("birzha-header-btn")
-                    ui.button("Страница Жизни",
-                              on_click=lambda: ui.navigate.to("/registry")  # PATCH_ROZH_BTN
-                              ).props("flat no-caps").classes("birzha-header-btn")
+                ui.button("ГРОНДХЕЙМ",
+                          on_click=lambda: ui.navigate.to("/karta")  # PATCH_KARTA_BTN
+                          ).props("flat no-caps").style(
+                    'padding:10px 40px; border-radius:10px; font-size:1.1rem; '
+                    'font-weight:900; letter-spacing:0.16em; '
+                    'background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.08)) !important; '
+                    'border: 1px solid rgba(201,168,76,0.55); color:#c9a84c;')
                 ui.element("div").style("flex:1")
-                with ui.element("div").style(
-                    "margin-right:10px; background:rgba(255,255,255,0.06); "
-                    "border:1px solid rgba(255,255,255,0.12); border-radius:10px;"
-                ):
+                ui.button("⏱ Тик",
+                          on_click=do_tik  # PATCH_BRAT_TIK_V1
+                          ).props("flat no-caps").style(
+                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
+                    "background:linear-gradient(135deg,rgba(80,200,140,0.15),rgba(80,200,140,0.08)); "
+                    "border:1px solid rgba(80,200,140,0.35); color:#fff;")
+                ui.button("Прописка",
+                          on_click=do_propiska  # PATCH_PROPISKA_BRAT
+                          ).props("flat no-caps").style(
+                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
+                    "background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08)); "
+                    "border:1px solid rgba(201,168,76,0.35); color:#fff;")
+                ui.button("Роль",
+                          on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
+                          ).props("flat no-caps").style(
+                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
+                    "background:linear-gradient(135deg,rgba(120,168,201,0.15),rgba(120,168,201,0.08)); "
+                    "border:1px solid rgba(120,168,201,0.35); color:#fff;")
+                ui.button("Страница Жизни",
+                          on_click=lambda: ui.navigate.to("/registry")  # PATCH_ROZH_BTN
+                          ).props("flat no-caps").style(
+                    "margin-right:14px; padding:8px 18px; border-radius:8px; font-size:0.82rem; "
+                    "background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08)); "
+                    "border:1px solid rgba(201,168,76,0.35); color:#fff;")
+                with ui.element("div").classes("brat-model-sel"):
                     opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
                     ui.select(opts, value=state["model"], on_change=on_model_change) \
-                        .props('dense borderless dark options-dense').style("min-width:190px;")
+                        .props('dense borderless dark options-dense').style("min-width:210px;")
 
         # LEFT: загрузчик + руда
         with ui.element("div").classes("area-left"):
@@ -1573,8 +1565,8 @@ def page_brat():
                 # теперь идут кликом по локации на самой карте, без кнопок.
                 with ui.element("div").classes("stage-toolbar").style(
                     "flex-shrink:0; grid-template-columns:1fr; justify-items:center; "
-                    "align-items:end !important; height:55px !important; "
-                    "padding:9px 12px 6px !important; "
+                    "align-items:end !important; height:auto !important; "
+                    "padding:6px 12px 6px !important; "
                     "background:transparent !important; border-bottom:none !important; "
                     "backdrop-filter:none !important;"
                 ):
@@ -1585,7 +1577,7 @@ def page_brat():
                                   on_click=lambda: ui.navigate.to("/grondheim")
                                   ).props("flat").classes("brat-gate")  # PATCH_GRONDHEIM_VISUAL_MAP
                 with ui.element("div").classes("stage-content").style(
-                    "padding-top:0 !important; padding-bottom:105px;"):
+                    "padding-top:0 !important; padding-bottom:90px;"):
                     with ui.element("div").classes("split-view"):
                         refs["chat"] = ui.element("div").classes("chat-log")
                         update_chat()

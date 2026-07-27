@@ -335,8 +335,7 @@ body{
   grid-template-areas:
     "header header header"
     "left   stage  right";
-  column-gap: 20px;
-  row-gap: 8px;
+  gap: 20px;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -1573,8 +1572,8 @@ def page_brat():
                 # теперь идут кликом по локации на самой карте, без кнопок.
                 with ui.element("div").classes("stage-toolbar").style(
                     "flex-shrink:0; grid-template-columns:1fr; justify-items:center; "
-                    "align-items:end !important; height:55px !important; "
-                    "padding:9px 12px 6px !important; "
+                    "align-items:end !important; height:auto !important; "
+                    "padding:6px 12px 6px !important; "
                     "background:transparent !important; border-bottom:none !important; "
                     "backdrop-filter:none !important;"
                 ):
@@ -1585,7 +1584,7 @@ def page_brat():
                                   on_click=lambda: ui.navigate.to("/grondheim")
                                   ).props("flat").classes("brat-gate")  # PATCH_GRONDHEIM_VISUAL_MAP
                 with ui.element("div").classes("stage-content").style(
-                    "padding-top:0 !important; padding-bottom:105px;"):
+                    "padding-top:0 !important; padding-bottom:90px;"):
                     with ui.element("div").classes("split-view"):
                         refs["chat"] = ui.element("div").classes("chat-log")
                         update_chat()
