@@ -191,8 +191,14 @@ class Dvizhok:
             "заряд": vdoh_result.get("заряд"),
         }
         try:
+            # DVIZHOK_MKDIR_FIX_V1: каждый слой сам заводит свою папку —
+            # раньше запись тихо проваливалась в except, если "sensory"/
+            # "resonance"/"archive" ещё не были созданы при рождении
+            # жителя (у настоящих резидентов это не всплывало — папки
+            # заводятся при рождении, но память не должна на это надеяться).
             if sloy == "sensory":
                 # sensory_memory.json — JSON-объект с массивом entries
+                (self.dom / "sensory").mkdir(parents=True, exist_ok=True)
                 p = self.dom / "sensory" / "sensory_memory.json"
                 data = {"entries": []}
                 if p.exists():
@@ -204,11 +210,13 @@ class Dvizhok:
                 p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             elif sloy == "resonance":
                 # event_log.jsonl — JSONL, дозапись строкой
+                (self.dom / "resonance").mkdir(parents=True, exist_ok=True)
                 p = self.dom / "resonance" / "event_log.jsonl"
                 with open(p, "a", encoding="utf-8") as f:
                     f.write(json.dumps(zapis, ensure_ascii=False) + "\n")
             elif sloy == "archive":
                 # archive.jsonl — JSONL, дозапись строкой
+                (self.dom / "archive").mkdir(parents=True, exist_ok=True)
                 p = self.dom / "archive" / "archive.jsonl"
                 with open(p, "a", encoding="utf-8") as f:
                     f.write(json.dumps(zapis, ensure_ascii=False) + "\n")

@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 
 _HERE = Path(__file__).resolve().parent     # Академия/
 _REPO = _HERE.parent                         # корень репо
-for _p in (_REPO, _REPO / "ГОРОД", _HERE):
+for _p in (_REPO, _REPO / "ГОРОД", _REPO / "жители", _HERE):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
@@ -60,6 +60,43 @@ def _write_json(p: Path, data):
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+# ═══════════════════════════════════════════════════════════
+# МОСТ В ЛИЧНУЮ ПАМЯТЬ ЖИТЕЛЯ (dvizhok.py, три этажа)
+# ═══════════════════════════════════════════════════════════
+# AKADEMIA_REKTOR_DVIZHOK_BRIDGE_V1: житель должен ПОМНИТЬ, что учился —
+# не только запись в ученики.json (факт/оценка), но и в его личной
+# памяти, той же, что видит Биржа. nositel.py (Биржа/nositel.py) УЖЕ
+# читает метки с otkuda="учёба" и подписывает их «чему тебя учили» —
+# это готовый провод, ректор просто ничего в него не пускал. Теперь
+# пускает: собеседование/оценка/экзамен/диплом ложатся и в реестр
+# (факт), и в метки/маяки (личный опыт, всплывёт в работе, житель
+# сможет столкнуть «чему учили» с «что сказал рынок»).
+#
+# Разные события — разная сила и разный порог:
+#   зачисление и диплом — вехи жизни, сразу МЕТКА (pattern=None)
+#   отдельная оценка/экзамен — черновик-МАЯК по предмету (pattern=predmet),
+#   набежит порог повторов — сам станет меткой (закон dvizhok, не мы решаем)
+
+def _zapomnit_uchebu(imya: str, fakt: str, vyvod: str,
+                     pattern: str | None = None,
+                     sila: float = 0.6, tonus: str = "плюс") -> None:
+    """Честно пробует прожить событие через dvizhok жителя. Не вышло
+    (нет резидента, нет dvizhok.py, паспорт битый) — тихо не падаем:
+    факт всё равно уже лёг в ученики.json, это не единственная правда."""
+    try:
+        import rezidenty
+        dom = rezidenty.dom_zhitelya(imya)
+        if not dom:
+            return
+        from dvizhok import Dvizhok
+        d = Dvizhok(dom)
+        vdoh_res = d.vdoh("учёба", sila, 1.0, tonus)
+        d.vydoh_stol(fakt, vdoh_res)
+        d.dopisat_vyvod(vyvod, pattern=pattern, otkuda="учёба")
+    except Exception:
+        pass
 
 
 # ═══════════════════════════════════════════════════════════
@@ -118,6 +155,9 @@ def zachislit(imya: str, kurs: str = "") -> tuple:
         "оценки": [], "экзамены": [], "диплом": None,
     })
     _sokhranit_zapisi(zapisi)
+    _zapomnit_uchebu(
+        imya, f"Поступил(а) в Академию Грондхейма (Замок Сов)",
+        "Я учусь в Академии Грондхейма", pattern=None, sila=0.6)
     return True, f"{imya} зачислен(а) на место {mesto}"
 
 
@@ -140,6 +180,10 @@ def postavit_otsenku(imya: str, predmet: str, otsenka: str) -> tuple:
             z.setdefault("оценки", []).append({
                 "предмет": predmet, "оценка": otsenka, "когда": _now()})
             _sokhranit_zapisi(zapisi)
+            _zapomnit_uchebu(
+                imya, f"Получил(а) оценку «{otsenka}» по «{predmet}»",
+                f"По предмету «{predmet}»: {otsenka}",
+                pattern=f"оценка:{predmet}", sila=0.4)
             return True, f"оценка «{otsenka}» по «{predmet}» выставлена {imya}"
     return False, f"{imya} не студент(ка) — оценку ставить некуда"
 
@@ -151,6 +195,10 @@ def provesti_ekzamen(imya: str, predmet: str, rezultat: str) -> tuple:
             z.setdefault("экзамены", []).append({
                 "предмет": predmet, "результат": rezultat, "когда": _now()})
             _sokhranit_zapisi(zapisi)
+            _zapomnit_uchebu(
+                imya, f"Сдал(а) экзамен «{predmet}»: {rezultat}",
+                f"Экзамен «{predmet}»: {rezultat}",
+                pattern=f"экзамен:{predmet}", sila=0.6)
             return True, f"экзамен «{predmet}» ({rezultat}) записан для {imya}"
     return False, f"{imya} не студент(ка) — экзамен принимать не у кого"
 
@@ -162,6 +210,12 @@ def vydat_diplom(imya: str, professiya: str = "") -> tuple:
             z["диплом"] = {"профессия": professiya, "выдан": _now()}
             z["статус"] = "выпускник"
             _sokhranit_zapisi(zapisi)
+            _prof = professiya or "специалист(ка)"
+            _zapomnit_uchebu(
+                imya, f"Получил(а) диплом Академии по специальности «{_prof}»",
+                f"Я — дипломированный(ая) {_prof}, умею применять эти "
+                f"знания в работе, не только помнить их как урок",
+                pattern=None, sila=0.9)
             return True, f"диплом «{professiya or 'без указания профессии'}» выдан {imya}"
     return False, f"{imya} не студент(ка) — диплом выдавать некому"
 
