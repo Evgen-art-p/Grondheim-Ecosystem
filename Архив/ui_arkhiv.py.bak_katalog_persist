@@ -644,27 +644,9 @@ def page_arkhiv() -> None:
                 dest, state.get("model"),
                 "Опиши, что на изображении: структура, детали, текст если "
                 "есть. Коротко и по делу, не выдумывай того, чего не видно.")
-            # PATCH_ARKHIV_KATALOG_PERSIST_V1: разбор уходит в каталог
-            # черновиком -- не только в чат, который забудется через ход.
-            try:
-                import khranitel_arkhiva as _khr2
-                _khr2.dobavit_v_katalog({
-                    "название": Path(imya_f).stem,
-                    "раздел": "медиа",
-                    "теги": ["автозагрузка", "изображение"],
-                    "файл": f"изображения/{imya_f}",
-                    "описание": razbor,
-                    "статус": "черновик — принято автоматически, не проверено Хранителем",
-                    "когда": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                })
-                _zapisano = True
-            except Exception:
-                _zapisano = False
-            _hvost = ("записано в каталог черновиком — Хранитель проверит"
-                     if _zapisano else
-                     "в архив не легло само — Хранитель решает руками")
             state["чат"][-1] = {"role": "assistant", "кто": "ЗАГРУЗЧИК",
-                                "content": f"🖼 «{imya_f}»: {razbor} ({_hvost})"}
+                                "content": f"🖼 «{imya_f}»: {razbor} "
+                                          f"(в архив не легло само — Хранитель решает руками)"}
             ui.notify(f"🖼 разобрано: {imya_f}", type="positive")
             update_chat()
 

@@ -725,16 +725,21 @@ def page_akademia() -> None:
             state["чат"].append({"role": "assistant", "кто": "ЗАГРУЗЧИК",
                                  "content": f"📄 Принял «{imya}» — лёг в руду на просев."})
             ui.notify(f"📄 Принято на просев: {imya}", type="positive")
+            update_chat()
         else:
-            # PATCH_AKADEMIA_RUDA_BEZ_ANALIZA_V1: разбор при загрузке убран
-            # -- жил один ход чата и дублировал то, что уже делает и
-            # СОХРАНЯЕТ "📖 Прочитать" (личная память активного студента).
-            # Стол только принимает, как и для текста.
+            # PATCH_AKADEMIA_VIZUAL_V1: реальный разбор вместо заглушки
             state["чат"].append({"role": "assistant", "кто": "ЗАГРУЗЧИК",
-                                 "content": f"🖼 Принял «{imya}» — лежит на столе, "
-                                           f"разберёт тот, кто сядет читать."})
-            ui.notify(f"🖼 Принято: {imya}", type="info")
-        update_chat()
+                                 "content": f"🖼 Принял «{imya}» — смотрю…"})
+            ui.notify(f"🖼 Принято: {imya} — смотрю...", type="info")
+            update_chat()
+            razbor = await _analiz_kartinki(
+                dest, state.get("model"),
+                "Опиши, что на изображении: структура, детали, текст если "
+                "есть. Коротко и по делу, не выдумывай того, чего не видно.")
+            state["чат"][-1] = {"role": "assistant", "кто": "ЗАГРУЗЧИК",
+                                "content": f"🖼 «{imya}»: {razbor}"}
+            ui.notify(f"🖼 разобрано: {imya}", type="positive")
+            update_chat()
 
         up = ruda_ref.get("uploader")
         if up:

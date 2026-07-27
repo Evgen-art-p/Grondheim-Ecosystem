@@ -83,15 +83,11 @@ def nayti_zapisi(zapros: str, razdel: str = "", limit: int = 8) -> list:
         if razdel and z.get("раздел", "") != razdel:
             continue
         if q:
-            # PATCH_ARKHIV_KATALOG_PERSIST_V1: описание тоже участвует в
-            # поиске -- иначе разбор картинки (лежит именно там) никогда
-            # не найдётся текстовым запросом.
             seno = " ".join([
                 str(z.get("название", "")),
                 str(z.get("раздел", "")),
                 " ".join(z.get("теги", []) or []),
                 str(z.get("файл", "")),
-                str(z.get("описание", "")),
             ]).lower()
             if q not in seno:
                 continue
@@ -99,22 +95,6 @@ def nayti_zapisi(zapros: str, razdel: str = "", limit: int = 8) -> list:
         if len(out) >= limit:
             break
     return out
-
-
-# PATCH_ARKHIV_KATALOG_PERSIST_V1: постоянная запись -- по образцу
-# старой студии (ref_indexer.py): разбор изображения пишется в
-# каталог один раз и остаётся там навсегда, а не живёт один ход чата.
-def dobavit_v_katalog(zapis: dict) -> None:
-    """Добавляет запись в каталог архива. Не подменяет решение
-    Хранителя -- новые записи от загрузчика метятся статусом
-    "черновик", Хранитель видит их и может поправить/убрать руками
-    (Закон Архива: своё решение важнее автоматической галочки)."""
-    _ARKHIV.mkdir(parents=True, exist_ok=True)
-    kat = _read_json(_KATALOG, {"записи": []}) or {"записи": []}
-    zapisi = kat.setdefault("записи", [])
-    zapisi.append(zapis)
-    _KATALOG.write_text(json.dumps(kat, ensure_ascii=False, indent=2),
-                        encoding="utf-8")
 
 
 # ═══════════════════════════════════════════════════════════
