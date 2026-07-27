@@ -44,6 +44,29 @@ for _p in (_REPO, _REPO / "ГОРОД", _REPO / "жители", _HERE):
 POST_ID = "rektor"
 _STATIC = "rektor-static"
 
+# ARKHIV_KABINET_FONY_V1: общая папка фонов на все кабинеты Академии
+# (Ректор, сама Академия, будущие). Положи файл с нужным именем —
+# ректор.jpg / академия.jpg (подойдут .jpg/.jpeg/.png/.webp) в
+#   GRONDHEIM_CITY/Академия/фоны/
+# код найдёт сам, второго реестра/пути заводить не надо.
+_FONY_DIR = _REPO / "GRONDHEIM_CITY" / "Академия" / "фоны"
+
+
+def _fon_url(imya_kabineta: str, static_ns: str = "akad-fony") -> str:
+    """Фон кабинета из общей папки. Нет файла — честно пусто, тот же
+    закон, что у остальных фонов в городе (не рисуем то, чего нет)."""
+    if not _FONY_DIR.exists():
+        return ""
+    for ext in (".jpg", ".jpeg", ".png", ".webp"):
+        f = _FONY_DIR / (imya_kabineta + ext)
+        if f.exists():
+            try:
+                app.add_static_files(f"/{static_ns}", str(_FONY_DIR))
+            except Exception:
+                pass
+            return f"/{static_ns}/{imya_kabineta}{ext}"
+    return ""
+
 
 def _read_json(p: Path, default=None):
     try:
@@ -105,7 +128,9 @@ REKTOR_CSS = r"""
 html, body { height:100%; margin:0; }
 body{ width:100vw; height:100vh; overflow:hidden !important; background:transparent !important;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-#bg{ position:fixed; inset:0; z-index:-1; background:#050510; }
+#bg{ position:fixed; inset:0; z-index:-1; background-size:cover;
+     background-position:center; background-color:#050510; }
+#bg::after{ content:''; position:absolute; inset:0; background:rgba(5,5,16,0.88); }
 .app-container{ position:fixed; inset:0; display:grid; width:100vw; height:100vh;
   grid-template-columns: 300px 1fr 260px; grid-template-rows: 80px 1fr;
   grid-template-areas: "header header header" "left stage right";
@@ -197,13 +222,16 @@ def page_rektor(zid: str = "") -> None:
 
     chat_ref = {"element": None}
     viewer_ref = {"element": None}
+    kand_avatar_ref = {"element": None}
+    kand_caption_ref = {"element": None}
     input_ref = {"element": None}
     bubble_ref = {"element": None}
     avatar_ref = {"element": None}
     vitals_ref = {"element": None}
 
     ui.add_head_html(f"<style>{REKTOR_CSS}</style>")
-    ui.html('<div id="bg"></div>')
+    _bg = _fon_url("ректор")
+    ui.html(f'<div id="bg"{f" style=\"background-image:url(\'{_bg}\');\"" if _bg else ""}></div>')
 
     def update_chat():
         if not chat_ref["element"]:
@@ -223,19 +251,49 @@ def page_rektor(zid: str = "") -> None:
                     who = m.get("кто", "СИСТЕМА")
                     ui.html(f'<div class="chat-msg-assistant"><b>{who}:</b> {m.get("content","")}</div>')
 
+    def update_kand_avatar():
+        if not kand_avatar_ref["element"]:
+            return
+        kand_avatar_ref["element"].clear()
+        with kand_avatar_ref["element"]:
+            if kandidat_imya:
+                av = _avatar_url(kandidat_dom, _STATIC) if kandidat_dom else ""
+                if av:
+                    ui.html(f'<img src="{av}" style="width:100%;height:100%;object-fit:cover;'
+                            f'border-radius:19px;opacity:.9;" onerror="this.style.display=\'none\'">')
+                else:
+                    ui.html('<div style="font-size:3rem;color:rgba(255,180,60,0.35);">⬡</div>')
+            else:
+                ui.html('<div style="font-size:.75rem;color:rgba(255,255,255,0.35);'
+                        'text-align:center;padding:0 16px;">без кандидата</div>')
+
+    def update_kand_caption():
+        if not kand_caption_ref["element"]:
+            return
+        kand_caption_ref["element"].clear()
+        with kand_caption_ref["element"]:
+            if kandidat_imya:
+                zap = _rek.najti_zapis(kandidat_imya)
+                status = zap.get("статус", "кандидат(ка)") if zap else "кандидат(ка) на собеседовании"
+                ui.html(
+                    f'<div style="padding:10px 16px 4px 16px;">'
+                    f'<div style="font-size:0.6rem;color:rgba(255,255,255,0.45);'
+                    f'letter-spacing:0.14em;text-transform:uppercase;">кандидат</div>'
+                    f'<div style="font-size:1.05rem;font-weight:800;color:#ffb43c;'
+                    f'line-height:1.3;">{kandidat_imya}</div>'
+                    f'<div style="font-size:0.72rem;color:rgba(255,255,255,0.55);">{status}</div></div>')
+
     def update_viewer():
         if not viewer_ref["element"]:
             return
         viewer_ref["element"].clear()
         with viewer_ref["element"]:
             if not kandidat_imya:
-                ui.markdown("# Без кандидата\n\n*Открой кабинет через кнопку "
-                            "«Учёба» в кабинете жителя.*")
+                ui.markdown("*Открой кабинет через кнопку «Учёба» в кабинете жителя.*")
                 return
             zap = _rek.najti_zapis(kandidat_imya)
-            md = f"# {kandidat_imya}\n\n"
+            md = ""
             if zap:
-                md += f"**Статус:** {zap.get('статус','—')}\n\n"
                 md += f"**Место:** {zap.get('место','—')} · **Курс:** {zap.get('курс') or '—'}\n\n"
                 otsenki = zap.get("оценки", [])
                 md += "**Оценки:** " + (", ".join(
@@ -326,6 +384,7 @@ def page_rektor(zid: str = "") -> None:
         ok, msg = _rek.zachislit(kandidat_imya)
         ui.notify(msg, type="positive" if ok else "warning")
         update_viewer()
+        update_kand_caption()
 
     oc_predmet_ref = {"el": None}
     oc_otsenka_ref = {"el": None}
@@ -342,6 +401,7 @@ def page_rektor(zid: str = "") -> None:
         ok, msg = _rek.postavit_otsenku(kandidat_imya, predmet, otsenka)
         ui.notify(msg, type="positive" if ok else "warning")
         update_viewer()
+        update_kand_caption()
 
     dip_prof_ref = {"el": None}
 
@@ -353,6 +413,7 @@ def page_rektor(zid: str = "") -> None:
         ok, msg = _rek.vydat_diplom(kandidat_imya, prof)
         ui.notify(msg, type="positive" if ok else "warning")
         update_viewer()
+        update_kand_caption()
 
     def idti_nazad():
         ui.navigate.to(f"/zhitel/{zid}" if zid else "/zhitel")
@@ -395,7 +456,10 @@ def page_rektor(zid: str = "") -> None:
             with ui.element("div").classes("left-col"):
                 with ui.element("div").classes("glass").style("flex:1; overflow-y:auto;"):
                     ui.html('<div class="panel-title">КАНДИДАТ</div>')
-                    with ui.element("div").style("padding:14px;"):
+                    kand_avatar_ref["element"] = ui.element("div").classes("right-top-slot").style(
+                        "margin:14px 14px 0 14px;")
+                    kand_caption_ref["element"] = ui.element("div")
+                    with ui.element("div").style("padding:6px 14px 14px 14px;"):
                         viewer_ref["element"] = ui.element("div")
 
         with ui.element("div").classes("area-stage"):
@@ -445,6 +509,8 @@ def page_rektor(zid: str = "") -> None:
 
     update_chat()
     update_bubble()
+    update_kand_avatar()
+    update_kand_caption()
     update_viewer()
 
 
