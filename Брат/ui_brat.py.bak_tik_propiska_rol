@@ -733,31 +733,29 @@ body{
                 padding:8px 12px; margin:8px 0; border-radius:0 8px 8px 0; }
 /* Врата — одинаковые кнопки: фикс-ширина, тонкий шрифт, белый текст */
 /* PATCH_GOROD_BIRZHA_STYLE — как кнопка РЫНОК в Бирже, высота +1/3 */
-/* PATCH_BRAT_GOLD_BUTTONS_V1: было зелёно-голубое, теперь золото — как .send-button */
 .brat-gate{ min-height:45px !important; padding:10px 22px !important;
             border-radius:8px 8px 0 0 !important;
             min-width:150px !important; width:auto !important; max-width:none !important;
-            background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.10)) !important;
-            border-top: 1px solid rgba(201,168,76,0.35) !important;
-            border-left: 1px solid rgba(201,168,76,0.35) !important;
-            border-right: 1px solid rgba(201,168,76,0.35) !important;
+            background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,204,255,0.10)) !important;
+            border-top: 1px solid rgba(0,255,136,0.35) !important;
+            border-left: 1px solid rgba(0,255,136,0.35) !important;
+            border-right: 1px solid rgba(0,255,136,0.35) !important;
             border-bottom: none !important;
             color: rgba(255,255,255,0.9) !important; font-weight:700 !important; font-size:0.85rem !important;
             text-transform:none !important; }
 .brat-gate .q-btn__content{ width:100% !important; justify-content:center !important; }
-.brat-gate:hover{ background: linear-gradient(135deg, rgba(201,168,76,0.24), rgba(201,168,76,0.16)) !important; }
+.brat-gate:hover{ background: linear-gradient(135deg, rgba(0,255,136,0.24), rgba(0,204,255,0.16)) !important; }
 
 /* PATCH_BIRZHA_HEADER_STYLE — кнопки хедера Брата в стиле кнопки
    "РЫНОК" из Биржи (Биржа/ui_torg.py, stage-toolbar, второй ряд). */
-/* PATCH_BRAT_GOLD_BUTTONS_V1: было зелёно-голубое, теперь золото */
 .birzha-header-btn{
     padding: 8px 18px !important; border-radius: 8px !important;
-    background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.10)) !important;
-    border: 1px solid rgba(201,168,76,0.35) !important;
+    background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,204,255,0.10)) !important;
+    border: 1px solid rgba(0,255,136,0.35) !important;
     color: rgba(255,255,255,0.9) !important; font-weight: 700 !important;
 }
 .birzha-header-btn:hover{
-    background: linear-gradient(135deg, rgba(201,168,76,0.24), rgba(201,168,76,0.16)) !important;
+    background: linear-gradient(135deg, rgba(0,255,136,0.24), rgba(0,204,255,0.16)) !important;
 }
 """
 
@@ -1065,8 +1063,8 @@ def page_brat():
                         ui.button("⬇", on_click=lambda f=fp: ui.download(f)) \
                             .props("flat dense").style(
                                 "font-size:0.9rem; padding:2px 8px; border-radius:6px; "
-                                "color:rgba(201,168,76,0.9); background:rgba(201,168,76,0.12); "
-                                "border:1px solid rgba(201,168,76,0.35); min-width:0;")
+                                "color:rgba(189,0,255,0.9); background:rgba(189,0,255,0.12); "
+                                "border:1px solid rgba(189,0,255,0.35); min-width:0;")
             if not s["ruda"] and not s["sifted"]:
                 ui.markdown(
                     "_Руды нет. Принеси экспорт-архивы слева —_\n"
@@ -1491,13 +1489,18 @@ def page_brat():
                 with ui.element("div").style(
                     "display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;"
                 ):
-                    # PATCH_BRAT_GOROD_REMOVED_V1: раньше вела на /karta,
-                    # теперь открывает карту напрямую — кнопка ГОРОД убрана
                     ui.button("ГРОНДХЕЙМ",
-                              on_click=lambda: ui.navigate.to("/grondheim")
+                              on_click=lambda: ui.navigate.to("/karta")  # PATCH_KARTA_BTN
                               ).props("flat no-caps").classes("birzha-header-btn")
-                    # PATCH_BRAT_TIK_PROPISKA_ROL_TO_STAGE_V1: Тик / Прописка / Роль
-                    # переехали в тулбар стола, в один ряд с кнопкой ГОРОД (см. ниже)
+                    ui.button("⏱ Тик",
+                              on_click=do_tik  # PATCH_BRAT_TIK_V1
+                              ).props("flat no-caps").classes("birzha-header-btn")
+                    ui.button("Прописка",
+                              on_click=do_propiska  # PATCH_PROPISKA_BRAT
+                              ).props("flat no-caps").classes("birzha-header-btn")
+                    ui.button("Роль",
+                              on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
+                              ).props("flat no-caps").classes("birzha-header-btn")
                     ui.button("Страница Жизни",
                               on_click=lambda: ui.navigate.to("/registry")  # PATCH_ROZH_BTN
                               ).props("flat no-caps").classes("birzha-header-btn")
@@ -1550,12 +1553,11 @@ def page_brat():
                         })
                         update_chat()
 
-                    # PATCH_BRAT_GOLD_BUTTONS_V1: было фиолетовое, теперь золото
                     ui.button("⚗ Просеять", on_click=do_sift).props("flat no-caps").style(
                         "width:calc(100% - 16px); margin:0 8px 8px 8px; border-radius:10px; "
                         "font-weight:700; font-size:0.82rem; letter-spacing:0.06em; "
-                        "background:linear-gradient(135deg,rgba(201,168,76,0.18),rgba(201,168,76,0.10)) !important; "
-                        "border:1px solid rgba(201,168,76,0.45) !important; color:#e8c96a !important;")
+                        "background:linear-gradient(135deg,rgba(189,0,255,0.18),rgba(0,204,255,0.10)) !important; "
+                        "border:1px solid rgba(189,0,255,0.45) !important; color:#e0aaff !important;")
 
                     ui.html('<div style="padding:6px 16px 12px; font-size:0.6rem; '
                             'color:rgba(255,255,255,0.35); line-height:1.5;">'
@@ -1579,18 +1581,9 @@ def page_brat():
                     with ui.element("div").style(
                         "display:flex; gap:8px; align-items:center; justify-content:center;"
                     ):
-                        # PATCH_BRAT_GOROD_REMOVED_V1: кнопка ГОРОД убрана — карта
-                        # открывается кликом на ГРОНДХЕЙМ в хедере (см. выше). Стиль
-                        # .brat-gate у оставшихся кнопок не тронут.
-                        ui.button("⏱ Тик",
-                                  on_click=do_tik  # PATCH_BRAT_TIK_V1
-                                  ).props("flat").classes("brat-gate")
-                        ui.button("Прописка",
-                                  on_click=do_propiska  # PATCH_PROPISKA_BRAT
-                                  ).props("flat").classes("brat-gate")
-                        ui.button("Роль",
-                                  on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
-                                  ).props("flat").classes("brat-gate")
+                        ui.button("ГОРОД",
+                                  on_click=lambda: ui.navigate.to("/grondheim")
+                                  ).props("flat").classes("brat-gate")  # PATCH_GRONDHEIM_VISUAL_MAP
                 with ui.element("div").classes("stage-content").style(
                     "padding-top:0 !important; padding-bottom:105px;"):
                     with ui.element("div").classes("split-view"):
@@ -1646,11 +1639,10 @@ def page_brat():
                                 "margin-top:10px; color:rgba(255,255,255,0.4); font-size:0.75rem;")
                         dlg.open()
 
-                    # PATCH_BRAT_GOLD_BUTTONS_V1: было голубое, теперь золото — как 💾 рядом
                     ui.button("📂", on_click=do_load).props("flat").style(
                         "font-size:1.2rem; padding:6px 10px; border-radius:10px; "
-                        "color:rgba(201,168,76,0.9); background:rgba(201,168,76,0.10); "
-                        "border:1px solid rgba(201,168,76,0.35);")
+                        "color:rgba(0,204,255,0.9); background:rgba(0,204,255,0.10); "
+                        "border:1px solid rgba(0,204,255,0.35);")
 
                     ui.button("ОТПРАВИТЬ", on_click=send).classes("send-button")
 
