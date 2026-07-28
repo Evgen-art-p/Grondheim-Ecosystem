@@ -295,23 +295,8 @@ def page_rektor(zid: str = "") -> None:
             md = ""
             if zap:
                 md += f"**Место:** {zap.get('место','—')} · **Курс:** {zap.get('курс') or '—'}\n\n"
-                # PATCH_REKTOR_DISTSIPLINY_UI_V1: дисциплины и оценки по
-                # частям -- рядом со старыми полями, не вместо них.
-                distsipliny = zap.get("дисциплины", []) or []
-                if distsipliny:
-                    md += "**Дисциплины:**\n"
-                    for d in distsipliny:
-                        t_oc = (d.get("теория", {}) or {}).get("оценки", []) or []
-                        p_oc = (d.get("практика", {}) or {}).get("оценки", []) or []
-                        t_posl = t_oc[-1]["оценка"] if t_oc else "—"
-                        p_posl = p_oc[-1]["оценка"] if p_oc else "—"
-                        md += (f"- **{d.get('дисциплина')}** ({d.get('направление','')}) "
-                              f"— теория: {t_posl} · практика: {p_posl}\n")
-                    md += "\n"
-                else:
-                    md += "**Дисциплины:** пока не записан(а) ни на одну\n\n"
                 otsenki = zap.get("оценки", [])
-                md += "**Оценки (старые):** " + (", ".join(
+                md += "**Оценки:** " + (", ".join(
                     f"{o['предмет']}: {o['оценка']}" for o in otsenki) or "нет") + "\n\n"
                 ekz = zap.get("экзамены", [])
                 md += "**Экзамены:** " + (", ".join(
@@ -432,13 +417,10 @@ def page_rektor(zid: str = "") -> None:
         messages = [{"role": "system", "content": dusha + rol},
                    {"role": "user", "content": posledniy_rektor}]
         import httpx
-        # PATCH_PROXY_VEZDE_V1: без прокси OpenRouter честно отвечает 403
-        # из некоторых регионов -- та же настройка, что и в остальном городе.
-        _proxy = os.getenv("PROXY_URL", "") or None
         headers = {"Authorization": f"Bearer {_key}", "Content-Type": "application/json"}
         payload = {"model": state.get("model") or DEFAULT_MODEL, "messages": messages}
         try:
-            async with httpx.AsyncClient(timeout=120, proxy=_proxy) as client:
+            async with httpx.AsyncClient(timeout=120) as client:
                 r = await client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers=headers, json=payload)
@@ -477,79 +459,19 @@ def page_rektor(zid: str = "") -> None:
         update_viewer()
         update_kand_caption()
 
-    # PATCH_REKTOR_DISTSIPLINY_UI_V1: тулбар работает с настоящими
-    # дисциплинами (диск), не со свободным текстом.
-    oc_otsenka_ref = {"el": None}          # текст оценки — общий для обеих кнопок
-    zapis_napr_ref = {"value": (_rek.list_napravlenia() or [""])[0]}
-    zapis_dist_container = {"element": None}
-    zapis_dist_ref = {"el": None}
-    otsenka_dist_container = {"element": None}
-    otsenka_dist_ref = {"el": None}
-    otsenka_chast_ref = {"el": None}
+    oc_predmet_ref = {"el": None}
+    oc_otsenka_ref = {"el": None}
 
-    def render_zapis_dist_select():
-        if not zapis_dist_container["element"]:
-            return
-        zapis_dist_container["element"].clear()
-        with zapis_dist_container["element"]:
-            opts = {d.get("id", d.get("название", "?")): d.get("название", d.get("id", "?"))
-                    for d in _rek.list_distsipliny(zapis_napr_ref["value"])}
-            if not opts:
-                ui.label("(дисциплин нет)").style(
-                    "font-size:10px; color:rgba(255,255,255,0.4); padding:6px;")
-                zapis_dist_ref["el"] = None
-            else:
-                zapis_dist_ref["el"] = ui.select(opts, value=next(iter(opts))).props(
-                    "dense outlined dark").style("width:150px; font-size:11px;")
-
-    def on_zapis_napr_change(e):
-        zapis_napr_ref["value"] = e.value
-        render_zapis_dist_select()
-
-    def render_otsenka_dist_select():
-        if not otsenka_dist_container["element"]:
-            return
-        otsenka_dist_container["element"].clear()
-        with otsenka_dist_container["element"]:
-            zap = _rek.najti_zapis(kandidat_imya) if kandidat_imya else None
-            moi = (zap or {}).get("дисциплины", []) or []
-            if not moi:
-                ui.label("(не записан(а) ни на одну)").style(
-                    "font-size:10px; color:rgba(255,255,255,0.4); padding:6px;")
-                otsenka_dist_ref["el"] = None
-            else:
-                opts = {d["дисциплина"]: d["дисциплина"] for d in moi}
-                otsenka_dist_ref["el"] = ui.select(opts, value=next(iter(opts))).props(
-                    "dense outlined dark").style("width:150px; font-size:11px;")
-
-    def deystvie_zapisat_distsiplinu():
+    def deystvie_otsenka():
         if not kandidat_imya:
             ui.notify("Нет кандидата", type="warning")
             return
-        if not zapis_dist_ref["el"]:
-            ui.notify("В этом направлении нет дисциплин", type="warning")
-            return
-        did = zapis_dist_ref["el"].value
-        ok, msg = _rek.zapisat_na_distsiplinu(kandidat_imya, did, zapis_napr_ref["value"])
-        ui.notify(msg, type="positive" if ok else "warning")
-        update_viewer()
-        update_kand_caption()
-        render_otsenka_dist_select()
-
-    def deystvie_otsenka_distsipliny():
-        if not kandidat_imya:
-            ui.notify("Нет кандидата", type="warning")
-            return
-        if not otsenka_dist_ref["el"]:
-            ui.notify("Сначала запиши на дисциплину", type="warning")
-            return
-        did = otsenka_dist_ref["el"].value
-        chast = otsenka_chast_ref["el"].value if otsenka_chast_ref["el"] else "теория"
+        predmet = (oc_predmet_ref["el"].value or "").strip() if oc_predmet_ref["el"] else ""
         otsenka = (oc_otsenka_ref["el"].value or "").strip() if oc_otsenka_ref["el"] else ""
-        if not otsenka:
-            ui.notify("Укажи оценку", type="warning")
+        if not predmet or not otsenka:
+            ui.notify("Укажи предмет и оценку", type="warning")
             return
-        ok, msg = _rek.postavit_otsenku_distsipliny(kandidat_imya, did, chast, otsenka)
+        ok, msg = _rek.postavit_otsenku(kandidat_imya, predmet, otsenka)
         ui.notify(msg, type="positive" if ok else "warning")
         update_viewer()
         update_kand_caption()
@@ -621,46 +543,19 @@ def page_rektor(zid: str = "") -> None:
                 with ui.element("div").classes("stage-toolbar"):
                     ui.html('<div style="color:rgba(255,255,255,0.55);font-size:11px;'
                             'letter-spacing:.14em;font-weight:900;">РЕКТОР · ЗАМОК СОВ</div>')
-                    with ui.row().style("gap:6px; flex-wrap:wrap; align-items:center;"):
+                    with ui.row().style("gap:6px; flex-wrap:wrap;"):
                         _bz = ui.element("div").classes("rekt-btn")
                         _bz.on("click", lambda: deystvie_zachislit())
                         with _bz:
                             ui.html("🎓 Зачислить")
-
-                    # PATCH_REKTOR_DISTSIPLINY_UI_V1: запись на дисциплину
-                    with ui.row().style("gap:6px; flex-wrap:wrap; align-items:center; "
-                                        "padding:4px 0; border-top:1px solid rgba(255,255,255,0.06);"):
-                        ui.label("📚 Записать:").style(
-                            "font-size:10px; color:rgba(255,255,255,0.5);")
-                        _napr_opts = {n: n for n in (_rek.list_napravlenia() or [])}
-                        ui.select(_napr_opts, value=zapis_napr_ref["value"],
-                                 on_change=on_zapis_napr_change).props(
-                            "dense outlined dark").style("width:140px; font-size:11px;")
-                        zapis_dist_container["element"] = ui.element("div")
-                        render_zapis_dist_select()
-                        _bzap = ui.element("div").classes("rekt-btn")
-                        _bzap.on("click", lambda: deystvie_zapisat_distsiplinu())
-                        with _bzap:
-                            ui.html("➕ Записать")
-
-                    # PATCH_REKTOR_DISTSIPLINY_UI_V1: оценка теории/практики
-                    with ui.row().style("gap:6px; flex-wrap:wrap; align-items:center; "
-                                        "padding:4px 0; border-top:1px solid rgba(255,255,255,0.06);"):
-                        ui.label("📋 Оценить:").style(
-                            "font-size:10px; color:rgba(255,255,255,0.5);")
-                        otsenka_dist_container["element"] = ui.element("div")
-                        render_otsenka_dist_select()
-                        otsenka_chast_ref["el"] = ui.select(
-                            {"теория": "теория", "практика": "практика"}, value="теория"
-                        ).props("dense outlined dark").style("width:100px; font-size:11px;")
+                        oc_predmet_ref["el"] = ui.input(placeholder="предмет").props(
+                            "dense outlined dark").style("width:100px; font-size:11px;")
                         oc_otsenka_ref["el"] = ui.input(placeholder="оценка").props(
                             "dense outlined dark").style("width:80px; font-size:11px;")
                         _bo = ui.element("div").classes("rekt-btn")
-                        _bo.on("click", lambda: deystvie_otsenka_distsipliny())
+                        _bo.on("click", lambda: deystvie_otsenka())
                         with _bo:
-                            ui.html("✓ Оценить")
-
-                    with ui.row().style("gap:6px; flex-wrap:wrap; align-items:center;"):
+                            ui.html("📋 Оценка")
                         dip_prof_ref["el"] = ui.input(placeholder="профессия").props(
                             "dense outlined dark").style("width:110px; font-size:11px;")
                         _bd = ui.element("div").classes("rekt-btn")
