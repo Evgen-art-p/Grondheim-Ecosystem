@@ -294,31 +294,9 @@ async def sprosit(vopros: str, istoria: list = None,
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers=headers, json=payload)
             r.raise_for_status()
-            _otvet = r.json()["choices"][0]["message"]["content"]
+            return r.json()["choices"][0]["message"]["content"]
     except Exception as e:
         return f"⚠ Хранитель не отозвался: {e}"
-
-    # PATCH_PAMYAT_VEZDE_V1: разговор на посту -- отпечаток в личной
-    # памяти того, кто сейчас сидит Хранителем. Свой sys.path -- модуль
-    # не подключает жители/ в общем импорте наверху (только ГОРОД).
-    try:
-        _repo_pm = Path(__file__).resolve().parent.parent
-        _zh_pm = _repo_pm / "жители"
-        if str(_zh_pm) not in sys.path:
-            sys.path.insert(0, str(_zh_pm))
-        import rezidenty as _rez_pm
-        _dom_pm = _rez_pm.dom_zhitelya(imya)
-        if _dom_pm:
-            from dvizhok import Dvizhok as _Dvizhok_pm
-            _dv_pm = _Dvizhok_pm(_dom_pm)
-            _vdoh_pm = _dv_pm.vdoh(kontekst="работа", sila=0.5, svezhest=1.0, tonus="ровно")
-            _dv_pm.vydoh_stol(
-                fakt=f"[Архив] {dlya_kogo} спросил(а): {vopros}\nЯ ответил(а): {_otvet}",
-                vdoh_result=_vdoh_pm)
-            _dv_pm.sохранить()
-    except Exception:
-        pass
-    return _otvet
 
 
 # ARKHIV_KHRANITEL_V1 — маркер идемпотентности

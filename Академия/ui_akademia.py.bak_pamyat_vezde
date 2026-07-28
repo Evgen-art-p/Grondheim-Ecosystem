@@ -1078,27 +1078,6 @@ def page_akademia() -> None:
                                              state.get("model"))
         except Exception as _e:
             _otvet = f"⚠ не отозвался(лась): {_e}"
-
-        # PATCH_PAMYAT_VEZDE_V1: разговор со студентом -- отпечаток в
-        # его личной памяти (сырой опыт, не готовый вывод). Свой
-        # sys.path -- на случай, если жители/ ещё не подключены (если
-        # "Прочитать"/"Осмыслить" ни разу не нажимались в этой сессии).
-        if m["дом"] and not _otvet.startswith("⚠"):
-            try:
-                _repo_pm = Path(__file__).resolve().parent.parent
-                _zh_pm = _repo_pm / "жители"
-                if str(_zh_pm) not in sys.path:
-                    sys.path.insert(0, str(_zh_pm))
-                from dvizhok import Dvizhok as _Dvizhok_pm
-                _dv_pm = _Dvizhok_pm(m["дом"])
-                _vdoh_pm = _dv_pm.vdoh(kontekst="общение", sila=0.5, svezhest=1.0, tonus="ровно")
-                _dv_pm.vydoh_stol(
-                    fakt=f"[Академия] Шеф спросил: {msg}\nЯ ответил(а): {_otvet}",
-                    vdoh_result=_vdoh_pm)
-                _dv_pm.sохранить()
-            except Exception:
-                pass
-
         state["чат"].pop()
         state["чат"].append({"role": "assistant", "кто": m["имя"],
                              "content": _otvet})

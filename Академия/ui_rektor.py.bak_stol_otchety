@@ -228,7 +228,6 @@ def page_rektor(zid: str = "") -> None:
     bubble_ref = {"element": None}
     avatar_ref = {"element": None}
     vitals_ref = {"element": None}
-    stage_viewer_ref = {"element": None}  # PATCH_REKTOR_STOL_OTCHETY_V1
 
     ui.add_head_html(f"<style>{REKTOR_CSS}</style>")
     _bg = _fon_url("ректор")
@@ -285,12 +284,13 @@ def page_rektor(zid: str = "") -> None:
                     f'<div style="font-size:0.72rem;color:rgba(255,255,255,0.55);">{status}</div></div>')
 
     def update_viewer():
-        # PATCH_REKTOR_STOL_OTCHETY_V1: один источник правды -- пишем
-        # в ОБА места (карточка слева + отчёты в столе), не дублируем
-        # логику расчёта md.
-        if not kandidat_imya:
-            md = "*Открой кабинет через кнопку «Учёба» в кабинете жителя.*"
-        else:
+        if not viewer_ref["element"]:
+            return
+        viewer_ref["element"].clear()
+        with viewer_ref["element"]:
+            if not kandidat_imya:
+                ui.markdown("*Открой кабинет через кнопку «Учёба» в кабинете жителя.*")
+                return
             zap = _rek.najti_zapis(kandidat_imya)
             md = ""
             if zap:
@@ -305,13 +305,7 @@ def page_rektor(zid: str = "") -> None:
                 md += f"**Диплом:** {dip['профессия'] if dip else 'не выдан'}\n"
             else:
                 md += "*Пока не студент(ка) — кандидат(ка) на собеседовании.*\n"
-        for _ref in (viewer_ref, stage_viewer_ref):
-            el = _ref.get("element")
-            if not el:
-                continue
-            el.clear()
-            with el:
-                ui.markdown(md)
+            ui.markdown(md)
 
     def update_avatar():
         if not avatar_ref["element"]:
@@ -533,10 +527,7 @@ def page_rektor(zid: str = "") -> None:
                         "margin:14px 14px 0 14px;")
                     kand_caption_ref["element"] = ui.element("div")
                     with ui.element("div").style("padding:6px 14px 14px 14px;"):
-                        # PATCH_REKTOR_STOL_OTCHETY_V1: явный белый цвет --
-                        # markdown без стиля рисовался чёрным по тёмному стеклу
-                        viewer_ref["element"] = ui.element("div").style(
-                            "color: rgba(255,255,255,0.86); font-size:0.82rem; line-height:1.5;")
+                        viewer_ref["element"] = ui.element("div")
 
         with ui.element("div").classes("area-stage"):
             with ui.element("div").classes("glass stage-monitor").style("height:100%; overflow:hidden;"):
@@ -568,9 +559,6 @@ def page_rektor(zid: str = "") -> None:
                         chat_ref["element"] = ui.element("div").classes("chat-log")
                         with chat_ref["element"]:
                             ui.html('<div class="chat-msg-system">SYSTEM: кликни по пузырьку Ректора.</div>')
-                        # PATCH_REKTOR_STOL_OTCHETY_V1: отчёты рядом с чатом,
-                        # как везде в городе (жители/Академия/Архив)
-                        stage_viewer_ref["element"] = ui.element("div").classes("viewer")
 
                 with ui.element("div").classes("floating-console"):
                     input_ref["element"] = ui.input(placeholder="Сообщение Ректору...").props(
