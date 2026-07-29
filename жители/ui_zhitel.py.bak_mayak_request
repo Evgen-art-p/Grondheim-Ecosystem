@@ -126,20 +126,6 @@ def _ubrat_memory_request(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-# PATCH_ZHITEL_MAYAK_REQUEST_V1: тот же приём, что MEMORY_REQUEST, только
-# наружу -- к Маяку Пробуждения, не внутрь себя.
-def _izvlech_mayak_request(text: str) -> str:
-    for line in (text or "").splitlines():
-        if "MAYAK_REQUEST:" in line:
-            return line.split("MAYAK_REQUEST:", 1)[1].strip()
-    return ""
-
-
-def _ubrat_mayak_request(text: str) -> str:
-    lines = [l for l in (text or "").splitlines() if "MAYAK_REQUEST:" not in l]
-    return "\n".join(lines).strip()
-
-
 # ═══════════════════════════════════════════════════════════
 # ZHITEL_CHAT_SAVE_V1 -- сохранить/достать чат, как у Брата
 # (Брат/чаты) -- своя полка на каждого жителя: дом/чаты/, не общий
@@ -1095,13 +1081,6 @@ def page_zhitel(zid: str = ""):
                 "отдельной строкой MEMORY_REQUEST: <что вспомнить> и тебе "
                 "поднимется это из твоей памяти."
             )
-            # PATCH_ZHITEL_MAYAK_REQUEST_V1
-            soul += (
-                "\nЕсли для ответа не хватает свежих фактов из внешнего мира "
-                "(то, чего ты сам знать не можешь — новости, текущие события, "
-                "актуальные данные) — напиши отдельной строкой "
-                "MAYAK_REQUEST: <что узнать> и Маяк Пробуждения принесёт ответ."
-            )
             messages = [{"role": "system", "content": soul}]
             for m in state["chat"][-12:]:
                 role = "user" if m["role"] == "user" else "assistant"
@@ -1110,50 +1089,7 @@ def page_zhitel(zid: str = ""):
             # PATCH_ZHITEL_VSPOMINAET: житель сам решил вспомнить — один подъём за ход,
             # без петель. Шеф видит только финальный ответ.
             _mem_q = _izvlech_memory_request(reply)
-            _mayak_q = _izvlech_mayak_request(reply)  # PATCH_ZHITEL_MAYAK_REQUEST_V1
-
-            if _mayak_q:
-                # PATCH_ZHITEL_MAYAK_REQUEST_V1: наружу, к Маяку. Приоритет
-                # над памятью за этот ход -- один подъём, без петель.
-                _naydeno_mayak = ""
-                _nashlos = False
-                try:
-                    _repo_m = Path(__file__).resolve().parent.parent
-                    _mayak_dir = _repo_m / "Маяк"
-                    if str(_mayak_dir) not in sys.path:
-                        sys.path.insert(0, str(_mayak_dir))
-                    import mayak
-                    _rez = await mayak.poisk(_mayak_q)
-                    _naydeno_mayak = mayak.dlya_promta(_rez)
-                    _nashlos = bool(_rez.get("ok"))
-                    try:
-                        mayak.zapisat_vizit(name, _mayak_q, _nashlos)
-                    except Exception:
-                        pass
-                except Exception as _e:
-                    _naydeno_mayak = f"(маяк не откликнулся: {_e})"
-                _vtoroy = list(messages)
-                _vtoroy.append({"role": "assistant", "content": reply})
-                _vtoroy.append({"role": "user", "content": (
-                    f"(С Маяка Пробуждения принесли по запросу «{_mayak_q}»:\n"
-                    f"{_naydeno_mayak}\n"
-                    f"Пропусти через себя и ответь заново своими словами, живым "
-                    f"голосом — не пересказывай источники. Маяк не упоминай.)")})
-                reply = await call_zhitel_llm(_vtoroy, state.get("model"))
-                # PATCH_ZHITEL_MAYAK_REQUEST_V1: свежий факт извне — в sensory
-                # (kontekst="факт"), не "учёба" — это не прожитый урок, а то,
-                # что принёс луч сейчас.
-                if dvizhok is not None and _nashlos:
-                    try:
-                        _chistyy = reply.strip()[:400]
-                        _vdoh_m = dvizhok.vdoh(kontekst="факт", sila=0.7,
-                                               svezhest=1.0, tonus="ровно")
-                        dvizhok.vydoh_stol(
-                            fakt=f"[Маяк] «{_mayak_q}»: {_chistyy}",
-                            vdoh_result=_vdoh_m)
-                    except Exception:
-                        pass
-            elif _mem_q and dvizhok is not None:
+            if _mem_q and dvizhok is not None:
                 try:
                     _naydeno = dvizhok.vspomnit(_mem_q)
                 except Exception:
@@ -1172,7 +1108,7 @@ def page_zhitel(zid: str = ""):
                         f"этого следа нет. Ответь заново честно, не выдумывая. "
                         f"Механизм памяти не упоминай.)")})
                 reply = await call_zhitel_llm(_vtoroy, state.get("model"))
-            reply = _ubrat_mayak_request(_ubrat_memory_request(reply)) or reply
+            reply = _ubrat_memory_request(reply) or reply
             try:
                 if dvizhok is not None:
                     dvizhok.sохранить()
