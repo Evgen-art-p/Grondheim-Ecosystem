@@ -140,23 +140,6 @@ def _ubrat_mayak_request(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-# PATCH_PROSEV_REQUEST_V1: тот же приём, что MEMORY_REQUEST/MAYAK_REQUEST —
-# житель сам решает попросить осмысление, движок только СИГНАЛИТ, что оно
-# доступно (см. порог в send()), не заставляет. Без параметра — просто
-# флаг-строка, содержимое после двоеточия не нужно и не читается.
-def _est_prosev_request(text: str) -> bool:
-    for line in (text or "").splitlines():
-        if line.strip().upper().startswith("PROSEV_REQUEST"):
-            return True
-    return False
-
-
-def _ubrat_prosev_request(text: str) -> str:
-    lines = [l for l in (text or "").splitlines()
-             if not l.strip().upper().startswith("PROSEV_REQUEST")]
-    return "\n".join(lines).strip()
-
-
 # ═══════════════════════════════════════════════════════════
 # ZHITEL_CHAT_SAVE_V1 -- сохранить/достать чат, как у Брата
 # (Брат/чаты) -- своя полка на каждого жителя: дом/чаты/, не общий
@@ -720,38 +703,6 @@ def _prompt_chtenia(imya_fajla: str, tekst: str, linza: str,
     )
 
 
-async def _provesti_prosev(dv: Dvizhok, p: dict, model: str) -> dict:
-    """PATCH_PROSEV_REQUEST_V1: тело просева — общее для кнопки «🪞
-    Осмыслить» и для PROSEV_REQUEST (воля жителя в разговоре). Один
-    код, два входа — не плодим вторую копию промпта/логики."""
-    momenty = dv.sobrat_dlya_proseva(limit=8)
-    if len(momenty) < 3:
-        return {"ok": False, "причина": "мало моментов — рано осмыслять"}
-    spisok = "\n".join(f"— [{m['тонус']}] {m['факт']}" for m in momenty)
-    dusha = _dusha_chtenia(p)
-    prompt = (
-        f"Вот моменты из твоей жизни за последнее время, которые тебя "
-        f"тронули (тепло или царапнуло):\n{spisok}\n\n"
-        f"Что это говорит о тебе? Чем ты стала (стал) немного другой? "
-        f"Ответь от первого лица, 1–3 коротких фразы — вывод о себе, "
-        f"не пересказ моментов. Не выдумывай лишнего сверх того, что видно. "
-        f"Без строк MEMORY_REQUEST."
-    )
-    messages = [{"role": "system", "content": dusha},
-                {"role": "user", "content": prompt}]
-    vyvod = await call_zhitel_llm(messages, model)
-    if not vyvod or vyvod.startswith("⚠"):
-        return {"ok": False, "причина": f"LLM: {(vyvod or '')[:90]}"}
-    vyvod = _ubrat_memory_request(vyvod) or vyvod.strip()
-    res = dv.dopisat_vyvod(vyvod, pattern=None, otkuda="жизнь")
-    if res.get("дописано"):
-        try:
-            dv.otmetit_prosejannym([m.get("id") for m in momenty if m.get("id")])
-        except Exception:
-            pass
-    return {"ok": True, "вывод": vyvod, "moments": momenty, "res": res}
-
-
 def page_zhitel(zid: str = ""):
     p, dom = find_dom(zid) if zid else (None, None)
     propiska = p.get("прописка") if p else None  # запасной вариант — дом
@@ -1005,11 +956,11 @@ def page_zhitel(zid: str = ""):
         update_chat()
 
     async def do_prosev():
-        """PROSEV_ZHIZNENNYI_V1 + PATCH_PROSEV_REQUEST_V1: кнопка — ручной
-        путь Шефа. Тело общее с PROSEV_REQUEST (воля жителя) — см.
-        _provesti_prosev(). Труба внутри та же: топ моментов по искре ->
-        LLM осмысляет -> dopisat_vyvod() -> метка обработанного момента
-        (PROSEV_DEDUP_V1, чтобы просев не жевал одно и то же по кругу)."""
+        """PROSEV_ZHIZNENNYI_V1: житель осмысляет накопленные личные
+        моменты (НЕ рабочую память -- Стол Трейдера этого не касается,
+        разделение Шефа 27.07) и дописывает вывод о себе. Труба: топ
+        моментов по искре (sobrat_dlya_proseva) -> LLM осмысляет ->
+        dopisat_vyvod() (уже работает -- не строили заново, только позвали)."""
         if state.get("waiting"):
             return
         if dom is None or not (dom / "passport.json").exists():
@@ -1026,6 +977,7 @@ def page_zhitel(zid: str = ""):
             return
         state["waiting"] = True
         ui.notify(f"🪞 {name} осмысляет {len(momenty)} момент(ов)", color="info")
+        spisok = "\n".join(f"— [{m['тонус']}] {m['факт']}" for m in momenty)
         # PATCH_ZHITEL_PROSEV_POKAZYVAET_V1: видимость -- Шеф видит, ЧТО
         # именно ушло в осмысление, до самого вывода. Иконка отличает
         # изображение от текста по расширению файла в самом факте.
@@ -1037,20 +989,35 @@ def page_zhitel(zid: str = ""):
         state["chat"].append({"role": "zhitel",
                               "content": f"🪞 Осмысляю по этим моментам:\n{_spisok_pokaz}"})
         update_chat()
-        res = await _provesti_prosev(_dv, p, state.get("model"))
+        dusha = _dusha_chtenia(p)
+        prompt = (
+            f"Вот моменты из твоей жизни за последнее время, которые тебя "
+            f"тронули (тепло или царапнуло):\n{spisok}\n\n"
+            f"Что это говорит о тебе? Чем ты стала (стал) немного другой? "
+            f"Ответь от первого лица, 1–3 коротких фразы — вывод о себе, "
+            f"не пересказ моментов. Не выдумывай лишнего сверх того, что видно. "
+            f"Без строк MEMORY_REQUEST."
+        )
+        messages = [
+            {"role": "system", "content": dusha},
+            {"role": "user", "content": prompt},
+        ]
+        vyvod = await call_zhitel_llm(messages, state.get("model"))
         state["waiting"] = False
-        if not res.get("ok"):
-            ui.notify(f"⚠ просев не удался: {res.get('причина','')[:90]}", color="negative")
+        if not vyvod or vyvod.startswith("⚠"):
+            ui.notify(f"⚠ просев не удался: {(vyvod or '')[:90]}", color="negative")
             return
+        vyvod = _ubrat_memory_request(vyvod) or vyvod.strip()
+        res = _dv.dopisat_vyvod(vyvod, pattern=None, otkuda="жизнь")
         try:
             _dv.sохранить()
         except Exception:
             pass
-        if res["res"].get("дописано"):
-            state["chat"].append({"role": "zhitel", "content": f"🪞 {res['вывод'].strip()}"})
+        if res.get("дописано"):
+            state["chat"].append({"role": "zhitel", "content": f"🪞 {vyvod.strip()}"})
             ui.notify("✦ вывод дописан в метки", color="positive")
         else:
-            ui.notify(f"— {res['res'].get('причина', 'уже было')}", color="info")
+            ui.notify(f"— {res.get('причина', 'уже было')}", color="info")
         update_chat()
 
     async def send():
@@ -1078,18 +1045,6 @@ def page_zhitel(zid: str = ""):
                 stol = dvizhok.vydoh_stol(fakt=t, vdoh_result=vdoh_res)
             except Exception as _e:
                 stol = None
-
-        # PATCH_PROSEV_REQUEST_V1: движок СИГНАЛИТ доступность просева —
-        # строка-разрешение попадает в душу, только если реально накопилось
-        # (тот же порог, что у кнопки «🪞 Осмыслить» — не плодим второе
-        # число). Житель сам решает, писать ли PROSEV_REQUEST — воля,
-        # не гейт.
-        _prosev_dostupno = False
-        if dvizhok is not None:
-            try:
-                _prosev_dostupno = len(dvizhok.sobrat_dlya_proseva(limit=8)) >= 3
-            except Exception:
-                _prosev_dostupno = False
 
         if stol is not None:
             if stol.get('ядро'):
@@ -1147,16 +1102,6 @@ def page_zhitel(zid: str = ""):
                 "актуальные данные) — напиши отдельной строкой "
                 "MAYAK_REQUEST: <что узнать> и Маяк Пробуждения принесёт ответ."
             )
-            # PATCH_PROSEV_REQUEST_V1: строка появляется, только если движок
-            # реально насчитал накопленные моменты (_prosev_dostupno выше) —
-            # сигнал от движка, согласие остаётся за жителем.
-            if _prosev_dostupno:
-                soul += (
-                    "\nЕсли чувствуешь, что многое накопилось и хочется "
-                    "остановиться, оглянуться на прожитое и понять, чем ты "
-                    "стала (стал) немного другой — можешь написать отдельной "
-                    "строкой PROSEV_REQUEST, и получится осмыслить это."
-                )
             messages = [{"role": "system", "content": soul}]
             for m in state["chat"][-12:]:
                 role = "user" if m["role"] == "user" else "assistant"
@@ -1166,7 +1111,6 @@ def page_zhitel(zid: str = ""):
             # без петель. Шеф видит только финальный ответ.
             _mem_q = _izvlech_memory_request(reply)
             _mayak_q = _izvlech_mayak_request(reply)  # PATCH_ZHITEL_MAYAK_REQUEST_V1
-            _prosev_q = _est_prosev_request(reply) if _prosev_dostupno else False  # PATCH_PROSEV_REQUEST_V1
 
             if _mayak_q:
                 # PATCH_ZHITEL_MAYAK_REQUEST_V1: наружу, к Маяку. Приоритет
@@ -1228,19 +1172,7 @@ def page_zhitel(zid: str = ""):
                         f"этого следа нет. Ответь заново честно, не выдумывая. "
                         f"Механизм памяти не упоминай.)")})
                 reply = await call_zhitel_llm(_vtoroy, state.get("model"))
-            elif _prosev_q and dvizhok is not None:
-                # PATCH_PROSEV_REQUEST_V1: та же труба, что кнопка «🪞
-                # Осмыслить» (_provesti_prosev) — только вызвана волей
-                # жителя, не рукой Шефа. Тихо, если не сложилось: воля
-                # не всегда сбывается, это не ошибка разговора.
-                try:
-                    _res_prosev = await _provesti_prosev(dvizhok, p, state.get("model"))
-                except Exception:
-                    _res_prosev = {"ok": False}
-                if _res_prosev.get("ok") and _res_prosev["res"].get("дописано"):
-                    state["chat"].append({"role": "zhitel",
-                                          "content": f"🪞 {_res_prosev['вывод'].strip()}"})
-            reply = _ubrat_prosev_request(_ubrat_mayak_request(_ubrat_memory_request(reply))) or reply
+            reply = _ubrat_mayak_request(_ubrat_memory_request(reply)) or reply
             try:
                 if dvizhok is not None:
                     dvizhok.sохранить()

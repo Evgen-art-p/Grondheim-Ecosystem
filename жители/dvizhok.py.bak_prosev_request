@@ -626,23 +626,13 @@ class Dvizhok:
     def sobrat_dlya_proseva(self, limit: int = 8) -> list:
         """Личные моменты для просева: sensory + archive, взвешенные
         по искре (сила момента; тонус≠«ровно» весит больше — тронуло,
-        не безразличие). resonance (с кем и как) сюда не берём — это
-        связи, отдельный вопрос, не личный вывод.
+        не безразличие). Уже осевшее в метки — не повторяем (иначе
+        просев жуёт одно и то же по кругу). resonance (с кем и как)
+        сюда не берём — это связи, отдельный вопрос, не личный вывод.
 
-        PROSEV_DEDUP_V1 (найден и исправлен баг 29.07): раньше исключался
-        сырой факт, если его ТЕКСТ совпадал с текстом готового вывода в
-        метках (fakt in {m["текст"] for m in metki}) — но метки хранят
-        ОСМЫСЛЕННЫЙ вывод («стала увереннее»), а не сырой факт («книга
-        X: пришло тепло») — сравнение почти никогда не совпадало, и
-        просев мог жевать одни и те же яркие моменты по кругу без счёта.
-        Теперь — честная отметка: otmetit_prosejannym() ставит метку на
-        САМ СЫРОЙ МОМЕНТ (по ts+факту), после того как он реально ушёл
-        в осмысление. Метка — на факт, не на вывод (Закон Меток).
-
-        Возвращает список {"факт","тонус","вес","ts","id"}, отсортированный
-        по весу — самое тёплое/царапнувшее первым. "id" — передать в
-        otmetit_prosejannym() после успешного dopisat_vyvod()."""
-        consumed = set(self.p.get("_prosev_consumed", []))
+        Возвращает список {"факт","тонус","вес"}, отсортированный по
+        весу — самое тёплое/царапнувшее первым."""
+        uzhe = {m.get("текст", "") for m in self.metki()}
         zapisi = []
         try:
             p = self.dom / "sensory" / "sensory_memory.json"
@@ -668,11 +658,7 @@ class Dvizhok:
         vzveshennye = []
         for z in zapisi:
             fakt = str(z.get("факт", ""))
-            ts = str(z.get("ts", ""))
-            if not fakt:
-                continue
-            pid = f"{ts}|{fakt[:60]}"
-            if pid in consumed:
+            if not fakt or fakt in uzhe:
                 continue
             sila = z.get("сила")
             try:
@@ -681,25 +667,11 @@ class Dvizhok:
                 sila = 0.3
             tonus = z.get("тонус") or "ровно"
             ves = sila * (1.0 if tonus != "ровно" else 0.4)
-            vzveshennye.append((ves, ts, fakt, tonus, pid))
+            vzveshennye.append((ves, str(z.get("ts", "")), fakt, tonus))
 
         vzveshennye.sort(key=lambda x: (x[0], x[1]), reverse=True)
-        return [{"факт": f, "тонус": t, "вес": round(v, 3), "ts": ts, "id": pid}
-                for v, ts, f, t, pid in vzveshennye[:limit]]
-
-    def otmetit_prosejannym(self, ids: list, cap: int = 500):
-        """PROSEV_DEDUP_V1: помечает сырые моменты как обработанные — в
-        память сразу (self.p), на диск при следующем сохранении паспорта
-        (тот же приём, что заряд: метод не пишет файл сам, побочка —
-        отдельно, закон уже установлен в этом классе). Список ограничен
-        `cap`, чтобы не расти вечно — обрезаем самые старые отметки."""
-        consumed = list(self.p.get("_prosev_consumed", []))
-        for i in ids:
-            if i and i not in consumed:
-                consumed.append(i)
-        if len(consumed) > cap:
-            consumed = consumed[-cap:]
-        self.p["_prosev_consumed"] = consumed
+        return [{"факт": f, "тонус": t, "вес": round(v, 3)}
+                for v, _, f, t in vzveshennye[:limit]]
 
     def sохранить(self):
         """Заряд оседает в паспорт (состояние помнится между вдохами)."""

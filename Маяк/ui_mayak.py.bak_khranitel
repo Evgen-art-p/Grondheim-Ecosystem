@@ -46,7 +46,6 @@ for _p in (_REPO, _HERE, _REPO / "жители"):
 
 import gnezda                                  # noqa: E402
 import mayak                                   # noqa: E402
-import khranitel_mayaka                        # noqa: E402  MAYAK_KHRANITEL_V1
 
 _LOKACII = _REPO / "GRONDHEIM_CITY" / "локации"
 _KOVCHEG = _REPO / "GRONDHEIM_CITY" / "жители" / "ковчег"
@@ -290,8 +289,7 @@ def page_mayak() -> None:
     _gn = gnezda.spisok()
     _pervoe = next((g["номер"] for g in _gn if g["занято"]), 1)
 
-    state = {"гнездо": _pervoe, "чат": [], "смыслы": [], "модель": DEFAULT_MODEL,
-             "хранитель": False}   # MAYAK_KHRANITEL_V1: чат идёт к Хранителю
+    state = {"гнездо": _pervoe, "чат": [], "смыслы": [], "модель": DEFAULT_MODEL}
     refs = {"чат": None, "отчёт": None, "ввод": None,
             "лево": None, "право": None, "шапка": None}
 
@@ -380,34 +378,6 @@ def page_mayak() -> None:
                         zn, cv = _znak(g["род"])
                         ui.html(f'<span style="color:{cv};">{zn}</span>')
 
-            # MAYAK_KHRANITEL_V1: пузырёк Хранителя Маяка — ОТДЕЛЬНО от
-            # гнёзд, за своим разделителем. Гнездо — это луч (сеанс),
-            # а пост стоит всегда, даже когда все лучи погашены. Смешивать
-            # их в один ряд значило бы соврать про природу обоих.
-            _est_khr = khranitel_mayaka.est_khranitel()
-            _imya_khr = khranitel_mayaka.imya_na_postu()
-            ui.element("div").classes("razdel")
-            _cls_khr = "gn" if _est_khr else "gn pusto"
-            if state.get("хранитель"):
-                _cls_khr += " aktiv"
-            _bk = ui.element("div").classes(_cls_khr)
-            _bk.props('title="{}"'.format(
-                f"{_imya_khr} · Хранитель Маяка" if _est_khr
-                else "Хранитель Маяка · пост свободен"))
-            _bk.on("click", lambda: toggle_khranitel())
-            _dom_khr = khranitel_mayaka.dom_na_postu() if _est_khr else None
-            if _dom_khr:
-                try:
-                    app.add_static_files(f"/{_STATIC}/{_dom_khr.name}", str(_dom_khr))
-                except Exception:
-                    pass
-                _av_khr = _avatar_url(_dom_khr)
-                if _av_khr:
-                    _bk.style(f"background-image:url('{_av_khr}');")
-            with _bk:
-                if not _dom_khr:
-                    ui.html('<span style="color:rgba(0,229,222,0.85);">✎</span>')
-
     # ── левая: кто на связи ────────────────────────────────
     def update_levo():
         if not refs["лево"]:
@@ -481,28 +451,8 @@ def page_mayak() -> None:
         update_pravo()
 
     # ── выбор гнезда ───────────────────────────────────────
-    def toggle_khranitel():
-        """MAYAK_KHRANITEL_V1: включить/выключить разговор с Хранителем.
-        Пока включён — чат идёт к нему, а не в гнездо."""
-        if not khranitel_mayaka.est_khranitel():
-            ui.notify("Пост Хранителя Маяка свободен — сажать некого",
-                      color="warning")
-            return
-        state["хранитель"] = not state.get("хранитель")
-        update_shapka()
-        if state["хранитель"]:
-            imya = khranitel_mayaka.imya_na_postu()
-            update_otchet(
-                f"# ✎ {imya} · Хранитель Маяка\n\n"
-                f"{khranitel_mayaka.svodka_tekstom()}\n\n"
-                f"---\n\n*Спроси про связи, про учёт народа, "
-                f"про города на связи.*")
-        else:
-            vybrat(state["гнездо"])
-
     def vybrat(n: int):
         state["гнездо"] = n
-        state["хранитель"] = False   # MAYAK_KHRANITEL_V1: выбрал луч — вышел с поста
         g = gnezda.gnezdo(n)
         update_shapka()
         if not g.get("занято"):
@@ -625,27 +575,6 @@ def page_mayak() -> None:
         inp.value = ""
         state["чат"].append({"кто": "Шеф", "текст": vopros})
         update_chat()
-
-        # MAYAK_KHRANITEL_V1: Хранитель на посту перехватывает разговор —
-        # он не в гнезде, он ЗА пультом. Тот же приём, что у Хранителя
-        # Архива в ui_arkhiv.py.
-        if state.get("хранитель"):
-            _imya_khr = khranitel_mayaka.imya_na_postu() or "ХРАНИТЕЛЬ"
-            state["чат"].append({"кто": _imya_khr, "текст": "…смотрит журнал"})
-            update_chat()
-            _ist = [{"role": "user" if m.get("кто") == "Шеф" else "assistant",
-                     "content": m.get("текст", "")} for m in state["чат"][:-2]]
-            try:
-                _otv = await khranitel_mayaka.sprosit(
-                    vopros, _ist, "Шеф", model=state.get("модель"))
-            except Exception as e:
-                _otv = f"⚠ сорвалось: {e}"
-            state["чат"].pop()
-            state["чат"].append({"кто": _imya_khr, "текст": _otv})
-            update_chat()
-            update_otchet(f"# ✎ {_imya_khr} · Хранитель Маяка\n\n"
-                          f"{khranitel_mayaka.svodka_tekstom()}")
-            return
 
         g = gnezda.gnezdo(state["гнездо"])
         if not g.get("занято"):
