@@ -376,80 +376,13 @@ def page_rektor(zid: str = "") -> None:
         update_avatar(); update_vitals(); update_bubble(); update_chat()
 
     async def send_message():
-        if not input_ref["element"]:
+        if not input_ref["element"] or not state["активен"]:
+            if not state["активен"]:
+                ui.notify("Сначала кликни по пузырьку", type="warning")
             return
         msg = (input_ref["element"].value or "").strip()
         if not msg:
             return
-
-        # PATCH_REKTOR_PRYAMOY_STUDENT_V1: Ректор неактивен — он ушёл,
-        # Шеф пишет СТУДЕНТУ напрямую (свои слова, не автоответ кнопкой
-        # на реплику Ректора — тот путь остался отдельно, do_otvet_kandidata).
-        if not state["активен"]:
-            if not kandidat_imya:
-                ui.notify("Нет кандидата — писать некому", type="warning")
-                return
-            input_ref["element"].value = ""
-            state["чат"].append({"role": "user", "content": msg})
-            update_chat()
-            state["чат"].append({"role": "assistant", "кто": kandidat_imya,
-                                 "content": "…думает"})
-            update_chat()
-            try:
-                import rezidenty
-                dusha = rezidenty.sobrat_dushu(kandidat_p)
-            except Exception:
-                dusha = (f"Ты — {kandidat_imya}, житель Грондхейма. "
-                        f"Говоришь от первого лица.\n")
-            rol = ("\n=== ТЫ СЕЙЧАС В АКАДЕМИИ (Замок Сов) ===\n"
-                  "Ректора рядом нет — с тобой говорит Шеф напрямую. "
-                  "Говоришь своим голосом, своим характером — честно, "
-                  "не как ассистент.\n")
-            _key = os.getenv("OPENROUTER_API_KEY", "")
-            if not _key:
-                otvet = "⚠ OPENROUTER_API_KEY не задан."
-            else:
-                messages = [{"role": "system", "content": dusha + rol}]
-                for _m in state["чат"][:-2][-10:]:
-                    _r = "user" if _m.get("role") == "user" else "assistant"
-                    messages.append({"role": _r, "content": _m.get("content", "")})
-                messages.append({"role": "user", "content": msg})
-                import httpx
-                # PATCH_PROXY_VEZDE_V1: та же настройка, что и в остальном городе.
-                _proxy = os.getenv("PROXY_URL", "") or None
-                headers = {"Authorization": f"Bearer {_key}",
-                          "Content-Type": "application/json"}
-                payload = {"model": state.get("model") or DEFAULT_MODEL,
-                          "messages": messages}
-                try:
-                    async with httpx.AsyncClient(timeout=120, proxy=_proxy) as client:
-                        r = await client.post(
-                            "https://openrouter.ai/api/v1/chat/completions",
-                            headers=headers, json=payload)
-                        r.raise_for_status()
-                        otvet = r.json()["choices"][0]["message"]["content"]
-                except Exception as e:
-                    otvet = f"⚠ {kandidat_imya} не отозвалась: {e}"
-            # PATCH_PAMYAT_VEZDE_V1 (тот же приём, что в do_otvet_kandidata
-            # рядом): отпечаток в её личной памяти.
-            if kandidat_dom and not otvet.startswith("⚠"):
-                try:
-                    from dvizhok import Dvizhok as _Dvizhok_pm2
-                    _dv_pm2 = _Dvizhok_pm2(kandidat_dom)
-                    _vdoh_pm2 = _dv_pm2.vdoh(kontekst="общение", sila=0.5,
-                                             svezhest=1.0, tonus="ровно")
-                    _dv_pm2.vydoh_stol(
-                        fakt=f"[Академия] Шеф спросил: {msg}\nЯ ответила: {otvet}",
-                        vdoh_result=_vdoh_pm2)
-                    _dv_pm2.sохранить()
-                except Exception:
-                    pass
-            state["чат"].pop()
-            state["чат"].append({"role": "assistant", "кто": kandidat_imya,
-                                 "content": otvet})
-            update_chat()
-            return
-
         input_ref["element"].value = ""
         state["чат"].append({"role": "user", "content": msg})
         update_chat()
