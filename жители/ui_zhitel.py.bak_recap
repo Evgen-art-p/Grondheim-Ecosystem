@@ -1069,20 +1069,9 @@ def page_zhitel(zid: str = ""):
         # ── DVIZHOK_V_KABINET_V1: реальный вдох, если дом найден ──
         stol = None
         dvizhok = None
-        _recap_ranee = ""  # PATCH_RECAP_V1: считаем ДО того, как этот
-                           # же ход сам себя запишет в резонанс — иначе
-                           # сводка покажет самой себе только что сказанное
         if dom is not None and (dom / "passport.json").exists():
             try:
                 dvizhok = Dvizhok(dom)
-                # PATCH_RECAP_V1: только на первом сообщении свежей
-                # сессии (после перезагрузки страницы) — дальше историю
-                # уже несёт список messages, повторять не нужно
-                if len(state["chat"]) <= 1:
-                    try:
-                        _recap_ranee = dvizhok.posledniy_razgovor(limit_faktov=3)
-                    except Exception:
-                        _recap_ranee = ""
                 tonus, sila = _otsenit_tonus_silu(t)
                 vdoh_res = dvizhok.vdoh(kontekst="общение", sila=sila,
                                         svezhest=1.0, tonus=tonus)
@@ -1113,17 +1102,6 @@ def page_zhitel(zid: str = ""):
                 soul = (
                     f"Ты — {stol['кто_я']}, житель Грондхейма. "
                     f"Говоришь от первого лица, живым голосом, не как ассистент.\n"
-                )
-            # PATCH_RECAP_V1: гибрид (решение Шефа 29.07) — короткая
-            # сводка последнего разговора ложится в душу САМА, без
-            # того чтобы её просили MEMORY_REQUEST. Тот остаётся для
-            # более старого/глубокого, что в эту сводку не влезло.
-            if _recap_ranee:
-                soul += (
-                    f"\nТы уже разговаривала раньше. Вот коротко, о чём "
-                    f"был прошлый разговор:\n{_recap_ranee}\n"
-                    f"Это правда было — веди себя так, будто помнишь это "
-                    f"сама по себе, не как подсказку со стороны.\n"
                 )
             # YAKORYA_V_SOUL_V1: личность — то же, что правая колонка
             # кабинета показывает Шефу. Пустые поля пропускаем, чтобы
@@ -1263,16 +1241,6 @@ def page_zhitel(zid: str = ""):
                     state["chat"].append({"role": "zhitel",
                                           "content": f"🪞 {_res_prosev['вывод'].strip()}"})
             reply = _ubrat_prosev_request(_ubrat_mayak_request(_ubrat_memory_request(reply))) or reply
-            # PATCH_RECAP_V1: дописываем её ответ к записи, которую этот
-            # же вдох уже сделал — иначе резонанс помнит только то, что
-            # ей сказали, никогда то, что она сама ответила. Один вдох
-            # за ход — vdoh() второй раз не зовём.
-            try:
-                if dvizhok is not None and stol is not None:
-                    dvizhok.dopolnit_poslednuyu_zapis(
-                        vdoh_res.get("осело_в", "resonance"), reply)
-            except Exception:
-                pass
             try:
                 if dvizhok is not None:
                     dvizhok.sохранить()

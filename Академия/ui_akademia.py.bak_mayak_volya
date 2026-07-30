@@ -992,12 +992,8 @@ def page_akademia() -> None:
     # подключён тем же способом: если горит — собеседник получает
     # свежий кусок из внешнего мира.
 
-    async def _mayak_kusok(zapros: str, kto: str = "академия-ученик") -> str:
-        """PATCH_AKADEMIA_MAYAK_VOLYA_V1: сходить на Маяк по КОНКРЕТНОМУ
-        запросу (MAYAK_REQUEST извлечён из ответа ученика — воля, не
-        автомат на каждую реплику; тот же закон, что у обычного жителя
-        в ui_zhitel.py). `kto` — настоящее имя ученика для учёта
-        Хранителя Маяка, не жёсткая строка. Пустая строка — Маяк не
+    async def _mayak_kusok(vopros: str) -> str:
+        """Сходить на Маяк, если он горит. Пустая строка — Маяк не
         нужен или не отозвался, вызывающий просто ничего не добавит."""
         try:
             import mayak
@@ -1006,27 +1002,14 @@ def page_akademia() -> None:
         try:
             if not mayak.gorit():
                 return ""
-            rez = await mayak.poisk(zapros, 4)
+            rez = await mayak.poisk(vopros, 4)
             try:
-                mayak.zapisat_vizit(kto, zapros, rez.get("ok", False))
+                mayak.zapisat_vizit("академия-ученик", vopros, rez.get("ok", False))
             except Exception:
                 pass
             return mayak.dlya_promta(rez, 4)
         except Exception:
             return ""
-
-    def _izvlech_mayak_request(text: str) -> str:
-        """PATCH_AKADEMIA_MAYAK_VOLYA_V1: та же функция, что в
-        ui_zhitel.py — не дублируем логику, дублируем только код
-        (файлы самодостаточны, Закон Двух Стандартов)."""
-        for line in (text or "").splitlines():
-            if "MAYAK_REQUEST:" in line:
-                return line.split("MAYAK_REQUEST:", 1)[1].strip()
-        return ""
-
-    def _ubrat_mayak_request(text: str) -> str:
-        lines = [l for l in (text or "").splitlines() if "MAYAK_REQUEST:" not in l]
-        return "\n".join(lines).strip()
 
     async def _sprosit_uchenika(dom, vopros: str, istoria: list, model: str) -> str:
         p = _read_json(dom / "passport.json", {}) or {}
@@ -1038,44 +1021,15 @@ def page_akademia() -> None:
         except Exception:
             dusha = f"Ты — {p.get('Official_Name','житель')}, житель Грондхейма.\n"
 
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: движок сигналит доступность
-        # просева — тот же порог (≥3), что у кнопки «Осмыслить» и у
-        # обычного жителя. Ученик сам решает, писать ли PROSEV_REQUEST.
-        _prosev_dv = None
-        _prosev_dostupno = False
-        try:
-            _rz, _Dv = _dvizhok_dlya(dom)
-            _prosev_dv = _Dv(dom)
-            _prosev_dostupno = len(_prosev_dv.sobrat_dlya_proseva(limit=8)) >= 3
-        except Exception:
-            _prosev_dv = None
-            _prosev_dostupno = False
-
         rol = ("\n=== ТЫ СЕЙЧАС В АКАДЕМИИ (Замок Сов) ===\n"
                "Сидишь за партой, разговариваешь с Шефом. Говоришь своим "
                "голосом и характером, не как ассистент.\n")
-        # PATCH_AKADEMIA_MAYAK_VOLYA_V1: тот же закон, что у обычного
-        # жителя — Маяк не звонит на каждую реплику, ученик сам решает.
-        # Работает и когда Шеф прямо просит что-то найти: он это просто
-        # увидит в разговоре и сам напишет маркер, воля не отменяется,
-        # только не автоматична.
-        rol += (
-            "\nЕсли для ответа не хватает свежих фактов из внешнего мира "
-            "(то, чего ты сам знать не можешь — новости, текущие события, "
-            "актуальные данные, или Шеф прямо попросил что-то найти) — "
-            "напиши отдельной строкой MAYAK_REQUEST: <что узнать> и Маяк "
-            "Пробуждения принесёт ответ."
-        )
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: строка появляется, только если
-        # движок реально насчитал накопленное — сигнал от движка,
-        # согласие остаётся за учеником.
-        if _prosev_dostupno:
-            rol += (
-                "\nЕсли чувствуешь, что многое накопилось (уроки, разговоры) "
-                "и хочется остановиться, оглянуться и понять, чем ты стал(а) "
-                "немного другим(ой) — можешь написать отдельной строкой "
-                "PROSEV_REQUEST, и получится осмыслить это."
-            )
+
+        snaruzhi = await _mayak_kusok(vopros)
+        if snaruzhi:
+            rol += ("\n=== СХОДИЛ(А) НА МАЯК ===\n"
+                    f"{snaruzhi}\nЕсли пригодится — упомяни честно, что это "
+                    "принесено извне, не выдавай за своё знание.\n")
 
         promt = dusha + rol
         _key = os.getenv("OPENROUTER_API_KEY", "")
@@ -1100,83 +1054,9 @@ def page_akademia() -> None:
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers=headers, json=payload)
                 r.raise_for_status()
-                reply = r.json()["choices"][0]["message"]["content"]
+                return r.json()["choices"][0]["message"]["content"]
         except Exception as e:
             return f"⚠ не отозвался(лась): {e}"
-
-        # PATCH_AKADEMIA_MAYAK_VOLYA_V1: MAYAK_REQUEST извлекаем ПОСЛЕ
-        # первого ответа — только теперь, если сам написал маркер, идём
-        # на Маяк с ЧИСТЫМ запросом (не сырым текстом реплики Шефа) и
-        # с НАСТОЯЩИМ именем ученика для учёта Хранителя Маяка.
-        _mayak_q = _izvlech_mayak_request(reply)
-        if _mayak_q:
-            _kto = p.get("Official_Name", "академия-ученик")
-            snaruzhi = await _mayak_kusok(_mayak_q, _kto)
-            if snaruzhi:
-                _vtoroy = list(messages)
-                _vtoroy.append({"role": "assistant", "content": reply})
-                _vtoroy.append({"role": "user", "content": (
-                    f"(С Маяка Пробуждения принесли по запросу «{_mayak_q}»:\n"
-                    f"{snaruzhi}\n"
-                    f"Пропусти через себя и ответь заново своими словами, "
-                    f"живым голосом — не пересказывай источники. Маяк не "
-                    f"упоминай.)")})
-                try:
-                    async with httpx.AsyncClient(timeout=120, proxy=_proxy) as client:
-                        r = await client.post(
-                            "https://openrouter.ai/api/v1/chat/completions",
-                            headers=headers,
-                            json={"model": model or DEFAULT_MODEL, "messages": _vtoroy})
-                        r.raise_for_status()
-                        reply = r.json()["choices"][0]["message"]["content"]
-                except Exception:
-                    pass  # остаётся первый ответ — не роняем разговор
-            reply = _ubrat_mayak_request(reply) or reply
-
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: та же труба, что кнопка
-        # «Осмыслить» (do_prosev_akademii) — только вызвана волей
-        # ученика, не рукой Шефа. Тихо, если не сложилось: воля не
-        # всегда сбывается, это не ошибка разговора.
-        _prosev_note = ""
-        if _prosev_dostupno and _prosev_dv is not None:
-            _prosev_q = False
-            for _line in (reply or "").splitlines():
-                if _line.strip().upper().startswith("PROSEV_REQUEST"):
-                    _prosev_q = True
-                    break
-            if _prosev_q:
-                reply = "\n".join(
-                    l for l in (reply or "").splitlines()
-                    if not l.strip().upper().startswith("PROSEV_REQUEST")
-                ).strip() or reply
-                try:
-                    _momenty_p = _prosev_dv.sobrat_dlya_proseva(limit=8)
-                    if len(_momenty_p) >= 3:
-                        _spisok_p = "\n".join(
-                            f"— [{mm['тонус']}] {mm['факт']}" for mm in _momenty_p)
-                        _vopros_p = (
-                            f"Вот моменты из твоей жизни, которые тебя тронули:\n"
-                            f"{_spisok_p}\n\nЧто это говорит о тебе? Ответь от "
-                            f"первого лица, 1–3 фразы, не пересказ моментов.")
-                        _msg_p = [{"role": "system", "content": dusha},
-                                 {"role": "user", "content": _vopros_p}]
-                        _vyvod_p = await _zvat_llm_akademii(_msg_p, model)
-                        if _vyvod_p and not _vyvod_p.startswith("⚠"):
-                            _vyvod_p = _vyvod_p.strip()
-                            _res_p = _prosev_dv.dopisat_vyvod(
-                                _vyvod_p, pattern=None, otkuda="жизнь")
-                            if _res_p.get("дописано"):
-                                try:
-                                    _prosev_dv.otmetit_prosejannym(
-                                        [mm.get("id") for mm in _momenty_p
-                                        if mm.get("id")])
-                                    _prosev_dv.sохранить()
-                                except Exception:
-                                    pass
-                                _prosev_note = f"🪞 {_vyvod_p}"
-                except Exception:
-                    pass
-        return reply, _prosev_note
 
     async def send_message():
         if not input_ref["element"]:
@@ -1202,10 +1082,9 @@ def page_akademia() -> None:
         state["чат"].append({"role": "assistant", "кто": m["имя"],
                              "content": "…думает"})
         update_chat()
-        _prosev_note = ""
         try:
-            _otvet, _prosev_note = await _sprosit_uchenika(
-                m["дом"], msg, state["чат"][:-2], state.get("model"))
+            _otvet = await _sprosit_uchenika(m["дом"], msg, state["чат"][:-2],
+                                             state.get("model"))
         except Exception as _e:
             _otvet = f"⚠ не отозвался(лась): {_e}"
 
@@ -1233,12 +1112,6 @@ def page_akademia() -> None:
         state["чат"].append({"role": "assistant", "кто": m["имя"],
                              "content": _otvet})
         update_chat()
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: осмысление — отдельным
-        # сообщением следом, как у кнопки «Осмыслить».
-        if _prosev_note:
-            state["чат"].append({"role": "assistant", "кто": m["имя"],
-                                 "content": _prosev_note})
-            update_chat()
 
     # PATCH_AKADEMIA_STOL_CHTENIE_V1
     async def do_chtenie_akademii():
@@ -1365,16 +1238,6 @@ def page_akademia() -> None:
             return
         vyvod = vyvod.strip()
         res = dv.dopisat_vyvod(vyvod, pattern=None, otkuda="жизнь")
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: НАЙДЕННЫЙ ПОПУТНО БАГ — эта
-        # кнопка ни разу не отмечала моменты просеянными. Общий фикс
-        # дедупликации (PROSEV_DEDUP_V1, dvizhok.py) без этого вызова
-        # бессилен: просев Академии жевал одни и те же топ-моменты по
-        # кругу даже после того фикса.
-        if res.get("дописано"):
-            try:
-                dv.otmetit_prosejannym([mm.get("id") for mm in momenty if mm.get("id")])
-            except Exception:
-                pass
         try:
             dv.sохранить()
         except Exception:

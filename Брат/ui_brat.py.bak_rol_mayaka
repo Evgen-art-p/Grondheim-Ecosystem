@@ -1170,17 +1170,15 @@ def page_brat():
             return
 
         TIPY = ["резидент", "хранитель", "воркер", "студент",
-                "библиотекарь", "хранитель_архива", "ректор",
-                "хранитель_маяка"]  # PATCH_AKADEMIA_STUDENT_V1 + PATCH_POST_CHEREZ_ROL_V1 + PATCH_ROL_KHRANITEL_MAYAKA_V1
+                "библиотекарь", "хранитель_архива", "ректор"]  # PATCH_AKADEMIA_STUDENT_V1 + PATCH_POST_CHEREZ_ROL_V1
         # PATCH_POST_CHEREZ_ROL_V1: тип -> id поста в rezidenty.py.
-        # Библиотекарь/Архив/Ректор/Маяк — это ПОСТЫ (GRONDHEIM_CITY/посты/),
+        # Библиотекарь/Архив/Ректор — это ПОСТЫ (GRONDHEIM_CITY/посты/),
         # не Закон Пары. Выбрал такой тип — полей Цех/Слот/Фраза не
         # будет, посадка идёт сразу, одним кликом «назначить».
         TIP_TO_POST = {
             "библиотекарь": "bibliotekar",
             "хранитель_архива": "khranitel_arkhiva",
             "ректор": "rektor",
-            "хранитель_маяка": "khranitel_mayaka",
         }
         pick: dict = {"zhitel": None, "tip": None}
 

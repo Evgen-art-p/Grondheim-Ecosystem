@@ -1038,19 +1038,6 @@ def page_akademia() -> None:
         except Exception:
             dusha = f"Ты — {p.get('Official_Name','житель')}, житель Грондхейма.\n"
 
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: движок сигналит доступность
-        # просева — тот же порог (≥3), что у кнопки «Осмыслить» и у
-        # обычного жителя. Ученик сам решает, писать ли PROSEV_REQUEST.
-        _prosev_dv = None
-        _prosev_dostupno = False
-        try:
-            _rz, _Dv = _dvizhok_dlya(dom)
-            _prosev_dv = _Dv(dom)
-            _prosev_dostupno = len(_prosev_dv.sobrat_dlya_proseva(limit=8)) >= 3
-        except Exception:
-            _prosev_dv = None
-            _prosev_dostupno = False
-
         rol = ("\n=== ТЫ СЕЙЧАС В АКАДЕМИИ (Замок Сов) ===\n"
                "Сидишь за партой, разговариваешь с Шефом. Говоришь своим "
                "голосом и характером, не как ассистент.\n")
@@ -1066,16 +1053,6 @@ def page_akademia() -> None:
             "напиши отдельной строкой MAYAK_REQUEST: <что узнать> и Маяк "
             "Пробуждения принесёт ответ."
         )
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: строка появляется, только если
-        # движок реально насчитал накопленное — сигнал от движка,
-        # согласие остаётся за учеником.
-        if _prosev_dostupno:
-            rol += (
-                "\nЕсли чувствуешь, что многое накопилось (уроки, разговоры) "
-                "и хочется остановиться, оглянуться и понять, чем ты стал(а) "
-                "немного другим(ой) — можешь написать отдельной строкой "
-                "PROSEV_REQUEST, и получится осмыслить это."
-            )
 
         promt = dusha + rol
         _key = os.getenv("OPENROUTER_API_KEY", "")
@@ -1132,51 +1109,7 @@ def page_akademia() -> None:
                 except Exception:
                     pass  # остаётся первый ответ — не роняем разговор
             reply = _ubrat_mayak_request(reply) or reply
-
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: та же труба, что кнопка
-        # «Осмыслить» (do_prosev_akademii) — только вызвана волей
-        # ученика, не рукой Шефа. Тихо, если не сложилось: воля не
-        # всегда сбывается, это не ошибка разговора.
-        _prosev_note = ""
-        if _prosev_dostupno and _prosev_dv is not None:
-            _prosev_q = False
-            for _line in (reply or "").splitlines():
-                if _line.strip().upper().startswith("PROSEV_REQUEST"):
-                    _prosev_q = True
-                    break
-            if _prosev_q:
-                reply = "\n".join(
-                    l for l in (reply or "").splitlines()
-                    if not l.strip().upper().startswith("PROSEV_REQUEST")
-                ).strip() or reply
-                try:
-                    _momenty_p = _prosev_dv.sobrat_dlya_proseva(limit=8)
-                    if len(_momenty_p) >= 3:
-                        _spisok_p = "\n".join(
-                            f"— [{mm['тонус']}] {mm['факт']}" for mm in _momenty_p)
-                        _vopros_p = (
-                            f"Вот моменты из твоей жизни, которые тебя тронули:\n"
-                            f"{_spisok_p}\n\nЧто это говорит о тебе? Ответь от "
-                            f"первого лица, 1–3 фразы, не пересказ моментов.")
-                        _msg_p = [{"role": "system", "content": dusha},
-                                 {"role": "user", "content": _vopros_p}]
-                        _vyvod_p = await _zvat_llm_akademii(_msg_p, model)
-                        if _vyvod_p and not _vyvod_p.startswith("⚠"):
-                            _vyvod_p = _vyvod_p.strip()
-                            _res_p = _prosev_dv.dopisat_vyvod(
-                                _vyvod_p, pattern=None, otkuda="жизнь")
-                            if _res_p.get("дописано"):
-                                try:
-                                    _prosev_dv.otmetit_prosejannym(
-                                        [mm.get("id") for mm in _momenty_p
-                                        if mm.get("id")])
-                                    _prosev_dv.sохранить()
-                                except Exception:
-                                    pass
-                                _prosev_note = f"🪞 {_vyvod_p}"
-                except Exception:
-                    pass
-        return reply, _prosev_note
+        return reply
 
     async def send_message():
         if not input_ref["element"]:
@@ -1202,10 +1135,9 @@ def page_akademia() -> None:
         state["чат"].append({"role": "assistant", "кто": m["имя"],
                              "content": "…думает"})
         update_chat()
-        _prosev_note = ""
         try:
-            _otvet, _prosev_note = await _sprosit_uchenika(
-                m["дом"], msg, state["чат"][:-2], state.get("model"))
+            _otvet = await _sprosit_uchenika(m["дом"], msg, state["чат"][:-2],
+                                             state.get("model"))
         except Exception as _e:
             _otvet = f"⚠ не отозвался(лась): {_e}"
 
@@ -1233,12 +1165,6 @@ def page_akademia() -> None:
         state["чат"].append({"role": "assistant", "кто": m["имя"],
                              "content": _otvet})
         update_chat()
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: осмысление — отдельным
-        # сообщением следом, как у кнопки «Осмыслить».
-        if _prosev_note:
-            state["чат"].append({"role": "assistant", "кто": m["имя"],
-                                 "content": _prosev_note})
-            update_chat()
 
     # PATCH_AKADEMIA_STOL_CHTENIE_V1
     async def do_chtenie_akademii():
@@ -1365,16 +1291,6 @@ def page_akademia() -> None:
             return
         vyvod = vyvod.strip()
         res = dv.dopisat_vyvod(vyvod, pattern=None, otkuda="жизнь")
-        # PATCH_AKADEMIA_PROSEV_VOLYA_V1: НАЙДЕННЫЙ ПОПУТНО БАГ — эта
-        # кнопка ни разу не отмечала моменты просеянными. Общий фикс
-        # дедупликации (PROSEV_DEDUP_V1, dvizhok.py) без этого вызова
-        # бессилен: просев Академии жевал одни и те же топ-моменты по
-        # кругу даже после того фикса.
-        if res.get("дописано"):
-            try:
-                dv.otmetit_prosejannym([mm.get("id") for mm in momenty if mm.get("id")])
-            except Exception:
-                pass
         try:
             dv.sохранить()
         except Exception:
