@@ -705,12 +705,7 @@ def page_arkhiv() -> None:
 
     async def handle_zapis(e):
         """Запись в архив + каталог. Глубину/оценку Шеф или Хранитель
-        правят руками — код за них не сочиняет.
-
-        ARKHIV_PRAVYY_VIZUAL_V1: картинку разбираем по-настоящему —
-        тем же вызовом, что и левый загрузчик руды. Без этого файл
-        ложился слепым: ни тегов, ни описания, никто не мог узнать,
-        что на нём, не открыв руками."""
+        правят руками — код за них не сочиняет."""
         imya_f = e.name
         razdel = (zapisi_ref["раздел"].value if zapisi_ref["раздел"] else "прочее") or "прочее"
         try:
@@ -727,18 +722,6 @@ def page_arkhiv() -> None:
             ui.notify(f"Не положить в архив: {we}", type="negative")
             return
 
-        is_kartinka = Path(imya_f).suffix.lower() in KARTINKA_EXT
-        opisanie = ""
-        if is_kartinka:
-            state["чат"].append({"role": "assistant", "кто": "АРХИВ",
-                                 "content": f"🖼 «{imya_f}» — смотрю…"})
-            ui.notify(f"🖼 смотрю: {imya_f}", type="info")
-            update_chat()
-            opisanie = await _analiz_kartinki(
-                dest, state.get("model"),
-                "Опиши, что на изображении: структура, детали, текст если "
-                "есть. Коротко и по делу, не выдумывай того, чего не видно.")
-
         kat = _read_json(_KATALOG, {"записи": [], "разделы": RAZDELY}) or {"записи": [], "разделы": RAZDELY}
         zapisi = kat.setdefault("записи", [])
         rel = f"{razdel}/{imya_f}"
@@ -748,11 +731,9 @@ def page_arkhiv() -> None:
             "название": Path(imya_f).stem,
             "раздел": razdel,
             "файл": rel,
-            "теги": (["изображение"] if is_kartinka else []),
+            "теги": [],
             "когда": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         }
-        if opisanie:
-            zapis["описание"] = opisanie
         est = next((i for i, z in enumerate(zapisi) if z.get("файл") == rel), None)
         if est is not None:
             zapisi[est] = zapis
@@ -762,16 +743,9 @@ def page_arkhiv() -> None:
         _write_json(_KATALOG, kat)
 
         update_arkhiv_info()
-        if is_kartinka and opisanie:
-            _soobshchenie = f"🖼 «{zapis['название']}»: {opisanie}"
-        else:
-            _soobshchenie = f"🗄 «{zapis['название']}» легло в раздел «{razdel}»."
-        if is_kartinka:
-            state["чат"][-1] = {"role": "assistant", "кто": "АРХИВ",
-                                "content": _soobshchenie}
-        else:
-            state["чат"].append({"role": "assistant", "кто": "АРХИВ",
-                                 "content": _soobshchenie})
+        state["чат"].append({
+            "role": "assistant", "кто": "АРХИВ",
+            "content": f"🗄 «{zapis['название']}» легло в раздел «{razdel}»."})
         update_chat()
         ui.notify(f"В архив, раздел «{razdel}»: {zapis['название']}", type="positive")
         up = zapisi_ref.get("uploader")

@@ -143,25 +143,7 @@ async def _priyom_pulsa(request: _PrichalRequest):
         telo = await request.json()
     except Exception:
         return {"ok": False, "причина": "тело не разобралось как JSON", "id": ""}
-    rez = _prichal.prinyat(telo, request.headers.get(_prichal.KEY_HEADER, ""))
-
-    # ГНЕЗДО ОСТРОВА — PRICHAL_GNEZDO_V1
-    # Пульс дошёл — зажигаем гнездо рода «остров». Род не в числе
-    # постоянных (см. POSTOYANNYE в gnezda.py), поэтому если остров
-    # замолчит дольше SEANS_MINUT — гнездо погаснет само, честно.
-    if rez.get("ok"):
-        try:
-            import gnezda as _gnezda
-            _gnezda.votknut(
-                rod="остров",
-                imya=telo.get("имя") or rez.get("id", ""),
-                klyuch=f"prichal:{rez.get('id', '')}",
-                chto="пульс с границы",
-            )
-        except Exception:
-            pass
-
-    return rez
+    return _prichal.prinyat(telo, request.headers.get(_prichal.KEY_HEADER, ""))
 
 
 # ── АКАДЕМИЯ — Замок Сов (школа города) ── AKADEMIA_KABINET_V1
