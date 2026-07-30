@@ -345,7 +345,6 @@ LOCATION_GATES = {
     "0005_LIGHTHOUSE_AWAKENING": "/mayak",  # Маяк -> кабинет (ui_mayak.py)
     "0014_EXCHANGE": "/torg",       # Биржа -> стол Совета (ui_torg.py)
     "0008_OWL_CASTLE": "/akademia", # Замок Сов -> кабинет Академии (ui_akademia.py)
-    "0015_GRONDHEIM_ARCHIVE": "/arkhiv",  # Архив -> кабинет Хранителя (ui_arkhiv.py)
 }
 
 
