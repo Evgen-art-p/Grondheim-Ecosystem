@@ -295,47 +295,6 @@ _KARTINKA_MIME_STOL = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "imag
                        ".webp": "image/webp", ".gif": "image/gif"}
 
 
-# AKADEMIA_GLAZA_V_CHATE_V1 + AKADEMIA_STOL_ETO_ZAGRUZCHIK_V1
-def _kartinka_na_stole(ruda_sessii=None):
-    """Что за картинка лежит на столе СЕЙЧАС: (путь, data-url) или
-    (None, ""). Стол — это последняя картинка, которую положили в
-    загрузчик за эту сессию.
-
-    Нужно, чтобы про картинку можно было СПРОСИТЬ, а не только «дать
-    прочитать». Раньше чат не нёс изображение вовсе, и ученик отвечал
-    по имени файла — то есть выдумывал.
-
-    AKADEMIA_STOL_ETO_ZAGRUZCHIK_V1. Сначала здесь бралась самая
-    свежая картинка ИЗ ПАПКИ руды — и это было неверно: руда общая и
-    не расходуется, файлы лежат в ней всегда. Выходило, что на столе
-    вечно что-то есть, даже когда сегодня ничего не клали, и убрать
-    это можно было только вытащив файл руками. Стол — то, что
-    положили; CLEAR в загрузчике его убирает.
-
-    AKADEMIA_VSE_KARTINKI_STOLA_V1: отдаём ВСЕ картинки со стола, а не
-    последнюю. Так сделано в старой студии (_collect_images_for_vision)
-    и там работает. Одна картинка = сравнивать не с чем, а сравнение и
-    есть учёба: здесь откат кончился, а здесь нет.
-
-    Возвращает список пар (путь, data-url), в порядке укладки.
-    """
-    import base64 as _b64
-    out = []
-    for r in (ruda_sessii or []):
-        if r.get("вид") != "изображение" or not r.get("путь"):
-            continue
-        fp = Path(r["путь"])
-        if not fp.exists() or fp.suffix.lower() not in _KARTINKA_MIME_STOL:
-            continue
-        try:
-            data = fp.read_bytes()
-        except Exception:
-            continue
-        mime = _KARTINKA_MIME_STOL.get(fp.suffix.lower(), "image/png")
-        out.append((fp, f"data:{mime};base64,{_b64.b64encode(data).decode('ascii')}"))
-    return out
-
-
 def _kto_chto_prochital() -> dict:
     return _read_json(_PROCHITANO_REESTR, {}) or {}
 
@@ -1072,9 +1031,7 @@ def page_akademia() -> None:
     async def _sprosit_uchenika(dom, vopros: str, istoria: list, model: str) -> str:
         p = _read_json(dom / "passport.json", {}) or {}
         if not p:
-            # AKADEMIA_CHESTNAYA_OSHIBKA_V1: пара, а не строка — иначе
-            # вызывающий падает на распаковке и прячет эту причину.
-            return "⚠ паспорт не читается — не могу собрать личность.", ""
+            return "⚠ паспорт не читается — не могу собрать личность."
         try:
             import rezidenty
             dusha = rezidenty.sobrat_dushu(p)
@@ -1123,37 +1080,13 @@ def page_akademia() -> None:
         promt = dusha + rol
         _key = os.getenv("OPENROUTER_API_KEY", "")
         if not _key:
-            # AKADEMIA_CHESTNAYA_OSHIBKA_V1: пара, а не строка.
-            return "⚠ OPENROUTER_API_KEY не задан. Положи ключ в .env.", ""
+            return "⚠ OPENROUTER_API_KEY не задан. Положи ключ в .env."
 
         messages = [{"role": "system", "content": promt}]
         for m in (istoria or [])[-10:]:
             r = "user" if m.get("role") == "user" else "assistant"
             messages.append({"role": r, "content": m.get("content", "")})
-        # AKADEMIA_GLAZA_V_CHATE_V1: к вопросу прикрепляем то, что лежит
-        # на столе. Раньше чат нёс один текст, и на вопрос «что на
-        # картинке?» ученик отвечал по имени файла из переписки — то
-        # есть сочинял. Картинки нет — всё как раньше.
-        # AKADEMIA_STOL_ETO_ZAGRUZCHIK_V1: стол — список загрузчика этой
-        # сессии, а не всё, что накопилось в папке руды.
-        # AKADEMIA_VSE_KARTINKI_STOLA_V1: кладём ВСЕ, чтобы можно было
-        # сравнивать страницы между собой.
-        _stol = _kartinka_na_stole(state.get("руда"))
-        _url_stol = _stol[0][1] if _stol else ""
-        if _stol:
-            _skolko = ("На столе перед тобой лежит изображение."
-                       if len(_stol) == 1 else
-                       f"На столе перед тобой {len(_stol)} изображени"
-                       f"{'я' if len(_stol) < 5 else 'й'}, по порядку.")
-            _content = [{"type": "text", "text": (
-                f"({_skolko} Если речь о них — смотри на сами изображения, "
-                f"а не на названия. Не разглядела — так и скажи.)\n\n" + vopros)}]
-            for _fp_i, _url_i in _stol:
-                _content.append({"type": "image_url",
-                                 "image_url": {"url": _url_i}})
-            messages.append({"role": "user", "content": _content})
-        else:
-            messages.append({"role": "user", "content": vopros})
+        messages.append({"role": "user", "content": vopros})
 
         import httpx
         # PATCH_PROXY_VEZDE_V1: без прокси OpenRouter честно отвечает 403
@@ -1169,13 +1102,7 @@ def page_akademia() -> None:
                 r.raise_for_status()
                 reply = r.json()["choices"][0]["message"]["content"]
         except Exception as e:
-            # AKADEMIA_CHESTNAYA_OSHIBKA_V1: пара, а не строка. И текст
-            # ошибки укорачиваем — иначе JSON-простыня распирает чат.
-            _tekst = str(e)
-            _telo = getattr(getattr(e, "response", None), "text", "")
-            if _telo:
-                _tekst = f"{_tekst} | ответ сервера: {_telo}"
-            return f"⚠ не отозвался(лась): {_tekst[:400]}", ""
+            return f"⚠ не отозвался(лась): {e}"
 
         # PATCH_AKADEMIA_MAYAK_VOLYA_V1: MAYAK_REQUEST извлекаем ПОСЛЕ
         # первого ответа — только теперь, если сам написал маркер, идём
@@ -1259,16 +1186,6 @@ def page_akademia() -> None:
             return
         input_ref["element"].value = ""
 
-        # POPRAVKA_UCHITELYA_V1: сообщение с восклицательного знака —
-        # это не реплика, а ПОПРАВКА. Ляжет ученику сразу меткой.
-        # Сам знак ученику не показываем: он видит обычную фразу
-        # учителя и отвечает на неё как всегда.
-        _eto_popravka = msg.startswith("!")
-        if _eto_popravka:
-            msg = msg[1:].strip()
-            if not msg:
-                return
-
         m = _mesto_row(mesta, state["активное_место"])
         if not (m and m["занято"]):
             state["чат"].append({"role": "user", "content": msg})
@@ -1309,23 +1226,6 @@ def page_akademia() -> None:
                     fakt=f"[Академия] Шеф спросил: {msg}\nЯ ответил(а): {_otvet}",
                     vdoh_result=_vdoh_pm)
                 _dv_pm.sохранить()
-                # POPRAVKA_UCHITELYA_V1: поправка ложится ОТДЕЛЬНО и
-                # сразу меткой — твёрдым знанием. Разговор остаётся
-                # сырым моментом рядом, ничего не стирая.
-                if _eto_popravka:
-                    try:
-                        _res_p = _dv_pm.popravka_uchitelya(msg)
-                        if _res_p.get("легло"):
-                            ui.notify("✎ поправка легла в знание",
-                                      type="positive")
-                        else:
-                            ui.notify(f"⚠ поправка не легла: "
-                                      f"{_res_p.get('причина','?')}",
-                                      type="warning")
-                    except AttributeError:
-                        ui.notify("⚠ движок без popravka_uchitelya — "
-                                  "накати патч на dvizhok.py",
-                                  type="negative")
             except Exception:
                 pass
 
@@ -1405,21 +1305,8 @@ def page_akademia() -> None:
                     continue
                 mime = _KARTINKA_MIME_STOL.get(fp.suffix.lower(), "image/png")
                 url = f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"
-                # AKADEMIA_GLAZA_V_CHATE_V1: наблюдение и натура разведены
-                # по времени. Раньше они стояли в одном вопросе, и натура
-                # побеждала: реставратор икон видел слои копоти вместо
-                # баров. Имя файла убрано из запроса — оно и было той
-                # соломинкой, за которую хваталась выдумка.
-                vopros = (
-                    "Перед тобой изображение. Ответь двумя частями.\n\n"
-                    "ЧТО ВИЖУ — только то, что действительно нарисовано. "
-                    "Буквально, без толкований и сравнений. Есть чертёж, "
-                    "схема или график — назови, что именно на нём начерчено. "
-                    "Есть текст — о чём он. Не разглядела или мелко — так и "
-                    "напиши, это нормальный ответ, догадываться не нужно.\n\n"
-                    "ЧТО ЭТО ВО МНЕ — и только теперь твой отклик своей "
-                    "натурой, 2-3 фразы.\n\n"
-                    "Суди по самой картинке. Её название ничего не значит.")
+                vopros = (f"На столе изображение: {fp.name}. Посмотри своей натурой, "
+                         f"вынеси концентрат — 5-8 строк, суть плюс личный отклик.")
                 messages = [{"role": "system", "content": dusha + rol},
                            {"role": "user", "content": [
                                {"type": "text", "text": vopros},

@@ -295,45 +295,31 @@ _KARTINKA_MIME_STOL = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "imag
                        ".webp": "image/webp", ".gif": "image/gif"}
 
 
-# AKADEMIA_GLAZA_V_CHATE_V1 + AKADEMIA_STOL_ETO_ZAGRUZCHIK_V1
-def _kartinka_na_stole(ruda_sessii=None):
-    """Что за картинка лежит на столе СЕЙЧАС: (путь, data-url) или
-    (None, ""). Стол — это последняя картинка, которую положили в
-    загрузчик за эту сессию.
+# AKADEMIA_GLAZA_V_CHATE_V1
+def _kartinka_na_stole():
+    """Что за картинка сейчас лежит на столе: (путь, data-url) или
+    (None, ""). Берём самую свежую в руде — стол общий, и лежит на нём
+    то, что положили последним.
 
     Нужно, чтобы про картинку можно было СПРОСИТЬ, а не только «дать
     прочитать». Раньше чат не нёс изображение вовсе, и ученик отвечал
     по имени файла — то есть выдумывал.
-
-    AKADEMIA_STOL_ETO_ZAGRUZCHIK_V1. Сначала здесь бралась самая
-    свежая картинка ИЗ ПАПКИ руды — и это было неверно: руда общая и
-    не расходуется, файлы лежат в ней всегда. Выходило, что на столе
-    вечно что-то есть, даже когда сегодня ничего не клали, и убрать
-    это можно было только вытащив файл руками. Стол — то, что
-    положили; CLEAR в загрузчике его убирает.
-
-    AKADEMIA_VSE_KARTINKI_STOLA_V1: отдаём ВСЕ картинки со стола, а не
-    последнюю. Так сделано в старой студии (_collect_images_for_vision)
-    и там работает. Одна картинка = сравнивать не с чем, а сравнение и
-    есть учёба: здесь откат кончился, а здесь нет.
-
-    Возвращает список пар (путь, data-url), в порядке укладки.
     """
     import base64 as _b64
-    out = []
-    for r in (ruda_sessii or []):
-        if r.get("вид") != "изображение" or not r.get("путь"):
-            continue
-        fp = Path(r["путь"])
-        if not fp.exists() or fp.suffix.lower() not in _KARTINKA_MIME_STOL:
-            continue
-        try:
-            data = fp.read_bytes()
-        except Exception:
-            continue
-        mime = _KARTINKA_MIME_STOL.get(fp.suffix.lower(), "image/png")
-        out.append((fp, f"data:{mime};base64,{_b64.b64encode(data).decode('ascii')}"))
-    return out
+    papka = _RUDA / "изображения"
+    if not papka.exists():
+        return None, ""
+    fajly = [f for f in papka.iterdir()
+             if f.is_file() and f.suffix.lower() in _KARTINKA_MIME_STOL]
+    if not fajly:
+        return None, ""
+    fp = max(fajly, key=lambda f: f.stat().st_mtime)
+    try:
+        data = fp.read_bytes()
+    except Exception:
+        return None, ""
+    mime = _KARTINKA_MIME_STOL.get(fp.suffix.lower(), "image/png")
+    return fp, f"data:{mime};base64,{_b64.b64encode(data).decode('ascii')}"
 
 
 def _kto_chto_prochital() -> dict:
@@ -1134,24 +1120,15 @@ def page_akademia() -> None:
         # на столе. Раньше чат нёс один текст, и на вопрос «что на
         # картинке?» ученик отвечал по имени файла из переписки — то
         # есть сочинял. Картинки нет — всё как раньше.
-        # AKADEMIA_STOL_ETO_ZAGRUZCHIK_V1: стол — список загрузчика этой
-        # сессии, а не всё, что накопилось в папке руды.
-        # AKADEMIA_VSE_KARTINKI_STOLA_V1: кладём ВСЕ, чтобы можно было
-        # сравнивать страницы между собой.
-        _stol = _kartinka_na_stole(state.get("руда"))
-        _url_stol = _stol[0][1] if _stol else ""
-        if _stol:
-            _skolko = ("На столе перед тобой лежит изображение."
-                       if len(_stol) == 1 else
-                       f"На столе перед тобой {len(_stol)} изображени"
-                       f"{'я' if len(_stol) < 5 else 'й'}, по порядку.")
-            _content = [{"type": "text", "text": (
-                f"({_skolko} Если речь о них — смотри на сами изображения, "
-                f"а не на названия. Не разглядела — так и скажи.)\n\n" + vopros)}]
-            for _fp_i, _url_i in _stol:
-                _content.append({"type": "image_url",
-                                 "image_url": {"url": _url_i}})
-            messages.append({"role": "user", "content": _content})
+        _fp_stol, _url_stol = _kartinka_na_stole()
+        if _url_stol:
+            messages.append({"role": "user", "content": [
+                {"type": "text", "text": (
+                    "(На столе перед тобой лежит изображение. Если речь о нём — "
+                    "смотри на само изображение, а не на его название. "
+                    "Не разглядела — так и скажи.)\n\n" + vopros)},
+                {"type": "image_url", "image_url": {"url": _url_stol}},
+            ]})
         else:
             messages.append({"role": "user", "content": vopros})
 
@@ -1259,16 +1236,6 @@ def page_akademia() -> None:
             return
         input_ref["element"].value = ""
 
-        # POPRAVKA_UCHITELYA_V1: сообщение с восклицательного знака —
-        # это не реплика, а ПОПРАВКА. Ляжет ученику сразу меткой.
-        # Сам знак ученику не показываем: он видит обычную фразу
-        # учителя и отвечает на неё как всегда.
-        _eto_popravka = msg.startswith("!")
-        if _eto_popravka:
-            msg = msg[1:].strip()
-            if not msg:
-                return
-
         m = _mesto_row(mesta, state["активное_место"])
         if not (m and m["занято"]):
             state["чат"].append({"role": "user", "content": msg})
@@ -1309,23 +1276,6 @@ def page_akademia() -> None:
                     fakt=f"[Академия] Шеф спросил: {msg}\nЯ ответил(а): {_otvet}",
                     vdoh_result=_vdoh_pm)
                 _dv_pm.sохранить()
-                # POPRAVKA_UCHITELYA_V1: поправка ложится ОТДЕЛЬНО и
-                # сразу меткой — твёрдым знанием. Разговор остаётся
-                # сырым моментом рядом, ничего не стирая.
-                if _eto_popravka:
-                    try:
-                        _res_p = _dv_pm.popravka_uchitelya(msg)
-                        if _res_p.get("легло"):
-                            ui.notify("✎ поправка легла в знание",
-                                      type="positive")
-                        else:
-                            ui.notify(f"⚠ поправка не легла: "
-                                      f"{_res_p.get('причина','?')}",
-                                      type="warning")
-                    except AttributeError:
-                        ui.notify("⚠ движок без popravka_uchitelya — "
-                                  "накати патч на dvizhok.py",
-                                  type="negative")
             except Exception:
                 pass
 

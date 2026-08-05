@@ -1259,16 +1259,6 @@ def page_akademia() -> None:
             return
         input_ref["element"].value = ""
 
-        # POPRAVKA_UCHITELYA_V1: сообщение с восклицательного знака —
-        # это не реплика, а ПОПРАВКА. Ляжет ученику сразу меткой.
-        # Сам знак ученику не показываем: он видит обычную фразу
-        # учителя и отвечает на неё как всегда.
-        _eto_popravka = msg.startswith("!")
-        if _eto_popravka:
-            msg = msg[1:].strip()
-            if not msg:
-                return
-
         m = _mesto_row(mesta, state["активное_место"])
         if not (m and m["занято"]):
             state["чат"].append({"role": "user", "content": msg})
@@ -1309,23 +1299,6 @@ def page_akademia() -> None:
                     fakt=f"[Академия] Шеф спросил: {msg}\nЯ ответил(а): {_otvet}",
                     vdoh_result=_vdoh_pm)
                 _dv_pm.sохранить()
-                # POPRAVKA_UCHITELYA_V1: поправка ложится ОТДЕЛЬНО и
-                # сразу меткой — твёрдым знанием. Разговор остаётся
-                # сырым моментом рядом, ничего не стирая.
-                if _eto_popravka:
-                    try:
-                        _res_p = _dv_pm.popravka_uchitelya(msg)
-                        if _res_p.get("легло"):
-                            ui.notify("✎ поправка легла в знание",
-                                      type="positive")
-                        else:
-                            ui.notify(f"⚠ поправка не легла: "
-                                      f"{_res_p.get('причина','?')}",
-                                      type="warning")
-                    except AttributeError:
-                        ui.notify("⚠ движок без popravka_uchitelya — "
-                                  "накати патч на dvizhok.py",
-                                  type="negative")
             except Exception:
                 pass
 

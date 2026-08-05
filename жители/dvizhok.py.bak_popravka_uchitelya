@@ -662,58 +662,6 @@ class Dvizhok:
         return {"учтено": False, "причина": "такого ключа нет ни в маяках, "
                                            "ни в метках", "паттерн": pattern}
 
-    # ═══════════════════════════════════════════════════════
-    # POPRAVKA_UCHITELYA_V1 — СЛОВО УЧИТЕЛЯ
-    # ═══════════════════════════════════════════════════════
-
-    def popravka_uchitelya(self, tekst: str, pattern: str = "") -> dict:
-        """Учитель поправил — ложится СРАЗУ меткой, твёрдым знанием.
-
-        Тот же закон, что и verdikt_rynka: знание твердеет от СУДЬИ, а
-        не от числа повторов. На Бирже судья — рынок. В Академии рынка
-        ещё нет, и судья — учитель. Сказал один раз, повторять трижды
-        незачем.
-
-        Ошибку ученика не трогаем: она остаётся сырым моментом в
-        разговоре. Просто рядом встаёт метка, которая весит больше.
-        Прошлое не переписываем — наращиваем.
-
-        pattern — необязательный ключ темы («фрактал», «вход»), чтобы
-                  поправка по той же теме заменяла прежнюю, а не
-                  копилась дублями.
-        """
-        tekst = (tekst or "").strip()
-        if not tekst:
-            return {"легло": False, "причина": "пустая поправка"}
-
-        metki = self.metki()
-        now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        pattern = (pattern or "").strip()
-
-        # поправка по той же теме заменяет прежнюю: учитель передумал —
-        # держим последнее слово, а прежнее уходит в архив, не пропадая
-        if pattern:
-            byvshie = [m for m in metki if m.get("паттерн") == pattern]
-            for b in byvshie:
-                self._archive_zapis(b.get("текст", ""),
-                                    "заменено новой поправкой учителя")
-            metki = [m for m in metki if m.get("паттерн") != pattern]
-
-        metki.append({
-            "текст": tekst,
-            "паттерн": pattern,
-            "откуда": "учитель",
-            "когда": now_iso,
-            "раз": 1,
-        })
-        if len(metki) > self.METKI_CAP:
-            for old in metki[:len(metki) - self.METKI_CAP]:
-                self._archive_zapis(old.get("текст", ""),
-                                    "метка вытеснена (лимит нажитого)")
-            del metki[:len(metki) - self.METKI_CAP]
-        self._pisat_etazh(self._metki_path(), metki)
-        return {"легло": True, "этаж": "метки", "паттерн": pattern}
-
     def zhdut_verdikta(self) -> list:
         """Рыночные маяки, по которым рынок ещё не ответил. Для кабинета:
         видно, что висит незакрытым и что вот-вот затвердеет."""
