@@ -919,30 +919,9 @@ class Dvizhok:
             consumed = consumed[-cap:]
         self.p["_prosev_consumed"] = consumed
 
-    # POST_V_PASPORTE_V1: свои поля движка — только эти. Всё остальное
-    # в паспорте принадлежит кому-то другому и трогать его нельзя.
-    _SVOI_POLYA = ("_charge", "_charge_ts", "_prosev_consumed")
-
     def sохранить(self):
-        """Заряд оседает в паспорт (состояние помнится между вдохами).
-
-        POST_V_PASPORTE_V1. Раньше здесь писалась КОПИЯ паспорта,
-        снятая при рождении движка, — и всё, что записал в паспорт
-        кто-то другой за время разговора, молча пропадало (пост,
-        например). Теперь паспорт перечитывается с диска, и поверх
-        ложатся только свои поля. Чужое остаётся чужим.
-        """
+        """Заряд оседает в паспорт (состояние помнится между вдохами)."""
         self.p["_charge"] = round(self.charge, 4)
         self.p["_charge_ts"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        try:
-            svezhiy = json.loads(self.passport_path.read_text(encoding="utf-8"))
-            if not isinstance(svezhiy, dict):
-                svezhiy = dict(self.p)
-        except Exception:
-            svezhiy = dict(self.p)   # не прочитался — пишем как раньше, не теряем
-        for k in self._SVOI_POLYA:
-            if k in self.p:
-                svezhiy[k] = self.p[k]
-        self.p = svezhiy
         self.passport_path.write_text(
-            json.dumps(svezhiy, ensure_ascii=False, indent=2), encoding="utf-8")
+            json.dumps(self.p, ensure_ascii=False, indent=2), encoding="utf-8")

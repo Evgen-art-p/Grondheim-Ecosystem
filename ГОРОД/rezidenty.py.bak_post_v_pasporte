@@ -128,130 +128,24 @@ def zavesti_post(post_id: str, nazvanie: str, gde: str = "",
 # СВЯЗЬ ПОСТ ↔ ЖИТЕЛЬ — отдельно от обоих
 # ═══════════════════════════════════════════════════════════
 
-# POST_V_PASPORTE_V1 — ПРАВДА О ПОСТЕ ЖИВЁТ В ПАСПОРТЕ ЖИТЕЛЯ
-#
-# Было: связь в посты/{id}/хранитель.json, сбоку от обоих. Житель не
-# знал, что он на посту, — работу ему подкладывали снаружи на время
-# разговора. Ректор не знал, что он ректор.
-#
-# Стало: в паспорте поле "Посты" — список того, что житель сейчас
-# делает. Душа, стол и память читают паспорт и так, значит работу
-# видят сами. Одна правда, одно место.
-#
-# Это НЕ «прикрутить личность к роли» (закон Шефа в шапке файла в
-# силе). Пост в паспорте — состояние, а не порода: сняли с поста,
-# строка ушла, житель прежний. Чертёж §1.5.2б: роль живёт внутри Рода.
-POLE_POSTY = "Посты"
-
-
-def _pasport_put(imya: str):
-    """Путь к паспорту жителя. Нет жителя — None."""
-    d = KOVCHEG / imya
-    p = d / "passport.json"
-    return p if p.exists() else None
-
-
-def _posty_zhitelya(imya: str) -> list:
-    p = _pasport_put(imya)
-    if p is None:
-        return []
-    spisok = (_read_json(p, {}) or {}).get(POLE_POSTY, [])
-    return spisok if isinstance(spisok, list) else []
-
-
-def _zapisat_posty(imya: str, spisok: list) -> bool:
-    """Кладёт список постов в паспорт, НЕ трогая остальное. Паспорт
-    перечитывается прямо перед записью — рядом может работать движок."""
-    p = _pasport_put(imya)
-    if p is None:
-        return False
-    pasport = _read_json(p, None)
-    if not isinstance(pasport, dict):
-        return False
-    if spisok:
-        pasport[POLE_POSTY] = spisok
-    else:
-        pasport.pop(POLE_POSTY, None)   # пустой список не держим
-    return _write_json(p, pasport)
-
-
-def perenesti_posty() -> int:
-    """Разовый переезд старых хранитель.json в паспорта. Зовётся сам
-    при первом обращении к постам, вручную не нужен.
-
-    Старый файл НЕ удаляем — переименовываем в .перенесено, чтобы
-    никто случайно не прочитал устаревшую правду, но и не потерять.
-    """
-    if not POSTY_DIR.exists():
-        return 0
-    pereehalo = 0
-    for d in sorted(POSTY_DIR.iterdir()):
-        f = d / "хранитель.json"
-        if not f.is_dir() and f.exists():
-            imya = (_read_json(f, {}) or {}).get("житель", "")
-            if imya and _pasport_put(imya) is not None:
-                spisok = _posty_zhitelya(imya)
-                if not any(x.get("пост") == d.name for x in spisok
-                           if isinstance(x, dict)):
-                    spisok.append({
-                        "пост": d.name,
-                        "с": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                    })
-                    _zapisat_posty(imya, spisok)
-                    pereehalo += 1
-            try:
-                f.rename(d / "хранитель.json.перенесено")
-            except Exception:
-                pass
-    return pereehalo
-
-
-_perenos_sdelan = False
-
-
-def _perenos_odin_raz():
-    global _perenos_sdelan
-    if not _perenos_sdelan:
-        _perenos_sdelan = True
-        try:
-            perenesti_posty()
-        except Exception:
-            pass   # переезд не должен ронять город
-
-
 def posadit(post_id: str, imya_zhitelya: str, zid: str = "") -> tuple:
     """Сажает жителя на пост. Род НЕ проверяется — закон Шефа.
     Пост занят другим — честно сменяем, но возвращаем, кто был,
     чтобы вызывающий мог сказать это вслух (не тайком).
 
-    POST_V_PASPORTE_V1: пишем в паспорт. Заодно снимаем прежнего —
-    иначе два паспорта заявят один пост, и никто не заметит.
-
     Возвращает (успех: bool, сообщение: str).
     """
-    _perenos_odin_raz()
     d = POSTY_DIR / post_id
     if not (d / "пост.json").exists():
         return False, f"поста «{post_id}» нет — сначала заведи"
-    if _pasport_put(imya_zhitelya) is None:
-        return False, f"жителя «{imya_zhitelya}» нет в ковчеге"
-
-    byl = kto_na_postu(post_id)
-    if byl and byl != imya_zhitelya:
-        # снимаем прежнего явно: одна правда, дублей не заводим
-        _zapisat_posty(byl, [x for x in _posty_zhitelya(byl)
-                             if not (isinstance(x, dict)
-                                     and x.get("пост") == post_id)])
-
-    spisok = [x for x in _posty_zhitelya(imya_zhitelya)
-              if not (isinstance(x, dict) and x.get("пост") == post_id)]
-    spisok.append({
-        "пост": post_id,
+    byl = (_read_json(d / "хранитель.json", {}) or {}).get("житель", "")
+    ok = _write_json(d / "хранитель.json", {
+        "житель": imya_zhitelya,
         "id": zid,
         "с": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     })
-    if not _zapisat_posty(imya_zhitelya, spisok):
-        return False, "не записался в паспорт"
+    if not ok:
+        return False, "не записался на диск"
     if byl and byl != imya_zhitelya:
         return True, f"сменил(а) на посту: {byl}"
     return True, "на посту"
@@ -259,42 +153,20 @@ def posadit(post_id: str, imya_zhitelya: str, zid: str = "") -> tuple:
 
 def snyat(post_id: str) -> tuple:
     """Освобождает пост. Пост остаётся, вакансия открыта."""
-    _perenos_odin_raz()
-    imya = kto_na_postu(post_id)
-    if not imya:
+    f = POSTY_DIR / post_id / "хранитель.json"
+    if not f.exists():
         return True, "пост и так свободен"
-    ok = _zapisat_posty(imya, [x for x in _posty_zhitelya(imya)
-                               if not (isinstance(x, dict)
-                                       and x.get("пост") == post_id)])
-    return (True, "пост освобождён") if ok else (False, "паспорт не записался")
+    try:
+        f.unlink()
+        return True, "пост освобождён"
+    except Exception as e:
+        return False, str(e)
 
 
 def kto_na_postu(post_id: str) -> str:
-    """Имя того, кто сейчас на посту. Пусто — вакансия.
-
-    POST_V_PASPORTE_V1: смотрим паспорта. Ковчег маленький, обход
-    дешёвый, зато правда одна и врать нечему.
-    """
-    _perenos_odin_raz()
-    vse = kto_na_postu_vse(post_id)
-    return vse[0] if vse else ""
-
-
-def kto_na_postu_vse(post_id: str) -> list:
-    """Все, кто заявил этот пост. В норме ноль или один. Двое —
-    рассинхрон, и его лучше увидеть, чем спрятать: кабинет может
-    показать это Шефу."""
-    if not KOVCHEG.exists():
-        return []
-    out = []
-    for d in sorted(KOVCHEG.iterdir()):
-        if not d.is_dir():
-            continue
-        for x in _posty_zhitelya(d.name):
-            if isinstance(x, dict) and x.get("пост") == post_id:
-                out.append(d.name)
-                break
-    return out
+    """Имя того, кто сейчас на посту. Пусто — вакансия."""
+    return (_read_json(POSTY_DIR / post_id / "хранитель.json", {})
+            or {}).get("житель", "") or ""
 
 
 def dom_zhitelya(imya: str) -> Path | None:
