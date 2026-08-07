@@ -720,6 +720,75 @@ def _prompt_chtenia(imya_fajla: str, tekst: str, linza: str,
     )
 
 
+# PROSEV_ZNANII_DOMA_V1 — второй заход просева: за содержанием
+_ZNANIE_MAX_TEM_DOMA = 3   # больше трёх тем за просев не берём — это деньги
+
+
+def _uchebnye_temy_doma(momenty: list) -> dict:
+    """Разбирает моменты просева на темы учёбы: {имя книги: [моменты]}.
+
+    Читальные записи узнаём по метке контекста в начале факта: дома это
+    «[Знание: Дом]» или «[Знание: Цех]», в Академии — «[Академия]».
+    Ловим обе, потому что архив у жителя один: читал он и там, и тут.
+    Всё прочее — личная жизнь, её не трогаем.
+    """
+    import re as _re
+    temy = {}
+    for mm in momenty or []:
+        fakt = str(mm.get("факт", ""))
+        if not (fakt.startswith("[Знание:") or fakt.startswith("[Академия]")):
+            continue
+        m = _re.search(r"«([^»]+)»", fakt)
+        tema = (m.group(1) if m else "материал").strip()
+        temy.setdefault(tema, []).append(mm)
+    return temy
+
+
+async def _prosev_znanii_doma(dv, dusha: str, momenty: list,
+                              model: str = "") -> list:
+    """Спрашивает, что житель УЗНАЛ — отдельно от того, что почувствовал.
+
+    Вопрос нарочно противоположен первому заходу: там «не пересказывай»,
+    здесь «перескажи точно». Без этого содержание из памяти выпадает
+    целиком, а остаётся одно впечатление.
+
+    Ложится черновиком, а не сразу меткой: это собственный пересказ
+    жителя, он может быть неверен. Черновики в промпт подаются, значит
+    знание с ним везде. Затвердеет от судьи — поправка учителя или
+    третья встреча с тем же.
+    """
+    itogi = []
+    temy = list(_uchebnye_temy_doma(momenty).items())[:_ZNANIE_MAX_TEM_DOMA]
+    for tema, gruppa in temy:
+        spisok = "\n".join(f"— {str(g.get('факт',''))}" for g in gruppa)
+        vopros = (
+            f"Вот что ты читал(а) по теме «{tema}»:\n{spisok}\n\n"
+            f"Что ты УЗНАЛ(А)? Своими словами, но ТОЧНО: определения, "
+            f"порядок действий, названия и числа сохрани как есть, ничего "
+            f"не округляй и не сглаживай. Это не про чувства — про "
+            f"содержание.\n3–6 строк. Чего-то не понял(а) — так и напиши, "
+            f"это нормальный ответ и он полезнее выдуманного.\n"
+            f"Без строк MEMORY_REQUEST."
+        )
+        try:
+            vyvod = await call_zhitel_llm(
+                [{"role": "system", "content": dusha},
+                 {"role": "user", "content": vopros}], model)
+        except Exception:
+            continue
+        if not vyvod or vyvod.startswith("⚠"):
+            continue
+        try:
+            vyvod = _ubrat_memory_request(vyvod) or vyvod.strip()
+            res = dv.dopisat_vyvod(vyvod.strip(),
+                                   pattern=f"знание:{tema}", otkuda="учёба")
+        except Exception:
+            continue
+        if res.get("дописано"):
+            itogi.append((tema, res.get("этаж", "?")))
+    return itogi
+
+
 async def _provesti_prosev(dv: Dvizhok, p: dict, model: str) -> dict:
     """PATCH_PROSEV_REQUEST_V1: тело просева — общее для кнопки «🪞
     Осмыслить» и для PROSEV_REQUEST (воля жителя в разговоре). Один
@@ -744,12 +813,20 @@ async def _provesti_prosev(dv: Dvizhok, p: dict, model: str) -> dict:
         return {"ok": False, "причина": f"LLM: {(vyvod or '')[:90]}"}
     vyvod = _ubrat_memory_request(vyvod) or vyvod.strip()
     res = dv.dopisat_vyvod(vyvod, pattern=None, otkuda="жизнь")
+    # PROSEV_ZNANII_DOMA_V1: второй заход — за содержанием, отдельной
+    # строкой от чувств. Не удался — просев всё равно состоялся.
+    _znaniya = []
+    try:
+        _znaniya = await _prosev_znanii_doma(dv, dusha, momenty, model)
+    except Exception:
+        pass
     if res.get("дописано"):
         try:
             dv.otmetit_prosejannym([m.get("id") for m in momenty if m.get("id")])
         except Exception:
             pass
-    return {"ok": True, "вывод": vyvod, "moments": momenty, "res": res}
+    return {"ok": True, "вывод": vyvod, "moments": momenty, "res": res,
+            "знания": _znaniya}
 
 
 def page_zhitel(zid: str = ""):
@@ -1154,6 +1231,12 @@ def page_zhitel(zid: str = ""):
                 f"Отвечай коротко, по-человечески, исходя из своей личности выше и текущего "
                 f"заряда — не упоминай слова 'заряд' или 'слои' напрямую, просто веди себя в тон."
             )
+            # PAMYAT_V_PROMT_VEZDE_V1: нажитое — в промпт. Раньше стол его
+            # считал, а сюда не доходило: житель копил и не помнил.
+            try:
+                soul += dvizhok.pamyat_v_promt()
+            except Exception:
+                pass
             # PATCH_ZHITEL_VSPOMINAET: воля жителя — подсказка. Не «заряд открыл —
             # на, читай», а сам решает, что и когда поднять из памяти.
             soul += (

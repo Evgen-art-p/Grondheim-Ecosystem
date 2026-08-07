@@ -714,6 +714,65 @@ class Dvizhok:
         self._pisat_etazh(self._metki_path(), metki)
         return {"легло": True, "этаж": "метки", "паттерн": pattern}
 
+    # ═══════════════════════════════════════════════════════
+    # PAMYAT_V_PROMT_VEZDE_V1 — НАЖИТОЕ СЛОВАМИ, ДЛЯ ПРОМПТА
+    # ═══════════════════════════════════════════════════════
+
+    ZNANIE_OTKUDA = ("учёба", "учеба", "учитель")
+
+    def pamyat_v_promt(self, metok: int = 14, chernovikov: int = 8) -> str:
+        """Нажитое — текстом для системного промпта. Пусто — пустая строка.
+
+        До этого метода вся трёхэтажная память работала ТОЛЬКО НА
+        ЗАПИСЬ: vydoh_stol её считал, а промпт собирался из паспорта, и
+        ни один вывод в разговор не попадал. Житель копил и не помнил.
+
+        Разложено по смыслу, а не свалено кучей:
+          — твёрдое знание (метки от учёбы и учителя) — подтверждено
+            судьёй, на него можно опираться;
+          — черновики учёбы — собственный пересказ, может быть неверен;
+          — выводы о себе (метки «жизнь») — это характер, не знание.
+        """
+        try:
+            metki = self.metki() or []
+            mayaki = self.mayaki() or []
+        except Exception:
+            return ""
+
+        def _tekst(x):
+            return str(x.get("текст", "")).strip()
+
+        znanie = [_tekst(m) for m in metki
+                  if m.get("откуда") in self.ZNANIE_OTKUDA and _tekst(m)]
+        chernoviki = [_tekst(m) for m in mayaki
+                      if m.get("откуда") in self.ZNANIE_OTKUDA and _tekst(m)]
+        o_sebe = [_tekst(m) for m in metki
+                  if m.get("откуда") not in self.ZNANIE_OTKUDA and _tekst(m)]
+
+        znanie = znanie[-metok:]
+        chernoviki = chernoviki[-chernovikov:]
+        o_sebe = o_sebe[-metok:]
+
+        if not (znanie or chernoviki or o_sebe):
+            return ""
+
+        s = "\n=== ЧТО У ТЕБЯ УЖЕ НАЖИТО ===\n"
+        if znanie:
+            s += ("\nЗнаешь твёрдо (проверено учителем или делом) — "
+                  "на это можно опираться:\n")
+            s += "".join(f"• {t}\n" for t in znanie)
+        if chernoviki:
+            s += ("\nПонял(а) сам(а), но ещё не проверено — говори об этом "
+                  "осторожнее, можешь ошибаться:\n")
+            s += "".join(f"• {t}\n" for t in chernoviki)
+        if o_sebe:
+            s += "\nЧто ты понял(а) о себе:\n"
+            s += "".join(f"• {t}\n" for t in o_sebe)
+        s += ("\nЭто твоя память — говори из неё своими словами. Чего здесь "
+              "нет, того ты не знаешь: так и скажи честно, не придумывай. "
+              "Не перечисляй этот список вслух, просто помни.\n")
+        return s
+
     def zhdut_verdikta(self) -> list:
         """Рыночные маяки, по которым рынок ещё не ответил. Для кабинета:
         видно, что висит незакрытым и что вот-вот затвердеет."""

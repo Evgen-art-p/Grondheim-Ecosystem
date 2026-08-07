@@ -348,6 +348,69 @@ def _otmetit_prochitannym(imya: str, fajl: str):
     _write_json(_PROCHITANO_REESTR, reg)
 
 
+# PROSEV_ZNANII_V1 — второй заход просева: за содержанием
+_ZNANIE_MAX_TEM = 3   # больше трёх тем за просев не берём — это деньги
+
+
+def _uchebnye_temy(momenty: list) -> dict:
+    """Разбирает моменты просева на темы учёбы: {имя материала: [моменты]}.
+
+    Учебные записи стол пишет в виде «[Академия] «имя»: выжимка» —
+    по этой форме их и узнаём. Всё остальное — личная жизнь, её не
+    трогаем, она уходит в первый заход как раньше.
+    """
+    import re as _re
+    temy = {}
+    for mm in momenty or []:
+        fakt = str(mm.get("факт", ""))
+        # PROSEV_ZNANII_DOMA_V1: житель читает и дома, а дом ставит свою
+        # метку контекста. Ловим обе формы, иначе просев видит только
+        # половину прочитанного — смотря где его запустили.
+        if not (fakt.startswith("[Академия]") or fakt.startswith("[Знание:")):
+            continue
+        m = _re.search(r"«([^»]+)»", fakt)
+        tema = (m.group(1) if m else "материал").strip()
+        temy.setdefault(tema, []).append(mm)
+    return temy
+
+
+async def _prosev_znanii(dv, dusha: str, momenty: list, model: str = "") -> list:
+    """Спрашивает у ученика, что он УЗНАЛ — отдельно от того, что
+    почувствовал. Возвращает список (тема, этаж) для показа Шефу.
+
+    Вопрос нарочно противоположен вопросу первого захода: там «не
+    пересказывай», здесь — «перескажи точно». Без этого содержание
+    из памяти выпадает целиком (проверено на Нине 06.08).
+    """
+    itogi = []
+    for tema, gruppa in list(_uchebnye_temy(momenty).items())[:_ZNANIE_MAX_TEM]:
+        spisok = "\n".join(f"— {str(g.get('факт',''))}" for g in gruppa)
+        vopros = (
+            f"Вот что ты читала по теме «{tema}»:\n{spisok}\n\n"
+            f"Что ты УЗНАЛА? Своими словами, но ТОЧНО: определения, порядок "
+            f"действий, названия и числа сохрани как есть, ничего не округляй "
+            f"и не сглаживай. Это не про чувства — про содержание.\n"
+            f"3–6 строк. Чего-то не поняла — так и напиши, это нормальный "
+            f"ответ и он полезнее выдуманного."
+        )
+        try:
+            vyvod = await _zvat_llm_akademii(
+                [{"role": "system", "content": dusha},
+                 {"role": "user", "content": vopros}], model)
+        except Exception:
+            continue
+        if not vyvod or vyvod.startswith("⚠"):
+            continue
+        try:
+            res = dv.dopisat_vyvod(vyvod.strip(),
+                                   pattern=f"знание:{tema}", otkuda="учёба")
+        except Exception:
+            continue
+        if res.get("дописано"):
+            itogi.append((tema, res.get("этаж", "?")))
+    return itogi
+
+
 async def _zvat_llm_akademii(messages, model: str = "") -> str:
     """Общий вызов LLM -- тот же способ, что и весь кабинет.
     Самодостаточная функция (свой os.getenv) -- Закон Двух Стандартов."""
@@ -1094,6 +1157,15 @@ def page_akademia() -> None:
             _prosev_dv = None
             _prosev_dostupno = False
 
+        # PAMYAT_V_PROMT_VEZDE_V1: ученик приходит на урок со ВСЕМ, что
+        # уже нажил. Без этого он адекватен, только пока материал лежит
+        # на столе прямо в этой сессии, а вышел — не знает ничего.
+        try:
+            if _prosev_dv is not None:
+                dusha += _prosev_dv.pamyat_v_promt()
+        except Exception:
+            pass
+
         rol = ("\n=== ТЫ СЕЙЧАС В АКАДЕМИИ (Замок Сов) ===\n"
                "Сидишь за партой, разговариваешь с Шефом. Говоришь своим "
                "голосом и характером, не как ассистент.\n")
@@ -1238,6 +1310,17 @@ def page_akademia() -> None:
                             _vyvod_p = _vyvod_p.strip()
                             _res_p = _prosev_dv.dopisat_vyvod(
                                 _vyvod_p, pattern=None, otkuda="жизнь")
+                            # PROSEV_ZNANII_V1: второй заход — за
+                            # содержанием, отдельной строкой от чувств.
+                            try:
+                                _zn = await _prosev_znanii(
+                                    _prosev_dv, dusha, _momenty_p, model)
+                                if _zn:
+                                    _prosev_note = (
+                                        (_prosev_note + "  ") if _prosev_note else ""
+                                    ) + "📚 узнала: " + ", ".join(t for t, _ in _zn)
+                            except Exception:
+                                pass
                             if _res_p.get("дописано"):
                                 try:
                                     _prosev_dv.otmetit_prosejannym(
@@ -1478,6 +1561,15 @@ def page_akademia() -> None:
             return
         vyvod = vyvod.strip()
         res = dv.dopisat_vyvod(vyvod, pattern=None, otkuda="жизнь")
+        # PROSEV_ZNANII_V1: второй заход — за содержанием.
+        try:
+            _zn = await _prosev_znanii(dv, dusha, momenty, state.get("model"))
+            if _zn:
+                ui.notify("📚 " + imya + " узнала: "
+                          + ", ".join(f"{t} → {e}" for t, e in _zn),
+                          type="positive")
+        except Exception as _e_zn:
+            ui.notify(f"⚠ знание не осело: {_e_zn}", type="warning")
         # PATCH_AKADEMIA_PROSEV_VOLYA_V1: НАЙДЕННЫЙ ПОПУТНО БАГ — эта
         # кнопка ни разу не отмечала моменты просеянными. Общий фикс
         # дедупликации (PROSEV_DEDUP_V1, dvizhok.py) без этого вызова

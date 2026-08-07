@@ -24,6 +24,40 @@ from datetime import datetime, timezone
 
 from nicegui import ui, app
 
+
+# ═══════════════════════════════════════════════════════════
+# PAMYAT_V_PROMT_VEZDE_V1 — нажитое жителя и сохранение чата
+# ═══════════════════════════════════════════════════════════
+def _nazhitoe(dom) -> str:
+    """Нажитое жителя словами — то же, что видит его собственный кабинет.
+
+    Без этого к Ректору житель приходил с одной личностью из паспорта:
+    ни выводов учёбы, ни поправок учителя. Экзамен сдать было нечем.
+    Движок лежит в папке жителей — подключаем так же, как это делает
+    сама Академия.
+    """
+    if not dom:
+        return ""
+    try:
+        _zh = Path(__file__).resolve().parent.parent / "жители"
+        if str(_zh) not in sys.path:
+            sys.path.insert(0, str(_zh))
+        from dvizhok import Dvizhok as _Dv
+        return _Dv(Path(dom)).pamyat_v_promt()
+    except Exception:
+        return ""
+
+
+def _save_chat_rektora(dom, chat: list) -> str:
+    """Сохраняет разговор в папку жителя — как Академия в академия_чаты."""
+    d = Path(dom) / "ректор_чаты"
+    d.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    fp = d / f"чат_{ts}.json"
+    fp.write_text(json.dumps(chat, ensure_ascii=False, indent=2),
+                  encoding="utf-8")
+    return fp.name
+
 _OPENROUTER_MODEL_ENV = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
 MODELS_CATALOG = [
     {"id": "google/gemini-2.5-flash",          "name": "Gemini 2.5 Flash",  "price": "$0.15/$0.60"},
@@ -401,6 +435,9 @@ def page_rektor(zid: str = "") -> None:
             except Exception:
                 dusha = (f"Ты — {kandidat_imya}, житель Грондхейма. "
                         f"Говоришь от первого лица.\n")
+            # PAMYAT_V_PROMT_VEZDE_V1: без этого житель приходит к Ректору
+            # с пустой головой — экзамен сдать физически нечем.
+            dusha += _nazhitoe(kandidat_dom)
             rol = ("\n=== ТЫ СЕЙЧАС В АКАДЕМИИ (Замок Сов) ===\n"
                   "Ректора рядом нет — с тобой говорит Шеф напрямую. "
                   "Говоришь своим голосом, своим характером — честно, "
@@ -488,6 +525,9 @@ def page_rektor(zid: str = "") -> None:
         except Exception:
             dusha = (f"Ты — {kandidat_imya}, житель Грондхейма. "
                     f"Говоришь от первого лица.\n")
+        # PAMYAT_V_PROMT_VEZDE_V1: на собеседовании и экзамене память нужна
+        # в первую очередь — иначе спрашивать не о чем.
+        dusha += _nazhitoe(kandidat_dom)
         rol = ("\n=== ТЫ СЕЙЧАС НА СОБЕСЕДОВАНИИ В АКАДЕМИИ (Замок Сов) ===\n"
               f"С тобой говорит Ректор{f' ({imya})' if imya else ''}. Отвечай "
               "своим голосом, своим характером — честно, не как ассистент.\n")
@@ -754,6 +794,25 @@ def page_rektor(zid: str = "") -> None:
                         "font-size:0.75rem; padding:8px 14px; border-radius:20px; "
                         "color:rgba(80,250,123,0.9); background:rgba(80,250,123,0.10); "
                         "border:1px solid rgba(80,250,123,0.35); white-space:nowrap;")
+                    # PAMYAT_V_PROMT_VEZDE_V1: сохранить разговор
+                    def _sohranit_chat():
+                        if not state["чат"]:
+                            ui.notify("Чат пуст — нечего сохранять", type="warning")
+                            return
+                        if not kandidat_dom:
+                            ui.notify("Нет кандидата — некуда сохранять", type="warning")
+                            return
+                        try:
+                            imya_f = _save_chat_rektora(kandidat_dom, state["чат"])
+                            ui.notify(f"💾 сохранён: {imya_f}", type="positive")
+                        except Exception as _e_s:
+                            ui.notify(f"⚠ не сохранился: {_e_s}", type="negative")
+
+                    ui.button("💾 чат", on_click=_sohranit_chat).props(
+                        "flat no-caps").style(
+                        "font-size:0.75rem; padding:8px 14px; border-radius:20px; "
+                        "color:rgba(139,233,253,0.9); background:rgba(139,233,253,0.10); "
+                        "border:1px solid rgba(139,233,253,0.35); white-space:nowrap;")
                     ui.button("SEND", on_click=send_message).classes("send-button")
 
         with ui.element("div").classes("area-right"):

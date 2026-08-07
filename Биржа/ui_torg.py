@@ -579,6 +579,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
     chat_log_ref: dict[str, Any] = {"element": None}
     toolbar_refs: dict[str, Any] = {}
     viewer_ref:   dict[str, Any] = {"element": None}
+    kadr_ref:     dict[str, Any] = {"element": None}   # KABINET_GRAFIK_V1
     files_ref:    dict[str, Any] = {"element": None}
     avatar_ref:   dict[str, Any] = {"element": None}
     vitals_ref:   dict[str, Any] = {"element": None}   # заряд/оптика резидента — как везде в городе
@@ -609,6 +610,66 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         ui.html(f'<div class="chat-msg-user"><b>ШЕФ:</b> {content}</div>')
                     else:
                         ui.html(f'<div class="chat-msg-assistant"><b>{who}:</b> {content}</div>')
+
+    # ── KABINET_GRAFIK_V1: кадр ──────────────────────────────
+    def _aktivnyy_rynok() -> tuple:
+        """Что сейчас на полке: символ и рабочий этаж."""
+        try:
+            s = state.get("symbol") or state.get("актив") or "EURUSD"
+            tf = state.get("timeframe") or state.get("tf") or "H1"
+            return s, tf
+        except Exception:
+            return "EURUSD", "H1"
+
+    def pokazat_kadr(put=None):
+        """Рисует кадр и кладёт в верхнюю половину правой части.
+
+        Модель не трогаем: Шеф смотрит, трейдер спит. Это и есть
+        дешёвый способ проверить, читается ли картинка, ПЕРЕД тем как
+        отдавать её глазу.
+        """
+        if not kadr_ref["element"]:
+            return None
+        symbol, tf = _aktivnyy_rynok()
+        try:
+            import grafik
+            p = Path(put) if put else grafik.kadr(symbol, tf)
+        except Exception as e:
+            ui.notify(f"⚠ кадр не нарисовался: {e}", type="negative")
+            return None
+        if not p:
+            ui.notify("⚠ кадр не нарисовался (нет matplotlib или баров)",
+                      type="warning")
+            return None
+        kadr_ref["element"].clear()
+        with kadr_ref["element"]:
+            ui.image(str(p)).style("width:100%; height:auto;")
+        return p
+
+    async def vzglyad_treydera():
+        """Трейдер смотрит на кадр и решает. Не увидел — на этом всё."""
+        symbol, tf = _aktivnyy_rynok()
+        ui.notify(f"👁 {symbol} {tf} — трейдер смотрит…", type="info")
+        try:
+            import vzglyad as _vz
+            # так же, как кабинет уже гоняет тестер: в исполнителе, чтобы
+            # интерфейс не замирал на время двух вызовов модели
+            _loop = asyncio.get_event_loop()
+            itog = await _loop.run_in_executor(
+                None, lambda: _vz.posmotret(symbol, tf))
+        except Exception as e:
+            ui.notify(f"⚠ взгляд сорвался: {e}", type="negative")
+            return
+        if itog.get("кадр"):
+            pokazat_kadr(itog["кадр"])
+        chasti = [f"### 👁 Взгляд — {symbol} {tf}\n\n{itog.get('взгляд','')}"]
+        if itog.get("приборы"):
+            chasti.append(f"### 📐 Приборы\n\n{itog['приборы']}")
+        if itog.get("решение"):
+            chasti.append(f"### ⚖️ Решение\n\n{itog['решение']}")
+        update_viewer("\n\n".join(chasti))
+        ui.notify("👁 " + ("увидел" if itog.get("увидел") else "мимо"),
+                  type="positive" if itog.get("увидел") else "info")
 
     def update_viewer(content: str):
         if not viewer_ref["element"]:
@@ -2038,14 +2099,36 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             "flex:1; min-height:0; overflow-y:auto;")
                         with chat_log_ref["element"]:
                             ui.html('<div class="chat-msg-system">SYSTEM: Биржа готова</div>')
-                        viewer_ref["element"] = ui.element("div").classes("viewer").style(
-                            "flex:1; min-height:0; overflow-y:auto;")
-                        with viewer_ref["element"]:
-                            ui.label("Отчёты агентов появятся здесь")
+                        # KABINET_GRAFIK_V1: правая часть — две половины
+                        # по горизонтали: сверху кадр, снизу отчёты.
+                        with ui.element("div").style(
+                                "flex:1; min-height:0; display:flex; "
+                                "flex-direction:column; gap:8px;"):
+                            kadr_ref["element"] = ui.element("div").classes("viewer").style(
+                                "flex:1; min-height:0; overflow:auto; "
+                                "display:flex; align-items:center; "
+                                "justify-content:center;")
+                            with kadr_ref["element"]:
+                                ui.label("Кадр появится здесь — жми «📈 кадр»")
+                            viewer_ref["element"] = ui.element("div").classes("viewer").style(
+                                "flex:1; min-height:0; overflow-y:auto;")
+                            with viewer_ref["element"]:
+                                ui.label("Отчёты агентов появятся здесь")
 
                 with ui.element("div").classes("floating-console"):
                     input_ref["element"] = ui.input(placeholder="Сообщение Совету...").props("borderless").style("flex:1")
                     input_ref["element"].on("keydown.enter", send_message)
+                    # KABINET_GRAFIK_V1: посмотреть самому / дать посмотреть
+                    ui.button("📈 кадр", on_click=lambda: pokazat_kadr()).props(
+                        "flat no-caps").style(
+                        "font-size:0.75rem; padding:8px 14px; border-radius:20px; "
+                        "color:rgba(139,233,253,0.9); background:rgba(139,233,253,0.10); "
+                        "border:1px solid rgba(139,233,253,0.35); white-space:nowrap;")
+                    ui.button("👁 взгляд", on_click=vzglyad_treydera).props(
+                        "flat no-caps").style(
+                        "font-size:0.75rem; padding:8px 14px; border-radius:20px; "
+                        "color:rgba(255,214,102,0.95); background:rgba(255,214,102,0.10); "
+                        "border:1px solid rgba(255,214,102,0.35); white-space:nowrap;")
                     ui.button("SEND", on_click=send_message).classes("send-button")
 
         with ui.element("div").classes("area-right"):
