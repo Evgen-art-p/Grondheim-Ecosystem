@@ -32,7 +32,16 @@ from typing import Optional
 
 # ── Кадр. Не весь экран, а окно последних баров: на терминальном
 # скриншоте всё сразу — мелко и нечитаемо (проверено на живом).
-BAROV_V_KADRE = 100
+# 140 баров — число Вильямса: на втором уровне взгляд меняется
+# «от сравнения двух соседних баров до анализа 140 и более».
+BAROV_V_KADRE = 140
+
+# ── Смещения Аллигатора ВПЕРЁД, как в терминале: челюсть +8, зубы +5,
+# губы +3. Ядро считает без смещения (ему сравнивать цену с текущей
+# линией), но ГЛАЗ видит другую фигуру: в MT5 линии выступают за
+# последнюю свечу. Рисуем как в терминале, иначе трейдер учится на
+# одной картинке, а Шеф смотрит на другую.
+SDVIG_JAW, SDVIG_TEETH, SDVIG_LIPS = 8, 5, 3
 
 # ── Цвета. Аллигатор канонический: челюсть синяя, зубы красные,
 # губы зелёные. Свечи — не «красное/зелёное» в тон линиям, иначе
@@ -51,7 +60,8 @@ C_AO_DOWN = "#d92626"
 def narisovat(bars: list, alligator: dict, ao_series: list,
               symbol: str = "", timeframe: str = "",
               kuda: Optional[Path] = None,
-              barov: int = BAROV_V_KADRE) -> Optional[Path]:
+              barov: int = BAROV_V_KADRE,
+              fraktaly: Optional[dict] = None) -> Optional[Path]:
     """Рисует кадр и возвращает путь к PNG. Нет matplotlib — вернёт None.
 
     bars       — список баров как их отдаёт feed_source
@@ -79,9 +89,15 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
         s = list(seq)[-n:]
         return [None] * (n - len(s)) + s
 
-    jaw = _hvost(alligator.get("jaw_series"))
-    teeth = _hvost(alligator.get("teeth_series"))
-    lips = _hvost(alligator.get("lips_series"))
+    # Смещаем вперёд: значение бара i рисуется на позиции i+сдвиг.
+    # Хвост уходит правее последней свечи — там же, где он в терминале.
+    def _sdvinut(seq, sdvig):
+        h = _hvost(seq)
+        return [None] * sdvig + h
+
+    jaw = _sdvinut(alligator.get("jaw_series"), SDVIG_JAW)
+    teeth = _sdvinut(alligator.get("teeth_series"), SDVIG_TEETH)
+    lips = _sdvinut(alligator.get("lips_series"), SDVIG_LIPS)
     ao = _hvost(ao_series)
 
     # Свечи сверху, AO снизу — как в терминале, глаз к этому привык.
@@ -92,7 +108,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
     fig.patch.set_facecolor(C_FON)
 
     x = list(range(n))
-    shirina = 0.62
+    shirina = 0.58
 
     for i, bar in enumerate(b):
         o, h, l, c = bar["open"], bar["high"], bar["low"], bar["close"]
@@ -119,10 +135,33 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
         if xs:
             ax.plot(xs, ys, color=cvet, linewidth=2.2, zorder=4, label=imya)
 
+    # Фракталы — стрелки над/под баром, как в терминале. Это точка
+    # отсчёта для входа и место стопа: не нарисовать их — значит
+    # заставить трейдера считать пять баров глазами на каждом шаге.
+    if fraktaly:
+        sdvig_ot = len(bars) - n   # индексы фракталов — по всему ряду
+        for storona, znak, dy in (("all_up", "v", 1), ("all_down", "^", -1)):
+            for f in (fraktaly.get(storona) or []):
+                i = f.get("bar_index")
+                if i is None:
+                    continue
+                k = i - sdvig_ot
+                if not (0 <= k < n):
+                    continue
+                cena = f.get("price")
+                if cena is None:
+                    continue
+                razmah = max(x["high"] for x in b) - min(x["low"] for x in b)
+                ax.plot(k, cena + dy * razmah * 0.012, marker=znak,
+                        color="#7a4fbf", markersize=8, zorder=5)
+
     ax.set_facecolor(C_FON)
     ax.grid(True, color="#00000012", linewidth=0.8)
-    ax.set_xlim(-1, n)
-    ax.legend(loc="upper left", fontsize=11, framealpha=0.85)
+    # правее последней свечи оставляем место под вынос линий
+    ax.set_xlim(-1, n + SDVIG_JAW + 1)
+    # легенда снаружи справа — в углу она закрывала свечи
+    ax.legend(loc="upper left", fontsize=10, framealpha=0.9,
+              bbox_to_anchor=(1.005, 1.0), borderaxespad=0)
     zag = f"{symbol} {timeframe}".strip()
     if zag:
         ax.set_title(zag, fontsize=15, loc="left", color="#222")
@@ -149,6 +188,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
     # Подписи времени — редко: частые превращаются в кашу
     shag = max(1, n // 8)
     poz = list(range(0, n, shag))
+    axo.set_xlim(-1, n + SDVIG_JAW + 1)
     axo.set_xticks(poz)
     axo.set_xticklabels([str(b[i].get("date", ""))[:16] for i in poz],
                         rotation=0, fontsize=9)
@@ -174,7 +214,8 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
     from feed_source import bars as source_bars
-    from williams_core import compute_alligator, compute_ao_series
+    from williams_core import (compute_alligator, compute_ao_series,
+                               detect_fractals)
 
     bs, point = source_bars(symbol, timeframe, count=max(400, barov + 60))
     if not bs:
@@ -183,4 +224,6 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
     lows = [x["low"] for x in bs]
     al = compute_alligator(highs, lows, point=point)
     ao = compute_ao_series(highs, lows)
-    return narisovat(bs, al, ao, symbol, timeframe, kuda=kuda, barov=barov)
+    fr = detect_fractals(bs)
+    return narisovat(bs, al, ao, symbol, timeframe, kuda=kuda, barov=barov,
+                     fraktaly=fr)

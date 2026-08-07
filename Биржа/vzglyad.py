@@ -45,62 +45,59 @@ _BIRZHA = Path(__file__).resolve().parent
 if str(_BIRZHA) not in sys.path:
     sys.path.insert(0, str(_BIRZHA))
 
-# Слот трейдера один. Характер даёт носитель, а не слот — закон
-# Картриджа («они все сами по себе разные»). Сменил носителя —
-# сменил характер, архитектуру не трогаешь.
-TREYDER_CEH, TREYDER_SLOT = "торговый_хаос", "A06"
+# Трейдеров трое, и каждый подключается НЕЗАВИСИМО — не собрание, не
+# голосование: посмотрел сам, решил сам. Характер даёт носитель в
+# слоте (закон Картриджа), поэтому слоты и различаются только тем,
+# кто в них сидит.
+TREYDER_CEH = "торговый_хаос"
+TREYDERY = ("A06", "A07", "A08")
+TREYDER_SLOT = TREYDERY[0]          # с кем работаем, если не сказано
 
 
 # ═════════════════════════════════════════════════════════════
 # ШАГ 1 — ВЗГЛЯД. Голая картинка, ни одного числа.
 # ═════════════════════════════════════════════════════════════
-VOPROS_VZGLYAD = """Перед тобой график. Больше ничего — ни показаний
-приборов, ни подсказок. Смотри своими глазами.
+VOPROS_VZGLYAD = """Перед тобой рынок. Смотри.
 
-Первой строкой ответь ровно одним словом:
-ВИЖУ — если на правом краю складывается рабочая картина;
-МИМО — если нет: намешано, линии сплелись, ничего не выделяется,
-       или движение уже ушло без тебя.
+Расскажи своими словами, что здесь происходит — так, как рассказал бы
+человеку, который стоит рядом. Не по списку и не по пунктам: что видишь,
+то и говори.
 
-МИМО — нормальный ответ и самый частый. Отказ это работа, а не её
-отсутствие. Не выдумывай картину, если её нет.
+Вильямс на первом уровне велит следить за рынком бар за баром и прямо
+предупреждает: не подгонять под увиденное готовый образец. Поэтому
+никаких шаблонов от тебя не ждут. Ждут, что ты посмотришь.
 
-Дальше 2–4 строки: что именно ты видишь. Только то, что нарисовано —
-как идут линии друг относительно друга, где цена по отношению к ним,
-что с гистограммой внизу. Без выводов о будущем."""
+Если работы здесь нет — так и скажи, это нормальный и самый частый
+ответ. Если есть — скажи, что бы ты сделал и почему.
+
+Не хватает чего-то, чтобы решить, — попроси. Отдельной строкой:
+
+    ПРИБОРЫ: что именно тебе нужно
+
+Например: ПРИБОРЫ: куда смотрит старший этаж; или: ПРИБОРЫ: где
+последние фракталы и какой выйдет стоп. Проси только то, чего не видно
+глазом, — считать за тебя то, что и так нарисовано, никто не станет."""
 
 
 # ═════════════════════════════════════════════════════════════
 # ШАГ 2 — ПРИБОРЫ. Только если увидел.
 # ═════════════════════════════════════════════════════════════
-VOPROS_PRIBORY = """Ты увидел картину и сказал:
-
-{vzglyad}
-
-Теперь показания приборов по тому же графику:
+VOPROS_PRIBORY = """Ты попросил приборы. Вот они:
 
 {pribory}
 
-Сверь их с тем, что видел глазом. Если прибор говорит не то, что ты
-разглядел, — так и скажи, это важнее, чем сойтись.
+Смотри на ту же картинку и договаривай. Если прибор говорит не то, что
+ты разглядел глазом, — так и скажи: глаз важнее, чем сойтись с цифрой.
 
-Ответь так:
-РЕШЕНИЕ: ВХОД | ЖДУ | МИМО
-СТОРОНА: BUY | SELL | —
-СТОП: цена, за которой ты неправ (или —)
-ПОЧЕМУ: 2–3 строки своими словами
-
-ВХОД бери только если сходится всё сразу: направление большой воды,
-откат состоялся, бар в ту же сторону и стоп выходит коротким. Не
-сошлось хоть одно — ЖДУ или МИМО. Длинный стоп означает, что движение
-ушло без тебя: это не повод входить осторожнее, это повод пропустить."""
+Что делаешь и почему? Если входишь — назови сторону и цену, за которой
+ты неправ."""
 
 
-def _dusha_treydera() -> str:
+def _dusha_treydera(slot: str = TREYDER_SLOT) -> str:
     """Личность носителя со всем нажитым — то же, что видит его кабинет."""
     try:
         from nositel import dusha_slota
-        d = dusha_slota(TREYDER_CEH, TREYDER_SLOT)
+        d = dusha_slota(TREYDER_CEH, slot)
         return d.get("душа") or d.get("dusha") or ""
     except Exception:
         return ""
@@ -111,19 +108,18 @@ def _kartinka(put: Path) -> list:
              "mime_type": "image/png", "name": put.name}]
 
 
-def _pervoe_slovo(otvet: str) -> str:
-    """ВИЖУ или МИМО из первой строки. Не разобрали — считаем МИМО:
-    непонятный ответ не повод тратить второй вызов."""
-    for s in (otvet or "").strip().splitlines():
-        s = s.strip().upper()
-        if not s:
-            continue
-        if s.startswith("ВИЖУ"):
-            return "ВИЖУ"
-        if s.startswith("МИМО"):
-            return "МИМО"
-        break
-    return "МИМО"
+def _prosba_o_priborah(otvet: str) -> str:
+    """Что трейдер попросил, если попросил. Пусто — не просил.
+
+    Городской закон: житель сам решает, чего ему не хватает, и просит
+    (так же устроены MAYAK_REQUEST и просев). Мы не решаем за него,
+    какие цифры ему нужны, и не суём их, пока он смотрит.
+    """
+    for stroka in (otvet or "").splitlines():
+        st = stroka.strip()
+        if st.upper().startswith("ПРИБОРЫ"):
+            return st.split(":", 1)[1].strip() if ":" in st else "все"
+    return ""
 
 
 def _pribory_tekstom(symbol: str, timeframe: str, bars: list,
@@ -168,8 +164,13 @@ def _pribory_tekstom(symbol: str, timeframe: str, bars: list,
 
 def posmotret(symbol: str, timeframe: str,
               on_event: Optional[Callable] = None,
-              kadr_put: Optional[Path] = None) -> dict:
-    """Один взгляд трейдера. Возвращает что увидел и что решил.
+              kadr_put: Optional[Path] = None,
+              slot: str = TREYDER_SLOT) -> dict:
+    """Один взгляд ОДНОГО трейдера. Что увидел и что решил.
+
+    slot — кого зовём: A06 / A07 / A08. Каждый смотрит сам и решает
+    сам; их ответы не сводятся и не голосуются. Один кадр можно дать
+    всем троим — получишь три независимых мнения на одну картинку.
 
     on_event(dict) — вести в кабинет, может быть None.
     """
@@ -180,8 +181,8 @@ def posmotret(symbol: str, timeframe: str,
             except Exception:
                 pass
 
-    itog = {"symbol": symbol, "timeframe": timeframe, "кадр": None,
-            "взгляд": "", "увидел": False, "приборы": "", "решение": ""}
+    itog = {"symbol": symbol, "timeframe": timeframe, "слот": slot, "кадр": None,
+            "взгляд": "", "просил": "", "приборы": "", "решение": ""}
 
     import grafik
     from feed_source import bars as source_bars
@@ -196,41 +197,44 @@ def posmotret(symbol: str, timeframe: str,
     itog["кадр"] = str(put)
     _ev({"type": "kadr", "путь": str(put)})
 
-    dusha = _dusha_treydera()
+    dusha = _dusha_treydera(slot)
 
-    # ── ШАГ 1: смотрит. Ни одного числа в запросе. ──
+    # ── СМОТРИТ. Ни одного числа в запросе. ──
     vzglyad = llm.chat_with_images(
         system=dusha, user_text=VOPROS_VZGLYAD, images=_kartinka(put),
-        agent_id="treyder", slot_id=TREYDER_SLOT)
+        agent_id="treyder", slot_id=slot)
     itog["взгляд"] = vzglyad or ""
-    _ev({"type": "vzglyad", "текст": itog["взгляд"]})
+    _ev({"type": "vzglyad", "текст": itog["взгляд"], "слот": slot})
 
-    if _pervoe_slovo(vzglyad) != "ВИЖУ":
-        itog["решение"] = "МИМО"
-        _ev({"type": "reshenie", "решение": "МИМО",
-             "почему": "картины не увидел"})
+    prosba = _prosba_o_priborah(vzglyad)
+    if not prosba:
+        # Приборов не просил — значит и не нужны. Ничего больше не
+        # считаем и не тратим: он посмотрел и сказал.
+        itog["решение"] = itog["взгляд"]
         return itog
 
-    itog["увидел"] = True
+    itog["просил"] = prosba
+    _ev({"type": "prosba", "текст": prosba})
 
-    # ── ШАГ 2: только теперь приборы ──
+    # ── ПОПРОСИЛ — ДАЁМ. Только теперь считаем. ──
     bars, point = source_bars(symbol, timeframe, count=400)
     if not bars or len(bars) < 42:
-        itog["решение"] = "МИМО"
-        _ev({"type": "reshenie", "решение": "МИМО", "почему": "баров мало"})
+        itog["решение"] = itog["взгляд"] + "\n\n(приборов нет: баров мало)"
         return itog
 
     pribory, md = _pribory_tekstom(symbol, timeframe, bars, point)
     itog["приборы"] = pribory
     _ev({"type": "pribory", "текст": pribory})
 
-    reshenie = llm.chat_with_images(
+    dogovorka = llm.chat_with_images(
         system=dusha,
-        user_text=VOPROS_PRIBORY.format(vzglyad=vzglyad, pribory=pribory),
+        user_text=VOPROS_PRIBORY.format(pribory=pribory),
         images=_kartinka(put),
-        agent_id="treyder", slot_id=TREYDER_SLOT)
-    itog["решение"] = reshenie or ""
-    _ev({"type": "reshenie", "текст": itog["решение"]})
+        history=[{"role": "user", "content": VOPROS_VZGLYAD},
+                 {"role": "assistant", "content": vzglyad}],
+        agent_id="treyder", slot_id=slot)
+    itog["решение"] = dogovorka or ""
+    _ev({"type": "reshenie", "текст": itog["решение"], "слот": slot})
 
     # Стол в шину — для дневника и для ведения позиции.
     # Код ничего не решает, только кладёт факты рядом с решением.
@@ -238,8 +242,8 @@ def posmotret(symbol: str, timeframe: str,
         from hooks import load_trading_state, save_trading_state
         ts = load_trading_state()
         ts["market_data"] = md
-        ts["vzglyad"] = {"кадр": str(put), "взгляд": vzglyad,
-                         "решение": itog["решение"]}
+        ts.setdefault("vzglyad", {})[slot] = {
+            "кадр": str(put), "взгляд": vzglyad, "решение": itog["решение"]}
         save_trading_state(ts)
     except Exception:
         pass

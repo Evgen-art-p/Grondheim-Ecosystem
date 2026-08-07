@@ -115,29 +115,42 @@ A3_NEW = '''    # ── KABINET_GRAFIK_V1: кадр ─────────
         return p
 
     async def vzglyad_treydera():
-        """Трейдер смотрит на кадр и решает. Не увидел — на этом всё."""
+        """Активный трейдер смотрит на кадр и решает.
+
+        Смотрит ТОТ, чей пузырёк выбран в шапке: трое работают
+        независимо, каждый сам по себе. Хочешь три мнения на одну
+        картинку — жми по очереди, переключая пузырёк.
+        """
         symbol, tf = _aktivnyy_rynok()
-        ui.notify(f"👁 {symbol} {tf} — трейдер смотрит…", type="info")
+        _slot = state.get("active_agent") or "A06"
+        if _slot not in ("A06", "A07", "A08"):
+            ui.notify("Выбери в шапке трейдера — смотрит он, не Архивариус",
+                      type="warning")
+            return
+        _kto = _agent_label(roster, _slot)
+        ui.notify(f"👁 {_kto} смотрит {symbol} {tf}…", type="info")
         try:
             import vzglyad as _vz
             # так же, как кабинет уже гоняет тестер: в исполнителе, чтобы
             # интерфейс не замирал на время двух вызовов модели
             _loop = asyncio.get_event_loop()
             itog = await _loop.run_in_executor(
-                None, lambda: _vz.posmotret(symbol, tf))
+                None, lambda: _vz.posmotret(symbol, tf, slot=_slot))
         except Exception as e:
             ui.notify(f"⚠ взгляд сорвался: {e}", type="negative")
             return
         if itog.get("кадр"):
             pokazat_kadr(itog["кадр"])
-        chasti = [f"### 👁 Взгляд — {symbol} {tf}\\n\\n{itog.get('взгляд','')}"]
+        chasti = [f"### 👁 {_kto} ({_slot}) — {symbol} {tf}\\n\\n{itog.get('взгляд','')}"]
+        if itog.get("просил"):
+            chasti.append(f"### 🙋 Попросил\\n\\n{itog['просил']}")
         if itog.get("приборы"):
             chasti.append(f"### 📐 Приборы\\n\\n{itog['приборы']}")
-        if itog.get("решение"):
-            chasti.append(f"### ⚖️ Решение\\n\\n{itog['решение']}")
+        if itog.get("решение") and itog.get("просил"):
+            chasti.append(f"### ⚖️ Договорил\\n\\n{itog['решение']}")
         update_viewer("\\n\\n".join(chasti))
-        ui.notify("👁 " + ("увидел" if itog.get("увидел") else "мимо"),
-                  type="positive" if itog.get("увидел") else "info")
+        ui.notify(f"👁 {_kto}: " + ("попросил приборы" if itog.get("просил")
+                                    else "посмотрел"), type="info")
 
     def update_viewer(content: str):
 '''

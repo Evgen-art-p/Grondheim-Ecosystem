@@ -1433,21 +1433,14 @@ def page_akademia() -> None:
             ui.notify("Место свободно — читать некому", type="warning")
             return
         imya, dom = m["имя"], m["дом"]
-        # STOL_TOLKO_POLOZHENNOE_V1: берём ТОЛЬКО то, что положили в
-        # загрузчик за эту сессию. Раньше здесь читалась вся папка руды
-        # целиком — а руда общая и не расходуется, там копится всё за
-        # месяц, и ученику вываливалось пачкой чужое и случайное.
         fajly = []
-        for _r in (state.get("руда") or []):
-            _p = _r.get("путь")
-            if not _p:
-                continue
-            fp = Path(_p)
-            if fp.is_file():
-                fajly.append((fp, _r.get("вид") or "текст"))
+        for papka, vid in ((_RUDA / "тексты", "текст"), (_RUDA / "изображения", "изображение")):
+            if papka.exists():
+                for fp in sorted(papka.iterdir()):
+                    if fp.is_file():
+                        fajly.append((fp, vid))
         if not fajly:
-            ui.notify("Стол пуст — положи материал в загрузчик",
-                      type="warning")
+            ui.notify("Стол пуст — нечего читать", type="warning")
             return
         uzhe = set(_kto_chto_prochital().get(imya, []))
         novye = [(fp, vid) for fp, vid in fajly if fp.name not in uzhe]
