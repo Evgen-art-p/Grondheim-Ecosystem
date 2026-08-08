@@ -113,44 +113,9 @@ def _scan_zhiteli_maski():
     return out
 
 
-def _zhitel_po_imeni(imya: str):
-    """RABOTA_DOKUMENT_V1: житель по имени, без всяких масок работы.
-    Нужен, когда правду о найме говорит документ места, а не бумажка
-    в жителе. Магик по-прежнему берём из маски — он про человека и
-    его сделки, а не про место."""
-    imya = (imya or "").strip()
-    if not imya:
-        return None
-    root = CITY / "жители"
-    if not root.exists():
-        return None
-    for passport_path in sorted(root.glob("*/*/passport.json")):
-        p = _read_json(passport_path) or {}
-        if (p.get("Official_Name") or passport_path.parent.name).strip() != imya:
-            continue
-        dom = passport_path.parent
-        mask = _read_json(dom / "маски" / "работа" / "mask.json") or {}
-        return {
-            "имя": p.get("Official_Name", dom.name),
-            "id": p.get("ID_Object", ""),
-            "тип": p.get("тип", ""),
-            "папка": str(dom),
-            "цех": "",
-            "слот": "",
-            "core_phrase": mask.get("Core_Phrase", ""),
-            "magic": mask.get("magic"),
-        }
-    return None
-
-
 def resolve_para(ceh_id: str, slot: str, kvartal: str = "Биржа"):
     """ЕДИНСТВЕННАЯ точка правды пары (цех, слот) → носитель.
-
-    RABOTA_DOKUMENT_V1: сперва спрашиваем ДОКУМЕНТ МЕСТА
-    (слоты/{слот}/должность.json) — там написано, кого приняли.
-    Работа больше не вкручена в личность: уволить можно, не трогая
-    жителя. Документа у места ещё нет — работаем по-старому, по
-    mask.json, чтобы уже сидящие не выпали из строя.
+    Ищет ТОЛЬКО по mask.json (Workshop_ID + Turbo_Role).
     Честный None: слот пуст / цеха нет / слота в манифесте нет."""
     ceh = get_ceh(ceh_id, kvartal)
     if ceh is None:
@@ -158,22 +123,6 @@ def resolve_para(ceh_id: str, slot: str, kvartal: str = "Биржа"):
     slots = [s.get("слот") for s in ceh.get("слоты", [])]
     if slot not in slots:
         return None  # такой вакансии в цехе не объявлено
-
-    try:
-        import rabota as _rab
-        if _rab.est_dokument(ceh_id, slot, kvartal):
-            _imya = _rab.kto_sidit(ceh_id, slot, kvartal)
-            if not _imya:
-                return None            # документ говорит: место свободно
-            _z = _zhitel_po_imeni(_imya)
-            if _z is None:
-                return None            # в документе имя, а жителя нет
-            _z["цех"] = ceh_id
-            _z["слот"] = slot
-            return _z
-    except Exception:
-        pass                            # механизма нет — по-старому
-
     for z in _scan_zhiteli_maski():
         if z["цех"] == ceh_id and z["слот"] == slot:
             return z
@@ -248,5 +197,3 @@ if __name__ == "__main__":
     _by_magic = resolve_by_magic(100002)
     print(f"magic 100002 → {(_by_magic or {}).get('имя') or '— не найден —'}")
     print("═══ конец самопроверки ═══")
-
-# RABOTA_DOKUMENT_V1 - marker

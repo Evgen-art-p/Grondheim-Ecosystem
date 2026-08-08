@@ -533,6 +533,20 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
     # некого. Имена полей те же, что клали они, — ниже по файлу ничего
     # не меняется. Не собрался — вернётся пустой стол той же формы,
     # как и раньше при холодном старте.
+    # KADR_I_VAKANSIYA_V1: пустое место молчит. Мозг — это РОЛЬ, и он
+    # заводился, даже когда за столом никого не было: слот-вакансия
+    # выносил вердикт, называл вход и лот. Решает житель, не стул.
+    try:
+        from nositel import dusha_slota as _dusha
+        _kto_sidit = _dusha(_CEH, _SLOT)
+    except Exception:
+        _kto_sidit = None
+    if not _kto_sidit:
+        return {"ok": False,
+                "error": "вакансия — за столом никого, смотреть некому",
+                "narrative": "", "signal": {}, "diary_entry": {},
+                "stats": _load_stats(), "market": {}, "table": {}}
+
     try:
         import stol as _stol
         table = _stol.nakryt(symbol, timeframe, self_key=_SELF_KEY)
@@ -772,3 +786,5 @@ def _my_temp():
 # VASYA_SVOY_RAZVOROT_V1 - marker
 
 # TREYDER_ZHIV_V1 - marker
+
+# KADR_I_VAKANSIYA_V1 - marker

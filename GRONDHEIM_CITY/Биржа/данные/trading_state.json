@@ -1,76 +1,30 @@
 {
   "version": 1,
-  "updated": "2026-08-08T23:41:17.077908",
+  "updated": "2026-08-09T00:36:41.479518",
   "iskra": {
-    "t1_status": "DETECTED",
-    "zero_point_price": 1.30824,
-    "history_dna": "v2_descent found BEAR @1.30824 H4, against BULL compass, updating DETECTED from prev 1.28293; last AO pivot MIN -0.00029091 @1.30239 2012.10.22 08:00",
-    "trend_direction": "BULL",
-    "compass": "BULL",
-    "soglasie": false,
-    "dlina": 55,
-    "struktura_chitaetsya": true,
-    "found_timeframe": null,
-    "alive": false,
-    "rodilas_na_bare": "2012.10.22 16:00",
-    "neutral_bars_count": 0
+    "t1_status": "NOT_FOUND",
+    "zero_point_price": null,
+    "history_dna": ""
   },
-  "positions": [
-    {
-      "trader": "BRUT",
-      "magic": 100001,
-      "direction": "LONG",
-      "entry": 4371.74,
-      "stop": 4220.77,
-      "tp": null,
-      "lot": 0.1,
-      "status": "PENDING",
-      "_ждёт_с": "2026.08.07 20:00",
-      "_ждёт_баров": 0,
-      "mode": "PAPER",
-      "opened_at": "2026.08.07 20:00",
-      "pnl": null,
-      "iskra_zero_point": 1.30824,
-      "стол_входа": {
-        "iskra": {
-          "t1_status": "DETECTED",
-          "zero_point_price": 1.30824,
-          "trend_direction": "BULL"
-        },
-        "morj": {
-          "morj_status": "AWAKE",
-          "wave_1_validated": false,
-          "tension_peak": true
-        },
-        "panic": {
-          "panic_phase": "GREED"
-        },
-        "hans": {
-          "fractal_valid": false,
-          "fractal_side": null,
-          "fractal_price": null
-        }
-      }
-    }
-  ],
+  "positions": [],
   "feed": {
-    "mode": "real",
-    "symbol": "EURUSD"
+    "mode": "tester",
+    "symbol": "GBPUSD"
   },
   "brut": {
-    "verdict": "APPROVED",
-    "reason": "Пробитие верхнего фрактала за пастью с подтверждением на фоне растущего AO.",
-    "direction": "LONG",
-    "entry": 4371.74,
-    "stop": 4220.77,
-    "lot": 0.1,
-    "action": "ENTER",
+    "verdict": "REJECTED",
+    "reason": "агент не ответил (вакансия — за столом никого, смотреть некому)",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": null,
     "new_stop": null,
     "add_lot": null
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "Недостаточный набор подтверждений: отсутствует приседающий бар и полный сигнал разворота.",
+    "reason": "Не хватает приседающего бара для подтверждения разворота. Входить в текущем состоянии нецелесообразно.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -81,12 +35,12 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "Нет приседающего бара и разворотного бар на откате волны 2, что требуется для входа.",
+    "reason": "агент не ответил (вакансия — за столом никого, смотреть некому)",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": "WAIT",
+    "action": null,
     "new_stop": null,
     "add_lot": null
   },

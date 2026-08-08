@@ -194,23 +194,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
                         rotation=0, fontsize=9)
 
     if kuda is None:
-        # KADR_I_VAKANSIYA_V1: своё имя каждому снимку. Один файл на
-        # все кадры значил, что браузер и глаз трейдера получают по
-        # знакомому адресу вчерашнюю картинку.
-        from datetime import datetime as _dt
-        _papka = Path(__file__).resolve().parent / "кадры"
-        _papka.mkdir(parents=True, exist_ok=True)
-        _chisto = lambda s: "".join(
-            c for c in str(s) if c.isalnum() or c in "-_") or "нет"
-        kuda = _papka / (f"{_chisto(symbol)}_{_chisto(timeframe)}_"
-                         f"{_dt.now().strftime('%Y%m%d_%H%M%S_%f')}.png")
-        try:   # папка не должна расти без края: держим последние 20
-            _bylye = sorted(_papka.glob("*.png"),
-                            key=lambda f: f.stat().st_mtime)
-            for _f in _bylye[:-20]:
-                _f.unlink(missing_ok=True)
-        except Exception:
-            pass
+        kuda = Path(__file__).resolve().parent / "кадр.png"
     kuda = Path(kuda)
     kuda.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(kuda, facecolor=C_FON, bbox_inches="tight")
@@ -243,5 +227,3 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
     fr = detect_fractals(bs)
     return narisovat(bs, al, ao, symbol, timeframe, kuda=kuda, barov=barov,
                      fraktaly=fr)
-
-# KADR_I_VAKANSIYA_V1 - marker
