@@ -22,7 +22,7 @@ run_iskra/run_morj/...) НЕ ПЕРЕДЕЛЫВАЛИ — она приходи�
   торговый_хаос: A01 A02 A03 A04 A06 A07 A08 (7 слотов-воркеров)
   контора:       архивариус, исполнитель (штаб, общий на всю Биржу)
   Здесь это один и тот же экран (Совет всегда виделся целиком) —
-  ROSTER_SPEC ниже сводит оба цеха в один хедер, порядок и иконки —
+  Состав читается из манифестов цехов (SOSTAV_S_DISKA_V1), иконки —
   как в старом TRADING_COUNCIL (A05=архивариус, A09=исполнитель).
 
 Промпт роли — СОБСТВЕННОСТЬ ЦЕХА (слоты/A0X/промпт.md в manifest),
@@ -100,17 +100,20 @@ KVARTAL = "Биржа"
 
 # ── СОСТАВ СОВЕТА — порядок/иконки как в старом TRADING_COUNCIL ──────
 # (ceh_id, реальный_слот_в_цехе, id_для_движка(A01..A09), иконка)
-# PUZYRKI_TOLKO_ZHIVYE_V1: на панели только те, у кого есть своё слово.
-# Сенсоры (A01 Искра, A02 Морж, A03 Паникёр, A04 Ганс) стали
-# математикой — аватар над формулой только путает: выглядит как
-# собеседник, а собеседника там нет. Их слоты на диске целы.
-ROSTER_SPEC = [
-    ("торговый_хаос", "A06",         "A06", "🪨"),
-    ("торговый_хаос", "A07",         "A07", "🎲"),
-    ("торговый_хаос", "A08",         "A08", "⚖️"),
-    ("контора",       "архивариус",  "A05", "📚"),
-    ("контора",       "исполнитель", "A09", "🎬"),
-]
+# SOSTAV_S_DISKA_V1: вбитого списка агентов здесь БОЛЬШЕ НЕТ — канон
+# прямо запрещает кабинету его хранить (БИРЖА.md §2). Состав читается
+# из манифестов цехов. Осталась табличка иконок: манифест их пока не
+# знает, а появится в слоте поле «иконка» — возьмётся оно.
+IKONKI_PO_SLOTU = {
+    "A01": "✴️", "A02": "🦭", "A03": "😱", "A04": "🎯",
+    "A06": "🪨", "A07": "🎲", "A08": "⚖️",
+    "архивариус": "📚", "исполнитель": "🎬",
+}
+IKONKA_PO_UMOLCHANIYU = "🎓"
+
+# Старые имена A05/A09 для штабных слотов: движок и отчёты кабинета
+# зовут их так исторически, ломать эти имена — трогать полгорода.
+STARYE_IMENA = {"архивариус": "A05", "исполнитель": "A09"}
 
 
 def _read_json(p: Path):
@@ -160,18 +163,50 @@ def _building_bg_url(building_id: str) -> str:
     return ""
 
 
-def _build_roster(static_prefix: str) -> list:
-    """Сводит оба цеха Биржи в один список пузырьков — Закон Пары
-    решает, кто где сидит, эта функция просто собирает экран."""
+def _sostav_kvartala() -> list:
+    """Кто вообще есть в квартале — по манифестам, а не по списку.
+
+    Сколько слотов объявлено в цехах, столько и участников. Нет папки
+    слота или нет мозга — участника нет, и это НЕ ошибка: слот просто
+    не заведён. Один трейдер на всю Биржу — законное состояние.
+
+    Штаб (тот цех, которого другие назвали своим штабом) идёт
+    последним: он служба, а не цех.
+    """
+    ceha = reg.list_ceha(KVARTAL) or []
+    shtaby = {c.get("штаб") for c in ceha if c.get("штаб")}
+    ceha.sort(key=lambda c: (1 if c.get("id") in shtaby else 0, c.get("id", "")))
+
     out = []
-    for ceh_id, slot, old_id, icon in ROSTER_SPEC:
-        ceh = reg.get_ceh(ceh_id, KVARTAL)
-        rol = ""
-        if ceh:
-            for s in ceh.get("слоты", []):
-                if s.get("слот") == slot:
-                    rol = s.get("роль", "")
-                    break
+    for c in ceha:
+        if c.get("_битый"):
+            continue
+        ceh_id = c.get("id", "")
+        put_slotov = Path(c.get("_путь", "")) / "слоты"
+        for s in c.get("слоты", []):
+            slot = s.get("слот")
+            if not slot:
+                continue
+            if not (put_slotov / slot / "мозг.py").exists():
+                continue          # слота нет — молча пропускаем
+            out.append({
+                "ceh_id": ceh_id,
+                "slot": slot,
+                "old_id": STARYE_IMENA.get(slot, slot),
+                "role": s.get("роль", ""),
+                "icon": (s.get("иконка") or IKONKI_PO_SLOTU.get(slot)
+                         or IKONKA_PO_UMOLCHANIYU),
+            })
+    return out
+
+
+def _build_roster(static_prefix: str) -> list:
+    """Сводит цеха Биржи в один список пузырьков — Закон Пары решает,
+    кто где сидит, эта функция просто собирает экран."""
+    out = []
+    for _z in _sostav_kvartala():
+        ceh_id, slot = _z["ceh_id"], _z["slot"]
+        old_id, icon, rol = _z["old_id"], _z["icon"], _z["role"]
         resident = reg.resolve_para(ceh_id, slot, KVARTAL)
         if resident:
             try:
@@ -544,9 +579,11 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
     # ── состояние страницы (как было в ui_exchange.py) ──────────
     state = {
-        # PUZYRKI_TOLKO_ZHIVYE_V1: Искры на панели больше нет —
-        # активным по умолчанию встаёт первый трейдер.
-        "active_agent": "A06",
+        # POCHINIT_SOSTAV_V1: активным встаёт первый, кто реально есть
+        # на диске. Состав собран строкой выше, поэтому берём прямо
+        # здесь — раньше это стояло ДО создания state и роняло кабинет.
+        # Пусто в квартале — пустая строка, и ничего не падает.
+        "active_agent": (roster[0]["old_id"] if roster else ""),
         "chat_history": [],
         "reports": {},
         "uploaded_files": [],
@@ -647,31 +684,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         with kadr_ref["element"]:
             ui.image(str(p)).style("width:100%; height:auto;")
         return p
-
-    async def vzglyad_treydera():
-        """Трейдер смотрит на кадр и решает. Не увидел — на этом всё."""
-        symbol, tf = _aktivnyy_rynok()
-        ui.notify(f"👁 {symbol} {tf} — трейдер смотрит…", type="info")
-        try:
-            import vzglyad as _vz
-            # так же, как кабинет уже гоняет тестер: в исполнителе, чтобы
-            # интерфейс не замирал на время двух вызовов модели
-            _loop = asyncio.get_event_loop()
-            itog = await _loop.run_in_executor(
-                None, lambda: _vz.posmotret(symbol, tf))
-        except Exception as e:
-            ui.notify(f"⚠ взгляд сорвался: {e}", type="negative")
-            return
-        if itog.get("кадр"):
-            pokazat_kadr(itog["кадр"])
-        chasti = [f"### 👁 Взгляд — {symbol} {tf}\n\n{itog.get('взгляд','')}"]
-        if itog.get("приборы"):
-            chasti.append(f"### 📐 Приборы\n\n{itog['приборы']}")
-        if itog.get("решение"):
-            chasti.append(f"### ⚖️ Решение\n\n{itog['решение']}")
-        update_viewer("\n\n".join(chasti))
-        ui.notify("👁 " + ("увидел" if itog.get("увидел") else "мимо"),
-                  type="positive" if itog.get("увидел") else "info")
 
     def update_viewer(content: str):
         if not viewer_ref["element"]:
@@ -2126,11 +2138,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         "font-size:0.75rem; padding:8px 14px; border-radius:20px; "
                         "color:rgba(139,233,253,0.9); background:rgba(139,233,253,0.10); "
                         "border:1px solid rgba(139,233,253,0.35); white-space:nowrap;")
-                    ui.button("👁 взгляд", on_click=vzglyad_treydera).props(
-                        "flat no-caps").style(
-                        "font-size:0.75rem; padding:8px 14px; border-radius:20px; "
-                        "color:rgba(255,214,102,0.95); background:rgba(255,214,102,0.10); "
-                        "border:1px solid rgba(255,214,102,0.35); white-space:nowrap;")
                     ui.button("SEND", on_click=send_message).classes("send-button")
 
         with ui.element("div").classes("area-right"):

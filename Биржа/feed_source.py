@@ -175,6 +175,21 @@ def bars(symbol: str, tf: str, count: int = 2000) -> Tuple[list, Optional[float]
     williams_core. Движок/Искра/спуск зовут ровно это и не знают крана.
     """
     mode = get_feed_mode()["mode"]
+
+    # FEED_CHEREZ_ISTOKI_V1: сперва спрашиваем ИСТОК — файл в папке
+    # Биржа/истоки/. Положил туда файл — появился новый источник, эту
+    # функцию править не надо. Исток, ответивший барами, втыкается в
+    # гнездо Маяка: город видит, откуда течёт.
+    try:
+        import istoki as _ist
+        _b, _p = _ist.bars(mode, symbol, tf, count)
+        if _b:
+            return _b, _p
+    except Exception as _e_ist:
+        print(f"[FEED] истоки недоступны ({_e_ist}) — иду прежним путём")
+
+    # Истока нет, он молчит или папку ещё не положили — работаем как
+    # работали. Отсутствие нового не должно ломать старое.
     if mode == "tester":
         return _bars_from_folder(symbol, tf, count)
     return _bars_from_terminal(symbol, tf, count)

@@ -243,21 +243,26 @@ def wake_council(symbol: str, timeframe: str,
                  on_event: Optional[Callable] = None,
                  window=None, point=None) -> dict:
     """
-    БУДИТ СОВЕТ на текущем баре. symbol/timeframe — паспорт, течёт
-    в каждого агента (они сами берут бар своего этажа — спуск Искры
-    решает где). on_event(dict) — вести наружу (лента кабинета/тестера),
-    может быть None.
+    ОЧЕРЁДНОСТЬ РАБОТЫ на текущем баре. Имя осталось прежним, чтобы
+    кабинет и тестер звали как звали, но собрания больше нет.
 
-    Возвращает сводку: кто что сказал + полные результаты каждого
-    агента (в results, чтобы UI мог обновить свои панели). Позиции
-    открывает Исполнитель (рука-код), закрывает _settle на следующем
-    баре — движок этого не трогает, только будит по порядку.
+    SOVET_BEZ_SENSOROV_V1 (решение Шефа 06.08). Было: Искра будила
+    себя от рынка, её СПУСК был воротами — не нашёл точку, все
+    расходятся. Сенсоры уехали в архив, значит спуска нет никогда, и
+    ворота не открылись бы ни разу: трейдеры не проснулись бы вообще.
 
-    on_event получает словари вида:
-      {"type": "agent", "id": "A02", "ok": True, "result": {...},
-       "narrative": "...", "verdict": "APPROVED"|None}
-      {"type": "council_idle", "why": "..."}   — спуск не нашёл точку
-    result — ПОЛНЫЙ словарь run_* (UI берёт из него signal/market/stats).
+    Стало: ворот нет и сенсоров нет. Каждый трейдер накрывает себе
+    стол сам (Биржа/stol.py) и сам решает — смотреть ему тут или
+    расходиться. Право промолчать переехало туда, где ему место: к
+    тому, кого этому учили, а не в замок на чужом сигнале.
+
+    symbol/timeframe — паспорт, течёт в каждого. on_event(dict) —
+    вести наружу (лента кабинета/тестера), может быть None.
+
+    Возвращает ту же сводку, что и раньше: кто что сказал плюс полные
+    результаты каждого (в results, чтобы UI обновил свои панели).
+    Позиции открывает Исполнитель (рука-код), закрывает _settle на
+    следующем баре — здесь их не трогают.
     """
     def _emit(ev):
         if on_event:
@@ -269,69 +274,10 @@ def wake_council(symbol: str, timeframe: str,
     summary = {"woke": [], "verdicts": {}, "orders": None,
                "idle": False, "results": {}}
 
-    # ── Искра (голова) ──
-    ceh, slot, fn = _ISKRA
-    ri = _call(ceh, slot, fn, symbol=symbol, timeframe=timeframe)
-    summary["woke"].append("A01")
-    summary["results"]["A01"] = ri
-    _emit({"type": "agent", "id": "A01", "ok": ri.get("ok"),
-           "result": ri, "narrative": ri.get("narrative", "")})
-
-    # ворота по спуску (COUNCIL_BY_DESCENT_V1): нашёл точку — Совет
-    # собирается. нет — расходимся. Это ФАКТ спуска, не суждение
-    # Искры-LLM (её t1_status идёт в Совет как голос, не как замок).
-    # KRIK_ISKRY_V1: различаем ДВА РАЗНЫХ случая, которые раньше
-    # сливались в один и врали Шефу:
-    #   а) Искра УПАЛА (ok=False) — в её аварийном return нет "descent"
-    #      вообще, и ворота читали это как «спуск не нашёл». Ложь:
-    #      спуск отработал, упало позже. Кричим ПОЧЕМУ.
-    #   б) Искра отработала, но спуск честно не нашёл точку — расходимся.
-    if not ri.get("ok"):
-        _err = ri.get("error", "?")
-        print(f"[СОВЕТ] ⛔ ИСКРА УПАЛА: {_err}")
-        print("[СОВЕТ]    Совет не собрался НЕ из-за спуска — из-за сбоя.")
-        _emit({"type": "council_idle",
-               "why": f"Искра упала: {_err}",
-               "descent": {}, "iskra_error": _err})
-        summary["idle"] = True
-        summary["iskra_error"] = _err
-        return summary
-
-    descent = ri.get("descent", {}) or {}
-    _svezhy_spusk = bool(descent.get("found"))
-
-    # COUNCIL_GATE_TROYNOY_V1: Триггер А не сработал — пробуем Б/В.
-    # Дешёвая проверка (без LLM): точка жива И (фрактал Ганса ИЛИ
-    # Большой палец) прямо на ЭТОМ баре.
-    _cheap = None
-    if not _svezhy_spusk:
-        _cheap = _deshyovaya_proverka_tochki(symbol, timeframe,
-                                             window=window, point=point)
-
-    if not _svezhy_spusk and not (_cheap and _cheap.get("trigger")):
-        _tochka_info = (_cheap or {}).get("tochka", {})
-        _emit({"type": "council_idle",
-               "why": ("спуск не нашёл точку, точка не жива/триггера нет "
-                      f"({_tochka_info.get('reason', '?')})"),
-               "descent": descent, "tochka": _tochka_info})
-        summary["idle"] = True
-        return summary
-
-    if not _svezhy_spusk and _cheap and _cheap.get("trigger"):
-        print(f"[СОВЕТ] 🎯 Триггер {_cheap['kind']} на живой точке "
-              f"(родилась: {_cheap['tochka'].get('reason','?')}) — "
-              f"будим Совет БЕЗ свежего спуска Искры")
-        _emit({"type": "council_triggered_by_point",
-               "kind": _cheap["kind"], "napravlenie": _cheap["napravlenie"],
-               "tochka": _cheap["tochka"]})
-
-    # ── сенсоры ──
-    for aid, ceh, slot, fn in _SENSORS:
-        r = _call(ceh, slot, fn, symbol=symbol, timeframe=timeframe)
-        summary["woke"].append(aid)
-        summary["results"][aid] = r
-        _emit({"type": "agent", "id": aid, "ok": r.get("ok"),
-               "result": r, "narrative": r.get("narrative", "")})
+    # ── сенсоров больше нет ───────────────────────────────────
+    # Искра, Морж, Паникёр и Ганс стали математикой и уехали из цеха.
+    # Их работу делает Биржа/stol.py — каждый трейдер зовёт его сам,
+    # внутри своего мозга. Будить тут некого.
 
     # ── Архивариус (память, без рынка — сам читает шину) ──
     aid, ceh, slot, fn = _ARKHIV

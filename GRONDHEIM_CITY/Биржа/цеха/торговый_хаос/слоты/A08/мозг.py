@@ -53,7 +53,79 @@ if str(_BIRZHA_CODE) not in _sys.path:
 from llm import chat
 
 PROMPT_PATH  = _SLOT_DIR / "промпт.md"
-KNOWLEDGE    = _SLOT_DIR / "знания" / "KOTIN_PHILOSOPHY.md"
+# ZNANIYA_PAPKOY_V1: канон — «слот несёт с собой знания/», ПАПКУ.
+# Было прибито одно имя файла, и второй файл в папке не читался никем.
+KNOWLEDGE_DIR = _SLOT_DIR / "знания"
+KNOWLEDGE    = KNOWLEDGE_DIR / "KOTIN_PHILOSOPHY.md"   # оставлено для совместимости
+
+
+# ════════════════════════════════════════════════════════════
+# STOL_I_GLAZ_V1 — глаз роли
+# ════════════════════════════════════════════════════════════
+_SLOT = "A08"
+_SELF_KEY = "a08"
+
+_GLAZ_PREAMBULA = (
+    "СПЕРВА ПОСМОТРИ на картинку своими глазами: что здесь происходит? "
+    "Не по списку — как рассказал бы человеку, который стоит рядом. "
+    "Работы не видишь — так и скажи, это законный и самый частый ответ.\n"
+    "Приборы ниже — ВТОРЫМ шагом, чтобы уточнить то, что ты уже "
+    "разглядел. Если прибор говорит не то, что видит глаз, скажи об "
+    "этом: глаз важнее, чем сойтись с цифрой.\n\n"
+)
+
+
+def _glaz(_chat, symbol, timeframe, slot):
+    """Обёртка над вызовом модели: подкладывает кадр.
+
+    Кадр — тот же PNG, что Шеф видит в кабинете: смотрят на одну
+    картинку, иначе проверить роль нечем. Не нарисовался или зрение
+    не сработало — честно зовём прежний вызов, без глаз.
+    """
+    def obertka(system="", user="", knowledge="", **kw):
+        put = None
+        try:
+            import grafik
+            put = grafik.kadr(symbol, timeframe)
+        except Exception as e:
+            print(f"[КАДР] не нарисовался ({e}) — работаю без глаз")
+        if put:
+            try:
+                import base64
+                from pathlib import Path as _P
+                from llm import chat_with_images
+                return chat_with_images(
+                    system=system, user_text=_GLAZ_PREAMBULA + user,
+                    knowledge=knowledge,
+                    images=[{"base64": base64.b64encode(
+                                 _P(put).read_bytes()).decode("ascii"),
+                              "mime_type": "image/png",
+                              "name": _P(put).name}],
+                    agent_id=kw.get("agent_id", slot),
+                    slot_id=kw.get("slot_id", slot))
+            except Exception as e:
+                print(f"[ГЛАЗ] зрение не сработало ({e}) — иду по числам")
+        return _chat(system=system, user=user, knowledge=knowledge, **kw)
+    return obertka
+
+
+def _znaniya_roli() -> str:
+    """Вся база знаний роли — все .md и .txt из папки, по алфавиту.
+
+    Каждый источник под своим заголовком: роль должна понимать, где
+    кончается один и начинается другой, иначе всё сливается в кашу.
+    """
+    if not KNOWLEDGE_DIR.exists():
+        return ""
+    kuski = []
+    for f in sorted(KNOWLEDGE_DIR.iterdir()):
+        if f.is_file() and f.suffix.lower() in (".md", ".txt"):
+            try:
+                kuski.append(f"\n\n===== {f.stem} =====\n"
+                             + f.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+    return "".join(kuski)
 STATE_DIR    = _SLOT_DIR / "данные"
 STATS_PATH   = STATE_DIR / "cons_stats.json"
 DIARY_PATH   = STATE_DIR / "diary_cons.jsonl"
@@ -456,7 +528,17 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
              bars_count: int = 300) -> dict:
     """Один взгляд Консерватора на стол. Читает показания сенсоров (шина)
     + market_data ядра, судит сам по §6.3 (откат волны 2, опора)."""
-    table = _read_table()
+    # STOL_I_GLAZ_V1: стол накрывает КОД, а не сенсоры-голоса.
+    # Сенсоры уехали в архив (решение Шефа 06.08), и ждать их больше
+    # некого. Имена полей те же, что клали они, — ниже по файлу ничего
+    # не меняется. Не собрался — вернётся пустой стол той же формы,
+    # как и раньше при холодном старте.
+    try:
+        import stol as _stol
+        table = _stol.nakryt(symbol, timeframe, self_key=_SELF_KEY)
+    except Exception as _e_stol:
+        print(f"[СТОЛ] ⚠️  не накрылся ({_e_stol}) — читаю шину как раньше")
+        table = _read_table()
     iskra_tf = table.get("iskra", {}).get("found_timeframe")
     if iskra_tf:
         timeframe = iskra_tf
@@ -500,7 +582,7 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
         print(f"[CONS] ⚠️  Носитель не поднялся ({e}) — работаю без души")
 
     prompt    = PROMPT_PATH.read_text(encoding="utf-8") if PROMPT_PATH.exists() else ""
-    knowledge = KNOWLEDGE.read_text(encoding="utf-8") if KNOWLEDGE.exists() else ""
+    knowledge = _znaniya_roli()   # ZNANIYA_PAPKOY_V1: вся папка, не один файл
 
     # DNEVNIK_BEZ_BUDUSHCHEGO_V1: только события ДО текущего бара
     recent = _read_recent_diary(5, as_of_bar_time=md.get("bar_time"))
@@ -527,18 +609,12 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
             "dlina":                own_wave.get("dlina"),
             "struktura_chitaetsya": own_wave.get("struktura_chitaetsya"),
         },
-        "sensors": {
-            "iskra":  {k: table["iskra"].get(k) for k in
-                       ("t1_status", "zero_point_price", "trend_direction",
-                        "dlina", "struktura_chitaetsya")},
-            "morj":   {k: table["morj"].get(k) for k in
-                       ("morj_status", "wave_1_validated", "tension_peak")},
-            "panic":  {k: table["panic"].get(k) for k in
-                       ("panic_phase", "crowd_sentiment")},
-            "hans":   {k: table["hans"].get(k) for k in
-                       ("fractal_valid", "fractal_side", "fractal_price")},
-            "arkhiv": table.get("arkhiv", {}),
-        },
+        # PRIBORY_V_MOZG_V1: здесь были ВЫВОДЫ сенсоров — «бар найден»,
+        # «согласен с водой», «фрактал действителен». Их больше нет:
+        # код не решает за трейдера. Теперь голые показания приборов, а
+        # что они значат — говорит он сам, глядя на кадр.
+        "приборы": table.get("приборы", {}),
+        "arkhiv": table.get("arkhiv", {}),
         "market": {
             "teeth":  alligator.get("teeth"),
             "alligator_sleeping": alligator.get("sleeping"),
@@ -620,6 +696,11 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
         system_full += "\n\n=== ТВОЁ СОСТОЯНИЕ (душа) ===\n" + soul
 
     try:
+        # STOL_I_GLAZ_V1 — ГЛАЗ. Порядок Шефа: сперва посмотреть,
+        # приборы потом. Сам вызов не трогаем — подменяем функцию
+        # обёрткой, которая рисует кадр и уходит в зрение. Кадра нет —
+        # обёртка честно зовёт прежнее, и мозг ничего не замечает.
+        chat = _glaz(chat, symbol, timeframe, _SLOT)
         response = chat(system=system_full, user=user_msg, knowledge=knowledge,
                         agent_id="A08_KONSERVATOR", slot_id="trading", temperature=_my_temp())
     except Exception as e:

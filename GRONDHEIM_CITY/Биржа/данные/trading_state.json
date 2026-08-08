@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-20T05:23:20.402424",
+  "updated": "2026-08-08T01:51:53.111067",
   "iskra": {
     "t1_status": "DETECTED",
     "zero_point_price": 1.30824,
@@ -17,12 +17,12 @@
   },
   "positions": [],
   "feed": {
-    "mode": "tester",
+    "mode": "real",
     "symbol": "EURUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "агент не ответил (Брут не смог решить: OpenRouter API [402]: This request requ)",
+    "reason": "агент не ответил (Брут не смог решить: cannot access local variable 'chat' whe)",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -33,7 +33,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "агент не ответил (Авантюрист не смог решить: OpenRouter API [402]: This reques)",
+    "reason": "агент не ответил (Авантюрист не смог решить: cannot access local variable 'cha)",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -44,7 +44,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "агент не ответил (Консерватор не смог решить: OpenRouter API [402]: This reque)",
+    "reason": "агент не ответил (Консерватор не смог решить: cannot access local variable 'ch)",
     "direction": null,
     "entry": null,
     "stop": null,
