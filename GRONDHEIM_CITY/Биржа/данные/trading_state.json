@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-08T01:51:53.111067",
+  "updated": "2026-08-08T23:41:17.077908",
   "iskra": {
     "t1_status": "DETECTED",
     "zero_point_price": 1.30824,
@@ -15,41 +15,78 @@
     "rodilas_na_bare": "2012.10.22 16:00",
     "neutral_bars_count": 0
   },
-  "positions": [],
+  "positions": [
+    {
+      "trader": "BRUT",
+      "magic": 100001,
+      "direction": "LONG",
+      "entry": 4371.74,
+      "stop": 4220.77,
+      "tp": null,
+      "lot": 0.1,
+      "status": "PENDING",
+      "_ждёт_с": "2026.08.07 20:00",
+      "_ждёт_баров": 0,
+      "mode": "PAPER",
+      "opened_at": "2026.08.07 20:00",
+      "pnl": null,
+      "iskra_zero_point": 1.30824,
+      "стол_входа": {
+        "iskra": {
+          "t1_status": "DETECTED",
+          "zero_point_price": 1.30824,
+          "trend_direction": "BULL"
+        },
+        "morj": {
+          "morj_status": "AWAKE",
+          "wave_1_validated": false,
+          "tension_peak": true
+        },
+        "panic": {
+          "panic_phase": "GREED"
+        },
+        "hans": {
+          "fractal_valid": false,
+          "fractal_side": null,
+          "fractal_price": null
+        }
+      }
+    }
+  ],
   "feed": {
     "mode": "real",
     "symbol": "EURUSD"
   },
   "brut": {
-    "verdict": "REJECTED",
-    "reason": "агент не ответил (Брут не смог решить: cannot access local variable 'chat' whe)",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
-    "action": null,
+    "verdict": "APPROVED",
+    "reason": "Пробитие верхнего фрактала за пастью с подтверждением на фоне растущего AO.",
+    "direction": "LONG",
+    "entry": 4371.74,
+    "stop": 4220.77,
+    "lot": 0.1,
+    "action": "ENTER",
     "new_stop": null,
     "add_lot": null
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "агент не ответил (Авантюрист не смог решить: cannot access local variable 'cha)",
+    "reason": "Недостаточный набор подтверждений: отсутствует приседающий бар и полный сигнал разворота.",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "агент не ответил (Консерватор не смог решить: cannot access local variable 'ch)",
+    "reason": "Нет приседающего бара и разворотного бар на откате волны 2, что требуется для входа.",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },

@@ -547,14 +547,11 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
     # НЕ этаж Искры — этаж НИЖЕ (Правило пятёрки, §4 канона).
     own_wave = _read_vasya_wave(symbol, iskra_tf)
 
-    from mt5_feed import _terminal, _fetch
-    mt5 = _terminal()
-    if mt5 is None:
-        return {"ok": False, "error": "MetaTrader5 не установлен в Python",
-                "narrative": "", "signal": {}, "diary_entry": {},
-                "stats": _load_stats(), "market": {}, "table": table}
-
-    bars, point = _fetch(mt5, symbol, timeframe, bars_count)
+    # TREYDER_ZHIV_V1: бары берём ОБЩИМ источником, а не из терминала
+    # напрямую. Тогда трейдер живёт по тому же крану РЕАЛ/ТЕСТЕР, что и
+    # кадр, а его запрос идёт через исток и виден в гнезде Маяка.
+    from feed_source import bars as _source_bars
+    bars, point = _source_bars(symbol, timeframe, bars_count)
     if not bars or point is None:
         return {"ok": False,
                 "error": f"Терминал не дал котировки {symbol} {timeframe}.",
@@ -700,8 +697,10 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
         # приборы потом. Сам вызов не трогаем — подменяем функцию
         # обёрткой, которая рисует кадр и уходит в зрение. Кадра нет —
         # обёртка честно зовёт прежнее, и мозг ничего не замечает.
-        chat = _glaz(chat, symbol, timeframe, _SLOT)
-        response = chat(system=system_full, user=user_msg, knowledge=knowledge,
+        # TREYDER_ZHIV_V1: обёртка в СВОЁ имя. Присваивание в `chat`
+        # делало его местным на всю функцию — вызов падал всегда.
+        _chat_glazami = _glaz(chat, symbol, timeframe, _SLOT)
+        response = _chat_glazami(system=system_full, user=user_msg, knowledge=knowledge,
                         agent_id="A08_KONSERVATOR", slot_id="trading", temperature=_my_temp())
     except Exception as e:
         return {"ok": False, "error": f"Консерватор не смог решить: {e}",
@@ -719,7 +718,7 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
         from nositel import podnyat_iz_arhiva, blok_pamyati, ubrat_zapros
         _zapros, _naydeno = podnyat_iz_arhiva(_CEH, _SLOT, response)
         if _zapros:
-            response = chat(
+            response = _chat_glazami(
                 system=system_full,
                 user=user_msg + blok_pamyati(_zapros, _naydeno),
                 knowledge=knowledge,
@@ -771,3 +770,5 @@ def _my_temp():
 # DNEVNIK_BEZ_BUDUSHCHEGO_V1 - marker
 
 # VASYA_SVOY_RAZVOROT_V1 - marker
+
+# TREYDER_ZHIV_V1 - marker
