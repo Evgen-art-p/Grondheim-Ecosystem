@@ -1636,6 +1636,14 @@ def page_brat():
                         ui.button("Роль",
                                   on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
                                   ).props("flat").classes("brat-gate")
+                        # RABOTA_KNOPKI_V1: Биржа ходит своей дверью —
+                        # приём и увольнение по документу места, без
+                        # ручного вписывания цеха и слота в личность.
+                        # STRANICA_RABOTY_V1: та табличка не тянулась на
+                        # город — теперь кнопка ведёт на Страницу Работы.
+                        ui.button("Работа",
+                                  on_click=lambda: ui.navigate.to("/rabota")
+                                  ).props("flat").classes("brat-gate")
                 with ui.element("div").classes("stage-content").style(
                     "padding-top:0 !important; padding-bottom:105px;"):
                     with ui.element("div").classes("split-view"):
@@ -1741,3 +1749,9 @@ if __name__ in {"__main__", "__mp_main__"}:
     ui.run(title="Кабинет Брата", port=8101, reload=False)
 
 # BRAT_TYPES_HONEST_V1 — маркер идемпотентности
+
+# RABOTA_KNOPKI_V1 - marker
+
+# STRANICA_RABOTY_V1 - marker
+
+# UBRAT_MYORTVOE_V1 - marker

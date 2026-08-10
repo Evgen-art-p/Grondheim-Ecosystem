@@ -1,0 +1,549 @@
+# -*- coding: utf-8 -*-
+# STRANICA_RABOTY_V1
+"""
+СТРАНИЦА РАБОТЫ — дерево города, поиск, бланк должности.
+
+    python postavit_stranicu_raboty.py --suho    посмотреть
+    python postavit_stranicu_raboty.py           поставить
+
+Запускать из КОРНЯ репо. Идемпотентно. Требует стандарта
+(postavit_standart_raboty.py) — без него ставиться не будет.
+
+ЧТО ЭТО
+
+    Отдельная страница /rabota, устроенная как Страница Жизни.
+
+    Слева — город: квартал, внутри цеха, внутри места. У каждого видно,
+    занято оно или свободно, или должности ещё нет. Сверху поиск и
+    четыре фильтра. Сотня мест листается спокойно, потому что дерево
+    свёрнуто, а поиск сужает его до нужного.
+
+    Справа — сам бланк: название, где, чем занят, обязанности, судья,
+    требования, условия, движок, привязка к цеху и слоту. Заполнил —
+    получил документ. Ниже — кто сидит, и руки: принять, уволить,
+    снести. Под ними трудовая история места, которая копится и не
+    перетирается.
+
+    Списков в коде нет: страница спрашивает сканер, сканер обходит
+    папки. Появился цех — появились его места, сам собой.
+
+    Кнопка «Работа» у Брата теперь ведёт сюда, а не в тот диалог,
+    который ты забраковал.
+
+ЧЕГО ЗДЕСЬ ПОКА НЕТ
+    Привязки места к локации — она следующим шагом, как договорились.
+    Поле «где» сейчас текстовое, туда и приедет локация.
+"""
+import argparse
+import ast
+import py_compile
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+KOREN = Path(__file__).resolve().parent
+GOROD = KOREN / "ГОРОД"
+MAIN = KOREN / "main.py"
+BRAT = KOREN / "Брат" / "ui_brat.py"
+MARKER = "# STRANICA_RABOTY_V1 - marker"
+BAK = ".bak_stranica_raboty"
+
+
+UI_RABOTA_PY = r'''# -*- coding: utf-8 -*-
+# STRANICA_RABOTY_V1
+"""
+СТРАНИЦА РАБОТЫ — /rabota
+
+Дерево города слева, бланк должности справа. Списков не держит:
+всё, что показано, приходит из rabota.mesta() — сканера папок.
+Здесь только показ и четыре руки; вся правда живёт в постах.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from nicegui import ui
+
+import rabota as R
+
+CSS = """
+<style>
+.rab-page { background:#0b0f14; color:#e6edf3;
+            font-family:'Inter',system-ui,sans-serif; }
+.rab-head { padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.08);
+            display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+.rab-title { font-weight:800; letter-spacing:0.14em; font-size:0.95rem; }
+.rab-schet { color:rgba(139,233,253,0.75); font-size:0.72rem;
+             letter-spacing:0.06em; }
+.rab-body { display:flex; gap:16px; padding:16px 20px; align-items:flex-start; }
+.rab-left { width:390px; flex-shrink:0; }
+.rab-right { flex:1; min-width:0; }
+.rab-card { background:rgba(255,255,255,0.03); border-radius:14px;
+            border:1px solid rgba(255,255,255,0.08); padding:14px; }
+.rab-mesto { width:100%; text-align:left; font-family:monospace;
+             font-size:0.76rem; padding:6px 10px; border-radius:8px;
+             background:rgba(255,255,255,0.04); margin-bottom:3px; }
+.rab-podpis { color:rgba(255,255,255,0.42); font-size:0.66rem;
+              letter-spacing:0.08em; text-transform:uppercase;
+              margin:10px 0 4px; }
+</style>
+"""
+
+POLYA = [
+    ("название", "Название должности"),
+    ("где", "Где (локация — привяжем позже)"),
+    ("квартал", "Квартал"),
+    ("цех", "Цех"),
+    ("слот", "Слот"),
+    ("чем_занят", "Чем занят — одной строкой"),
+    ("судья", "Судья — чем меряется работа"),
+    ("требования", "Требования"),
+    ("условия", "Условия"),
+    ("движок", "Движок (модуль, который умеет работать)"),
+]
+
+
+def _zhiteli() -> list:
+    """Имена жителей города. Читаем паспорта, списков не держим."""
+    out = []
+    if not R.KOVCHEG.exists():
+        return out
+    for p in sorted(R.KOVCHEG.glob("*/passport.json")):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            d = {}
+        imya = (d.get("Official_Name") or p.parent.name).strip()
+        if imya:
+            out.append(imya)
+    return out
+
+
+def page_rabota():
+    ui.add_head_html(CSS)
+    ui.query("body").classes("rab-page")
+
+    sost: dict[str, Any] = {"vybrano": None, "poisk": "", "filtr": "все"}
+    refs: dict[str, Any] = {}
+
+    # ── шапка ────────────────────────────────────────────────
+    with ui.element("div").classes("rab-head"):
+        ui.html('<div class="rab-title">ГРОНДХЕЙМ · РАБОТА</div>')
+        refs["schet"] = ui.html("")
+        ui.element("div").style("flex:1")
+        ui.button("← БРАТ", on_click=lambda: ui.navigate.to("/brat")).props(
+            "flat no-caps").style("font-size:0.72rem; "
+                                  "color:rgba(139,233,253,0.85);")
+
+    def obnovit_schet():
+        s = R.schet()
+        refs["schet"].content = (
+            f'<div class="rab-schet">всего {s["всего"]} · '
+            f'с должностью {s["с должностью"]} · занято {s["занято"]} · '
+            f'свободно {s["свободно"]} · '
+            f'без должности {s["без должности"]}</div>')
+
+    # ── тело ─────────────────────────────────────────────────
+    with ui.element("div").classes("rab-body"):
+        with ui.element("div").classes("rab-left"):
+            with ui.element("div").classes("rab-card"):
+                poisk = ui.input(placeholder="поиск: имя, цех, слот…").props(
+                    "dark dense outlined").style("width:100%; font-size:0.8rem;")
+
+                def _poisk(_=None):
+                    sost["poisk"] = (poisk.value or "").strip().lower()
+                    risovat_derevo()
+
+                poisk.on("keydown.enter", _poisk)
+                poisk.on("blur", _poisk)
+
+                with ui.row().style("gap:4px; margin:8px 0 4px; flex-wrap:wrap;"):
+                    for f in ("все", "свободные", "занятые", "без должности"):
+                        def _set(f=f):
+                            sost["filtr"] = f
+                            risovat_derevo()
+                        ui.button(f, on_click=_set).props("flat no-caps").style(
+                            "font-size:0.68rem; padding:3px 9px; border-radius:12px; "
+                            "color:rgba(139,233,253,0.85); "
+                            "background:rgba(139,233,253,0.08);")
+                refs["derevo"] = ui.element("div").style(
+                    "max-height:66vh; overflow-y:auto; margin-top:6px;")
+
+        with ui.element("div").classes("rab-right"):
+            refs["karta"] = ui.element("div").classes("rab-card")
+
+    # ── дерево ───────────────────────────────────────────────
+    def otobrat() -> list:
+        v = R.mesta()
+        q = sost["poisk"]
+        if q:
+            v = [m for m in v if q in (f'{m["название"]} {m["цех"]} '
+                                       f'{m["слот"]} {m["кто_сидит"]}').lower()]
+        f = sost["filtr"]
+        if f == "свободные":
+            v = [m for m in v if m["есть_пост"] and not m["кто_сидит"]]
+        elif f == "занятые":
+            v = [m for m in v if m["кто_сидит"]]
+        elif f == "без должности":
+            v = [m for m in v if not m["есть_пост"]]
+        return v
+
+    def risovat_derevo():
+        obnovit_schet()
+        refs["derevo"].clear()
+        v = otobrat()
+        if not v:
+            with refs["derevo"]:
+                ui.label("ничего не нашлось").style(
+                    "color:rgba(255,255,255,0.35); font-size:0.78rem;")
+            return
+        po_kvartalam: dict = {}
+        for m in v:
+            po_kvartalam.setdefault(m["квартал"] or "(без квартала)",
+                                    {}).setdefault(m["цех"] or "(город)",
+                                                   []).append(m)
+        with refs["derevo"]:
+            for kv in sorted(po_kvartalam):
+                ceha = po_kvartalam[kv]
+                vsego = sum(len(x) for x in ceha.values())
+                # свёрнуто по умолчанию — иначе сотня мест не листается
+                with ui.expansion(f"{kv}  ·  {vsego}",
+                                  value=bool(sost["poisk"])).style(
+                        "width:100%; font-size:0.8rem;"):
+                    for ceh in sorted(ceha):
+                        ui.html(f'<div class="rab-podpis">{ceh}</div>')
+                        for m in sorted(ceha[ceh], key=lambda x: x["слот"]):
+                            if m["кто_сидит"]:
+                                hvost = m["кто_сидит"]
+                                cvet = "rgba(80,250,123,0.85)"
+                            elif m["есть_пост"]:
+                                hvost = "свободно"
+                                cvet = "rgba(255,255,255,0.55)"
+                            else:
+                                hvost = "должности нет"
+                                cvet = "rgba(255,180,60,0.8)"
+                            nadpis = (f'{m["слот"] or "—":<6} '
+                                      f'{m["название"][:24]:<24} {hvost}')
+
+                            def _vybrat(m=m):
+                                sost["vybrano"] = m
+                                risovat_kartu()
+
+                            ui.button(nadpis, on_click=_vybrat).props(
+                                "flat no-caps").style(
+                                f"width:100%; text-align:left; "
+                                f"font-family:monospace; font-size:0.74rem; "
+                                f"color:{cvet}; padding:5px 10px; "
+                                f"border-radius:8px; "
+                                f"background:rgba(255,255,255,0.04); "
+                                f"margin-bottom:3px;")
+
+    # ── карточка места ───────────────────────────────────────
+    def risovat_kartu():
+        refs["karta"].clear()
+        m = sost["vybrano"]
+        with refs["karta"]:
+            if m is None:
+                ui.label("Выбери место слева — здесь откроется его бланк.").style(
+                    "color:rgba(255,255,255,0.4); font-size:0.82rem;")
+                return
+
+            post = R.chitat(m["id"]) or {}
+            est = bool(post)
+
+            ui.html(f'<div style="font-weight:800; font-size:0.92rem; '
+                    f'letter-spacing:0.06em; margin-bottom:2px;">'
+                    f'{post.get("название") or m["название"]}</div>'
+                    f'<div style="color:rgba(255,255,255,0.35); '
+                    f'font-size:0.68rem; font-family:monospace; '
+                    f'margin-bottom:12px;">id: {m["id"]}'
+                    f'{"" if est else "  ·  должности ещё нет"}</div>')
+
+            polya_ui = {}
+            with ui.element("div").style(
+                    "display:grid; grid-template-columns:1fr 1fr; gap:8px;"):
+                for klyuch, podpis in POLYA:
+                    znach = post.get(klyuch, "") if est else (
+                        m.get(klyuch, "") if klyuch in
+                        ("квартал", "цех", "слот") else
+                        (m["название"] if klyuch == "название" else ""))
+                    polya_ui[klyuch] = ui.input(podpis, value=znach or "").props(
+                        "dark dense outlined").style("font-size:0.78rem;")
+            ui.html('<div class="rab-podpis">обязанности — по одной в строке</div>')
+            obyaz = ui.textarea(
+                value="\n".join(post.get("обязанности", []) or [])).props(
+                "dark dense outlined").style("width:100%; font-size:0.78rem;")
+
+            def _sobrat() -> dict:
+                d = {k: (polya_ui[k].value or "").strip() for k, _ in POLYA}
+                d["обязанности"] = [s.strip() for s in
+                                    (obyaz.value or "").splitlines() if s.strip()]
+                return d
+
+            def _sohranit():
+                if est:
+                    ok, msg = R.obnovit(m["id"], _sobrat())
+                else:
+                    ok, msg = R.zavesti(m["id"], _sobrat())
+                ui.notify(("🪑 " if ok else "⚠ ") + msg,
+                          color="positive" if ok else "negative")
+                risovat_derevo()
+                risovat_kartu()
+
+            with ui.row().style("gap:8px; margin-top:12px; width:100%;"):
+                ui.button("сохранить бланк" if est else "завести должность",
+                          on_click=_sohranit).props("flat no-caps").style(
+                    "padding:7px 18px; border-radius:8px; font-weight:700; "
+                    "font-size:0.78rem; background:linear-gradient(135deg,"
+                    "rgba(120,168,201,0.30),rgba(120,168,201,0.18)); "
+                    "border:1px solid rgba(120,168,201,0.55); color:#fff;")
+
+            if not est:
+                return
+
+            # ── кто сидит и руки ─────────────────────────────
+            kto = ((post.get("кто_сидит") or {}).get("имя") or "").strip()
+            ui.html('<div class="rab-podpis">кто на месте</div>')
+            prich = ui.input("Причина — ляжет в трудовую историю").props(
+                "dark dense outlined").style("width:100%; font-size:0.78rem;")
+
+            if kto:
+                ui.label(f"Сейчас: {kto}  ·  с {(post.get('кто_сидит') or {}).get('с','')}").style(
+                    "color:rgba(80,250,123,0.85); font-size:0.82rem;")
+
+                def _uvolit():
+                    ok, msg = R.uvolit(m["id"], pochemu=(prich.value or "").strip())
+                    ui.notify(("🪑 " if ok else "⚠ ") + msg,
+                              color="positive" if ok else "negative")
+                    risovat_derevo()
+                    risovat_kartu()
+
+                ui.button("уволить", on_click=_uvolit).props("flat no-caps").style(
+                    "margin-top:8px; padding:7px 18px; border-radius:8px; "
+                    "font-size:0.78rem; font-weight:700; color:#fff; "
+                    "background:rgba(217,38,38,0.22); "
+                    "border:1px solid rgba(217,38,38,0.55);")
+            else:
+                imena = _zhiteli()
+                if not imena:
+                    ui.label("Жителей ещё нет — роди их в Странице Жизни.").style(
+                        "color:rgba(255,180,60,0.85); font-size:0.78rem;")
+                else:
+                    sel = ui.select({i: i for i in imena}, value=imena[0]).props(
+                        "dark dense outlined").style(
+                        "width:100%; font-size:0.78rem;")
+
+                    def _prinyat():
+                        ok, msg = R.prinyat(m["id"], (sel.value or "").strip(),
+                                            pochemu=(prich.value or "").strip())
+                        ui.notify(("🪑 " if ok else "⚠ ") + msg,
+                                  color="positive" if ok else "negative")
+                        risovat_derevo()
+                        risovat_kartu()
+
+                    def _snesti():
+                        ok, msg = R.snesti(m["id"])
+                        ui.notify(("🪑 " if ok else "⚠ ") + msg,
+                                  color="positive" if ok else "negative")
+                        if ok:
+                            sost["vybrano"] = None
+                        risovat_derevo()
+                        risovat_kartu()
+
+                    with ui.row().style("gap:8px; margin-top:8px;"):
+                        ui.button("принять", on_click=_prinyat).props(
+                            "flat no-caps").style(
+                            "padding:7px 18px; border-radius:8px; "
+                            "font-weight:700; font-size:0.78rem; color:#fff; "
+                            "background:linear-gradient(135deg,"
+                            "rgba(80,250,123,0.28),rgba(80,250,123,0.16)); "
+                            "border:1px solid rgba(80,250,123,0.5);")
+                        ui.button("снести должность", on_click=_snesti).props(
+                            "flat no-caps").style(
+                            "padding:7px 14px; border-radius:8px; "
+                            "font-size:0.74rem; color:rgba(255,255,255,0.5); "
+                            "border:1px solid rgba(255,255,255,0.18);")
+
+            # ── трудовая история ─────────────────────────────
+            ist = post.get("трудовая_история", []) or []
+            ui.html('<div class="rab-podpis">трудовая история</div>')
+            if not ist:
+                ui.label("пусто — здесь ещё никто не работал").style(
+                    "color:rgba(255,255,255,0.3); font-size:0.75rem;")
+            else:
+                with ui.element("div").style(
+                        "max-height:170px; overflow-y:auto; "
+                        "font-family:monospace; font-size:0.72rem; "
+                        "color:rgba(255,255,255,0.55);"):
+                    for z in reversed(ist):
+                        pch = f' — {z.get("почему")}' if z.get("почему") else ""
+                        ui.label(f'{z.get("когда","")}  {z.get("что","")}: '
+                                 f'{z.get("кто","")} (кем: {z.get("кем","")}){pch}')
+
+    risovat_derevo()
+    risovat_kartu()
+'''
+
+
+# ── main.py: маршрут ──────────────────────────────────────────
+STAROE_MAIN = '''from ui_registry import page_registry
+@ui.page("/registry")
+def _registry():
+    page_registry()
+'''
+NOVOE_MAIN = '''from ui_registry import page_registry
+@ui.page("/registry")
+def _registry():
+    page_registry()
+
+# ── СТРАНИЦА РАБОТЫ · места города (STRANICA_RABOTY_V1) ──
+# Дерево квартал → цех → место, поиск, бланк должности, приём и
+# увольнение. Списков не ведёт — спрашивает сканер (Закон Картриджа).
+from ui_rabota import page_rabota
+@ui.page("/rabota")
+def _rabota():
+    page_rabota()
+'''
+
+# ── Брат: кнопка ведёт на страницу ───────────────────────────
+STAROE_KNOPKA_DIALOG = '''                        ui.button("Работа",
+                                  on_click=do_rabota
+                                  ).props("flat").classes("brat-gate")
+'''
+NOVOE_KNOPKA_DIALOG = '''                        # STRANICA_RABOTY_V1: та табличка не тянулась на
+                        # город — теперь кнопка ведёт на Страницу Работы.
+                        ui.button("Работа",
+                                  on_click=lambda: ui.navigate.to("/rabota")
+                                  ).props("flat").classes("brat-gate")
+'''
+
+STAROE_KNOPKA_ROL = '''                        ui.button("Роль",
+                                  on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
+                                  ).props("flat").classes("brat-gate")
+'''
+NOVOE_KNOPKA_ROL = '''                        ui.button("Роль",
+                                  on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
+                                  ).props("flat").classes("brat-gate")
+                        # STRANICA_RABOTY_V1: места города — своя страница.
+                        ui.button("Работа",
+                                  on_click=lambda: ui.navigate.to("/rabota")
+                                  ).props("flat").classes("brat-gate")
+'''
+
+
+def proverit_python(tekst: str, imya: str) -> bool:
+    try:
+        ast.parse(tekst)
+    except SyntaxError as e:
+        print(f"  ✗ {imya}: синтаксис сломан ({e}) — НЕ пишу")
+        return False
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False,
+                                     encoding="utf-8") as f:
+        f.write(tekst)
+        vrem = f.name
+    try:
+        py_compile.compile(vrem, doraise=True)
+        return True
+    except py_compile.PyCompileError as e:
+        print(f"  ✗ {imya}: не компилируется ({e}) — НЕ пишу")
+        return False
+    finally:
+        Path(vrem).unlink(missing_ok=True)
+
+
+def polozhit(put: Path, soderzhimoe: str, suho: bool) -> bool:
+    if put.exists() and put.read_text(encoding="utf-8") == soderzhimoe:
+        print(f"  {put.name}: уже стоит")
+        return True
+    if not proverit_python(soderzhimoe, put.name):
+        return False
+    if suho:
+        print(f"  {put.name}: ✓ ляжет")
+        return True
+    if put.exists():
+        shutil.copy2(put, put.with_suffix(put.suffix + BAK))
+    put.write_text(soderzhimoe, encoding="utf-8")
+    print(f"  {put.name}: ✓ положен")
+    return True
+
+
+def pravit(put: Path, staroe: str, novoe: str, nazv: str, suho: bool) -> bool:
+    tekst = put.read_text(encoding="utf-8")
+    if MARKER in tekst:
+        print(f"  {put.name}: уже правлен")
+        return True
+    n = tekst.count(staroe)
+    if n != 1:
+        print(f"  ✗ {put.name}: якорь «{nazv}» найден {n} раз — не трогаю")
+        return False
+    tekst = tekst.replace(staroe, novoe, 1)
+    tekst = tekst.rstrip("\n") + "\n\n" + MARKER + "\n"
+    if not proverit_python(tekst, put.name):
+        return False
+    if suho:
+        print(f"  {put.name}: ✓ {nazv}")
+        return True
+    shutil.copy2(put, put.with_suffix(put.suffix + BAK))
+    put.write_text(tekst, encoding="utf-8")
+    print(f"  {put.name}: ✓ {nazv}")
+    return True
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--suho", action="store_true")
+    a = ap.parse_args()
+
+    print("═" * 62)
+    print("СТРАНИЦА РАБОТЫ" + ("   [СУХОЙ ПРОГОН]" if a.suho else ""))
+    print("═" * 62)
+
+    if not (GOROD / "rabota.py").exists():
+        print("✗ нет ГОРОД/rabota.py — сперва поставь "
+              "postavit_standart_raboty.py")
+        return 1
+    if not MAIN.exists() or not BRAT.exists():
+        print("✗ не вижу main.py или Брат/ui_brat.py — запускай из КОРНЯ")
+        return 1
+
+    ok = True
+    print("\nстраница:")
+    ok &= polozhit(GOROD / "ui_rabota.py", UI_RABOTA_PY, a.suho)
+
+    print("\nмаршрут /rabota:")
+    ok &= pravit(MAIN, STAROE_MAIN, NOVOE_MAIN, "маршрут добавлен", a.suho)
+
+    print("\nкнопка у Брата:")
+    tb = BRAT.read_text(encoding="utf-8")
+    if MARKER in tb:
+        print("  ui_brat.py: уже правлен")
+    elif tb.count(STAROE_KNOPKA_DIALOG) == 1:
+        ok &= pravit(BRAT, STAROE_KNOPKA_DIALOG, NOVOE_KNOPKA_DIALOG,
+                     "кнопка переведена на страницу", a.suho)
+    elif tb.count(STAROE_KNOPKA_ROL) == 1:
+        ok &= pravit(BRAT, STAROE_KNOPKA_ROL, NOVOE_KNOPKA_ROL,
+                     "кнопка добавлена", a.suho)
+    else:
+        print("  ✗ ui_brat.py: не нашёл, куда ставить кнопку — не трогаю")
+        ok = False
+
+    if not ok:
+        print("\n⚠ что-то не легло")
+        return 1
+    if a.suho:
+        print("\nСухой прогон прошёл. Ставить: "
+              "python postavit_stranicu_raboty.py")
+        return 0
+
+    print("\n" + "─" * 62)
+    print("Запусти город и открой /rabota — или жми «Работа» у Брата.")
+    print("Слева дерево и поиск, справа бланк. Место без должности —")
+    print("заполни бланк и жми «завести должность».")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

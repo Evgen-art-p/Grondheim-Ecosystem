@@ -695,13 +695,29 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return None
         kadr_ref["element"].clear()
         with kadr_ref["element"]:
-            ui.image(str(p)).style("width:100%; height:auto;")
+            # KADR_NA_VES_KVADRAT_V1: тянемся на всю клетку, но БЕЗ
+            # плющенья — contain держит пропорции свечей. Плющеная
+            # свеча врёт глазу, а глаз у нас важнее цифры.
+            ui.image(str(p)).style(
+                "width:100%; height:100%; object-fit:contain; "
+                "flex:1; min-height:0;")
             # KABINET_VZGLYAD_V1: подпись под кадром. Что смотрим и
             # каким краном — иначе глазом реал от истории не отличить.
+            # KADR_NA_VES_KVADRAT_V1: плюс дата последнего бара —
+            # живой рынок сегодняшним числом, тестер прошлогодним.
             _kran = "ТЕСТЕР" if state.get("mode") == "tester" else "РЕАЛ"
-            ui.label(f"👁 {symbol} · {tf} · {_kran}").style(
+            _kogda = ""
+            try:
+                from feed_source import bars as _src_bars
+                _bs, _ = _src_bars(symbol, tf, 3)
+                if _bs:
+                    _kogda = f" · {str(_bs[-1].get('date', ''))[:16]}"
+            except Exception:
+                pass
+            ui.label(f"👁 {symbol} · {tf} · {_kran}{_kogda}").style(
                 "color:rgba(139,233,253,0.75); font-size:11px; "
-                "letter-spacing:0.06em; padding-top:6px;")
+                "letter-spacing:0.06em; padding-top:6px; "
+                "flex-shrink:0; width:100%; text-align:center;")
         return p
 
     def update_viewer(content: str):
@@ -1893,8 +1909,19 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 _chat = getattr(_brain, _fn_name)
                 dialog = [m for m in state["chat_history"]
                           if m.get("role") in ("user", "assistant") and m.get("content")]
-                reply = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _chat(msg, state.get(_last_key), dialog))
+                # RAZGOVOR_SO_STOLOM_V1: отдаём собеседнику тот же
+                # инструмент, что выбран на полке, — чтобы он смотрел
+                # на то же, что и Шеф. Кто ещё не умеет принимать
+                # рынок (морж, паникёр, ганс, архивариус, исполнитель)
+                # — спрашиваем по-старому.
+                _rynok_seychas = _aktivnyy_rynok()
+                try:
+                    reply = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: _chat(msg, state.get(_last_key), dialog,
+                                            rynok=_rynok_seychas))
+                except TypeError:
+                    reply = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: _chat(msg, state.get(_last_key), dialog))
             except Exception as e:
                 reply = f"⚠️ {label} не смог(ла) ответить: {e}"
             state["chat_history"].append({"role": "assistant", "agent": agent_id, "content": reply})
@@ -2142,9 +2169,13 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         with ui.element("div").style(
                                 "flex:1; min-height:0; display:flex; "
                                 "flex-direction:column; gap:8px;"):
+                            # KADR_NA_VES_KVADRAT_V1: колонка, не строка.
+                            # В строке подпись вставала СПРАВА от кадра и
+                            # отжимала его — картинка не тянулась на клетку.
                             kadr_ref["element"] = ui.element("div").classes("viewer").style(
-                                "flex:1; min-height:0; overflow:auto; "
-                                "display:flex; align-items:center; "
+                                "flex:1; min-height:0; overflow:hidden; "
+                                "display:flex; flex-direction:column; "
+                                "align-items:center; "
                                 "justify-content:center;")
                             with kadr_ref["element"]:
                                 ui.label("Кадр появится здесь — жми «👁 Взгляд»")
@@ -2201,3 +2232,7 @@ if __name__ in {"__main__", "__mp_main__"}:
 # TORG_BARS_ONCHANGE_V1 — маркер идемпотентности
 
 # KABINET_VZGLYAD_V1 - marker
+
+# RAZGOVOR_SO_STOLOM_V1 - marker
+
+# KADR_NA_VES_KVADRAT_V1 - marker

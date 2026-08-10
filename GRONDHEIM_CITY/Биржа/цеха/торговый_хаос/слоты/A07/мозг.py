@@ -95,6 +95,11 @@ def _glaz(_chat, symbol, timeframe, slot):
                                  _P(put).read_bytes()).decode("ascii"),
                               "mime_type": "image/png",
                               "name": _P(put).name}],
+                    # RAZGOVOR_SO_STOLOM_V1: история и температура
+                    # ронялись здесь — с картинкой он забывал разговор
+                    # и говорил средним голосом вместо своего.
+                    history=kw.get("history"),
+                    temperature=kw.get("temperature"),
                     agent_id=kw.get("agent_id", slot),
                     slot_id=kw.get("slot_id", slot))
             except Exception as e:
@@ -360,7 +365,10 @@ def _sanitize(signal: dict) -> dict:
 # ════════════════════════════════════════════════════════════
 
 def chat_with_avan(question: str, last_run: Optional[dict] = None,
-                   dialog: Optional[list] = None) -> str:
+                   dialog: Optional[list] = None,
+                   rynok: Optional[tuple] = None) -> str:
+    # RAZGOVOR_SO_STOLOM_V1: rynok — (инструмент, этаж) с полки кабинета.
+    # Не передали — возьмём инструмент его прошлого решения.
     prompt = PROMPT_PATH.read_text(encoding="utf-8") if PROMPT_PATH.exists() else ""
 
     if last_run:
@@ -385,6 +393,32 @@ def chat_with_avan(question: str, last_run: Optional[dict] = None,
             "Ты ещё не смотрел стол в этой сессии. Если Шеф спрашивает про "
             "рынок — скажи, что нужно нажать РЫНОК. Живым голосом, без JSON."
         )
+
+    # RAZGOVOR_SO_STOLOM_V1: живой стол в разговор. Раньше сюда шёл
+    # только пересказ прошлого решения — и на вопрос «что на графике»
+    # он честно отвечал, что ничего не видит.
+    _sym = _tf = ""
+    if rynok:
+        _p = list(rynok) + ["", ""]
+        _sym, _tf = str(_p[0] or ""), str(_p[1] or "")
+    if (not _sym or not _tf) and last_run:
+        _mk = last_run.get("market", {}) or {}
+        _sym = str(_mk.get("symbol", "") or "")
+        _tf = str(_mk.get("timeframe", "") or "")
+    if _sym and _tf:
+        try:
+            import stol as _stol
+            _t = _stol.nakryt(_sym, _tf, self_key=_SELF_KEY)
+            work_ctx += (
+                f"\n\n=== СТОЛ ПРЯМО СЕЙЧАС · {_sym} {_tf} ===\n"
+                + json.dumps(_t, ensure_ascii=False, indent=2)
+                + "\n=== КОНЕЦ СТОЛА ===\n"
+                "Это живые числа ЭТОГО мгновения, а не память о прошлом "
+                "решении, и картинка перед тобой — та же, что у Шефа. "
+                "Спрашивают про рынок — смотри и отвечай, а не проси "
+                "прислать данные.\n")
+        except Exception as _e:
+            work_ctx += f"\n\n(стол накрыть не вышло: {_e})\n"
 
     system = prompt + work_ctx
     try:   # AVAN_NOSITEL_V1: в разговоре тоже ОН, не роль
@@ -415,7 +449,9 @@ def chat_with_avan(question: str, last_run: Optional[dict] = None,
         pass
 
     try:
-        return chat(system=system, user=question, history=history,
+        # RAZGOVOR_SO_STOLOM_V1: с кадром, если знаем, на что смотрим.
+        _chat_fn = _glaz(chat, _sym, _tf, _SLOT) if (_sym and _tf) else chat
+        return _chat_fn(system=system, user=question, history=history,
                     agent_id="A07_AVANTURIST", slot_id="A07",
                     temperature=_temp)
     except Exception as e:
@@ -769,3 +805,5 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
 # TREYDER_ZHIV_V1 - marker
 
 # KADR_I_VAKANSIYA_V1 - marker
+
+# RAZGOVOR_SO_STOLOM_V1 - marker

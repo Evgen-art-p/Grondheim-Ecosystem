@@ -160,19 +160,26 @@ def resolve_para(ceh_id: str, slot: str, kvartal: str = "Биржа"):
         return None  # такой вакансии в цехе не объявлено
 
     try:
+        # STANDART_RABOTY_V1: правду о найме говорит ПОСТ — единый
+        # реестр мест города. Поста на этом слоте нет — работаем
+        # по-старому, по mask.json, чтобы сидящие не выпали.
+        import sys as _sys
+        _g = str(CITY.parent / "ГОРОД")
+        if _g not in _sys.path:
+            _sys.path.insert(0, _g)
         import rabota as _rab
-        if _rab.est_dokument(ceh_id, slot, kvartal):
-            _imya = _rab.kto_sidit(ceh_id, slot, kvartal)
+        if _rab.est_post_na_slote(ceh_id, slot):
+            _imya = _rab.kto_na_slote(ceh_id, slot)
             if not _imya:
-                return None            # документ говорит: место свободно
+                return None            # пост говорит: место свободно
             _z = _zhitel_po_imeni(_imya)
             if _z is None:
-                return None            # в документе имя, а жителя нет
+                return None            # в посте имя, а жителя нет
             _z["цех"] = ceh_id
             _z["слот"] = slot
             return _z
     except Exception:
-        pass                            # механизма нет — по-старому
+        pass
 
     for z in _scan_zhiteli_maski():
         if z["цех"] == ceh_id and z["слот"] == slot:
@@ -250,3 +257,5 @@ if __name__ == "__main__":
     print("═══ конец самопроверки ═══")
 
 # RABOTA_DOKUMENT_V1 - marker
+
+# STANDART_RABOTY_V1 - marker

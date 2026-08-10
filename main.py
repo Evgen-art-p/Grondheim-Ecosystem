@@ -97,6 +97,14 @@ from ui_registry import page_registry
 def _registry():
     page_registry()
 
+# ── СТРАНИЦА РАБОТЫ · места города (STRANICA_RABOTY_V1) ──
+# Дерево квартал → цех → место, поиск, бланк должности, приём и
+# увольнение. Списков не ведёт — спрашивает сканер (Закон Картриджа).
+from ui_rabota import page_rabota
+@ui.page("/rabota")
+def _rabota():
+    page_rabota()
+
 # ── КАБИНЕТ ЖИТЕЛЯ — единое окно в любого жителя ──
 # Путь: запустил Брата → ГРОНДХЕЙМ (карта) → клик «открыть →» на жителе → сюда.
 # /zhitel/{id} открывает конкретного жителя по ID_Object (напр. 0001_Liya_Heat).
@@ -217,3 +225,5 @@ if __name__ in {"__main__", "__mp_main__"}:
         show=True,        # сам откроет браузер
         storage_secret="grondheim",
     )
+
+# STRANICA_RABOTY_V1 - marker
