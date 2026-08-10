@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-10T01:55:23.165691",
+  "updated": "2026-08-10T05:15:08.755560",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -46,16 +46,16 @@
   ],
   "feed": {
     "mode": "real",
-    "symbol": "XAUUSD"
+    "symbol": "GBPUSD"
   },
   "brut": {
-    "verdict": "APPROVED",
-    "reason": "Пробой фрактала вверх, подтверждённого бычьим AO.",
-    "direction": "LONG",
-    "entry": 4371.74,
-    "stop": 4220.77,
-    "lot": 0.1,
-    "action": "ENTER",
+    "verdict": "REJECTED",
+    "reason": "Жду подтверждения для входа, так как текущий бар не показывает достаточной силы для установки заявки.",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },

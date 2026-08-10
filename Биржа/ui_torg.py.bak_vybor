@@ -61,13 +61,7 @@ MODELS_CATALOG = [
     {"id": "meta-llama/llama-3.3-70b-instruct","name": "Llama 3.3 70B",     "price": "$0.10/$0.32"},
     {"id": "anthropic/claude-sonnet-4-5",      "name": "Claude Sonnet 4.5", "price": "$3/$15"},
 ]
-# GEMINI_PO_UMOLCHANIYU_V1: открываемся на модели, которая ВИДИТ кадр.
-# Проверено Шефом на одном и том же кадре: 4o mini читал «Аллигатор спит,
-# линии переплетены» там, где линии разведены и AO растёт. Цена та же,
-# переключатель на месте — это только чем открывается кабинет.
-DEFAULT_MODEL = next(
-    (m["id"] for m in MODELS_CATALOG if m["id"].startswith("google/gemini")),
-    MODELS_CATALOG[0]["id"])
+DEFAULT_MODEL = MODELS_CATALOG[0]["id"]
 
 import importlib.util
 from typing import Any  # UI_TORG_TYPING_V1
@@ -613,11 +607,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         "arkhiv_stats": {},
         "arkhiv_digest": {},
         "model": DEFAULT_MODEL,   # BIRZHA_MODEL_SEL_V1
-        # VAHTA_NOVAYA_SVECHA_V1: смотрим каждую новую свечу рабочего
-        # этажа. Выключена по умолчанию — прогон платный, включать надо
-        # осознанно.
-        "vahta": False,
-        "vahta_bar": "",
     }
 
     llm.set_model(state["model"])  # BIRZHA_MODEL_SEL_V1: применяем сразу при открытии кабинета
@@ -800,7 +789,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 with stats_ref["element"]:
                     ui.html('<div style="color:rgba(255,255,255,0.3); font-size:11px; '
                             'padding:10px; text-align:center;">Морж ещё не смотрел — '
-                            'нажми РЫНОК</div>')
+                            'нажми РЫНОК (нужен сигнал Искры)</div>')
                 return
             mstatus = msig.get("morj_status", "—")
             st_color = {"AWAKE": "#00ff88", "WAKING": "#ffb400",
@@ -854,7 +843,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 with stats_ref["element"]:
                     ui.html('<div style="color:rgba(255,255,255,0.3); font-size:11px; '
                             'padding:10px; text-align:center;">Паникёр ещё не мерил толпу — '
-                            'нажми РЫНОК</div>')
+                            'нажми РЫНОК (нужен сигнал Искры)</div>')
                 return
             phase = psig.get("panic_phase", "—")
             ph_color = {"PANIC": "#ff5050", "GREED": "#ffb400",
@@ -902,7 +891,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 with stats_ref["element"]:
                     ui.html('<div style="color:rgba(255,255,255,0.3); font-size:11px; '
                             'padding:10px; text-align:center;">Ганс ещё не выходил на след — '
-                            'нажми РЫНОК</div>')
+                            'нажми РЫНОК (нужен сигнал Искры)</div>')
                 return
             valid = hsig.get("fractal_valid")
             v_txt = "🎯 ВНЕ КРАСНОЙ" if valid else "пусто"
@@ -952,7 +941,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 with stats_ref["element"]:
                     ui.html('<div style="color:rgba(255,255,255,0.3); font-size:11px; '
                             'padding:10px; text-align:center;">Архивариус ещё не листал Атлас — '
-                            'нажми РЫНОК</div>')
+                            'нажми РЫНОК (нужен сигнал Искры)</div>')
                 return
             sample = asig.get("sample_size", adg.get("sample_size", 0))
             closed = adg.get("closed_trades", "—")
@@ -1009,7 +998,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 with stats_ref["element"]:
                     ui.html(f'<div style="color:rgba(255,255,255,0.3); font-size:11px; '
                             f'padding:10px; text-align:center;">{_label} ещё не смотрел(а) '
-                            f'стол — нажми РЫНОК</div>')
+                            f'стол — нажми РЫНОК (нужен сигнал Искры)</div>')
                 return
             verdict = tsig.get(f"{pre}_verdict", "—")
             v_ok = (verdict == "APPROVED")
@@ -1062,7 +1051,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 with stats_ref["element"]:
                     ui.html('<div style="color:rgba(255,255,255,0.3); font-size:11px; '
                             'padding:10px; text-align:center;">Исполнитель ещё не '
-                            'подводил итог — нажми РЫНОК</div>')
+                            'подводил итог — нажми РЫНОК (нужен сигнал Искры)</div>')
                 return
             fdna = esig.get("final_dna", {})
             sent = fdna.get("orders_sent", "—")
@@ -1584,69 +1573,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         update_avatar_states()
         ui.notify(tail, type="positive" if not stopped else "warning")
 
-    def _vahta_vid():
-        """Вид кнопки: горит — стоим на вахте."""
-        el = toolbar_refs.get("vahta_btn")
-        ht = toolbar_refs.get("vahta_html")
-        if el is None or ht is None:
-            return
-        if state.get("vahta"):
-            el.style("background:rgba(0,204,255,0.15);color:#00ccff;"
-                     "border:1px solid rgba(0,204,255,0.45);")
-            ht.content = "⏱ ВАХТА ●"
-        else:
-            el.style("background:rgba(255,255,255,0.03);"
-                     "color:rgba(255,255,255,0.45);"
-                     "border:1px solid rgba(255,255,255,0.08);")
-            ht.content = "⏱ ВАХТА"
-
-    def _vahta_pereklyuchit():
-        state["vahta"] = not state.get("vahta")
-        # забываем, где стояли: включаем — начинаем считать заново
-        state["vahta_bar"] = ""
-        _vahta_vid()
-        if state["vahta"]:
-            _s, _t = _aktivnyy_rynok()
-            ui.notify(f"⏱ вахта: жду новую свечу {_s} {_t}", type="info")
-        else:
-            ui.notify("⏱ вахта снята", type="info")
-
-    def _posledniy_bar(symbol: str, tf: str) -> str:
-        """Время последнего бара по тому же крану, что и кадр."""
-        try:
-            from feed_source import bars as _src_bars
-            _bs, _ = _src_bars(symbol, tf, 3)
-            if _bs:
-                return str(_bs[-1].get("date", ""))
-        except Exception:
-            pass
-        return ""
-
-    async def _vahta_tik():
-        """Раз в двадцать секунд: не сменилась ли свеча.
-
-        VAHTA_NOVAYA_SVECHA_V1. Первый тик только запоминает бар —
-        иначе Совет дёргался бы посреди уже начатой свечи. В тестере
-        молчим: там время идёт из файла, а не из жизни.
-        """
-        if not state.get("vahta") or state.get("running"):
-            return
-        if state.get("mode") == "tester":
-            return
-        _s, _t = _aktivnyy_rynok()
-        _bar = _posledniy_bar(_s, _t)
-        if not _bar:
-            return
-        if not state.get("vahta_bar"):
-            state["vahta_bar"] = _bar
-            return
-        if _bar == state["vahta_bar"]:
-            return
-        state["vahta_bar"] = _bar
-        ui.notify(f"🔔 новая свеча {_s} {_t} · {_bar[:16]} — смотрю",
-                  type="positive")
-        await market_dispatch()
-
     async def market_dispatch():
         if state.get("mode") == "tester":
             await run_tester_session()
@@ -1998,15 +1924,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         None, lambda: _chat(msg, state.get(_last_key), dialog))
             except Exception as e:
                 reply = f"⚠️ {label} не смог(ла) ответить: {e}"
-            # VYBOR_METKOY_V1: объявил выбор строкой «ВЫБОР: …» —
-            # кладём его меткой в дом человека, а не в слот.
-            try:
-                from vybor import poymat as _poymat_vybor
-                _ok_v, _msg_v = _poymat_vybor(_ceh_id, _slot, reply or "")
-                if _ok_v and _msg_v:
-                    ui.notify(f"🎯 {_msg_v}", type="positive")
-            except Exception:
-                pass
             state["chat_history"].append({"role": "assistant", "agent": agent_id, "content": reply})
             update_chat_display()
             return
@@ -2103,20 +2020,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             border: 1px solid rgba(0,255,136,0.35);
                             color: rgba(255,255,255,0.9); font-weight: 700;
                         ''')
-
-                        # VAHTA_NOVAYA_SVECHA_V1 — стоять на вахте и
-                        # смотреть каждую новую свечу рабочего этажа.
-                        toolbar_refs["vahta_btn"] = ui.element("div").style(
-                            "padding:6px 14px;border-radius:7px;font-size:12px;"
-                            "font-weight:700;cursor:pointer;"
-                            "background:rgba(255,255,255,0.03);"
-                            "color:rgba(255,255,255,0.45);"
-                            "border:1px solid rgba(255,255,255,0.08);")
-                        with toolbar_refs["vahta_btn"]:
-                            toolbar_refs["vahta_html"] = ui.html("⏱ ВАХТА")
-                        toolbar_refs["vahta_btn"].on(
-                            "click", lambda: _vahta_pereklyuchit())
-                        ui.timer(20.0, _vahta_tik)   # async-колбэк NiceGUI ждёт сам
                         toolbar_refs["mode_real"] = ui.element("div").style(
                             "padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;"
                             "cursor:pointer;background:rgba(0,255,136,0.15);color:#00ff88;"
@@ -2306,7 +2209,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     stats_ref["element"] = ui.element("div")
                     with stats_ref["element"]:
                         ui.html('<div style="color:rgba(255,255,255,0.3); font-size:11px; '
-                                'padding:10px; text-align:center;">Нажми РЫНОК — стол накроется</div>')
+                                'padding:10px; text-align:center;">Нажми РЫНОК — Искра оживёт</div>')
 
 
 if __name__ in {"__main__", "__mp_main__"}:
@@ -2333,9 +2236,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # RAZGOVOR_SO_STOLOM_V1 - marker
 
 # KADR_NA_VES_KVADRAT_V1 - marker
-
-# VYBOR_METKOY_V1 - marker
-
-# GEMINI_PO_UMOLCHANIYU_V1 - marker
-
-# VAHTA_NOVAYA_SVECHA_V1 - marker

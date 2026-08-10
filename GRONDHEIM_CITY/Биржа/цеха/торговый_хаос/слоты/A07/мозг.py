@@ -68,8 +68,20 @@ _GLAZ_PREAMBULA = (
     "этом: глаз важнее, чем сойтись с цифрой.\n\n"
 )
 
+# GLAZ_NE_TARATORIT_V1: в РАЗГОВОРЕ подводка другая. Прежняя велела
+# сперва пересказать картинку — и на вопрос о скорости света шёл абзац
+# про Аллигатора. Кадр оставляем, обязанность говорить о нём — снимаем.
+_GLAZ_RAZGOVOR = (
+    "Перед тобой кадр того рынка, на который ты сейчас смотришь — "
+    "тот же самый, что видит Шеф.\n"
+    "Спрашивают про рынок — смотри на него и отвечай по нему, а не проси "
+    "прислать данные.\n"
+    "Спрашивают НЕ про рынок — просто отвечай на вопрос. Пересказывать "
+    "график при этом не надо: тебя спросили не о нём.\n\n"
+)
 
-def _glaz(_chat, symbol, timeframe, slot):
+
+def _glaz(_chat, symbol, timeframe, slot, preambula=None):
     """Обёртка над вызовом модели: подкладывает кадр.
 
     Кадр — тот же PNG, что Шеф видит в кабинете: смотрят на одну
@@ -89,7 +101,9 @@ def _glaz(_chat, symbol, timeframe, slot):
                 from pathlib import Path as _P
                 from llm import chat_with_images
                 return chat_with_images(
-                    system=system, user_text=_GLAZ_PREAMBULA + user,
+                    system=system,
+                    user_text=(preambula if preambula is not None
+                               else _GLAZ_PREAMBULA) + user,
                     knowledge=knowledge,
                     images=[{"base64": base64.b64encode(
                                  _P(put).read_bytes()).decode("ascii"),
@@ -420,6 +434,30 @@ def chat_with_avan(question: str, last_run: Optional[dict] = None,
         except Exception as _e:
             work_ctx += f"\n\n(стол накрыть не вышло: {_e})\n"
 
+    # VYBOR_METKOY_V1: тот же выбор и в разговоре — иначе дома он один,
+    # а на работе другой. Здесь же он его и объявляет.
+    try:
+        from vybor import blok_dlya_prompta as _vybor_blok
+        work_ctx += _vybor_blok(_CEH, _SLOT)
+    except Exception:
+        pass
+
+    # ZNANIYA_V_RAZGOVORE_V1: полка за спиной. В разговоре знаний не было
+    # вовсе — ни книги Котина, ни входов, ни паттернов, — и на вопрос про
+    # паттерн отвечать было нечем, кроме общей эрудиции. Отсюда «уровни
+    # сопротивления», которых в этой школе нет.
+    _znaniya = ""
+    try:
+        _znaniya = _znaniya_roli()
+    except Exception:
+        pass
+    work_ctx += (
+        "\n\nГоворишь языком своей школы. В ней есть пасть и зубы "
+        "Аллигатора, фракталы, приседающий бар, разворотный бар, AO и "
+        "дивергенция, волны и откаты. «Уровней поддержки и сопротивления» "
+        "в ней нет — это чужой словарь. Не знаешь чего-то — так и скажи, "
+        "не подставляй чужое слово вместо своего.\n")
+
     system = prompt + work_ctx
     try:   # AVAN_NOSITEL_V1: в разговоре тоже ОН, не роль
         from nositel import dusha_slota
@@ -450,8 +488,11 @@ def chat_with_avan(question: str, last_run: Optional[dict] = None,
 
     try:
         # RAZGOVOR_SO_STOLOM_V1: с кадром, если знаем, на что смотрим.
-        _chat_fn = _glaz(chat, _sym, _tf, _SLOT) if (_sym and _tf) else chat
+        # GLAZ_NE_TARATORIT_V1: в разговоре — разговорная подводка.
+        _chat_fn = (_glaz(chat, _sym, _tf, _SLOT, preambula=_GLAZ_RAZGOVOR)
+                    if (_sym and _tf) else chat)
         return _chat_fn(system=system, user=question, history=history,
+                        knowledge=_znaniya,
                     agent_id="A07_AVANTURIST", slot_id="A07",
                     temperature=_temp)
     except Exception as e:
@@ -725,6 +766,13 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
     else:
         system_full = prompt
 
+    # VYBOR_METKOY_V1: выбор входа — его метка, а не свойство слота.
+    try:
+        from vybor import blok_dlya_prompta as _vybor_blok
+        system_full += _vybor_blok(_CEH, _SLOT)
+    except Exception:
+        pass
+
     # NATURA_V_TEMPERATURU_V1: натура и состояние Ильи меняют ТЕМПЕРАТУРУ головы,
     # а не только текст промпта. None → дефолт модели (как было).
     _temp = None
@@ -807,3 +855,9 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
 # KADR_I_VAKANSIYA_V1 - marker
 
 # RAZGOVOR_SO_STOLOM_V1 - marker
+
+# VYBOR_METKOY_V1 - marker
+
+# ZNANIYA_V_RAZGOVORE_V1 - marker
+
+# GLAZ_NE_TARATORIT_V1 - marker
