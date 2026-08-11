@@ -1880,12 +1880,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
     # POLKA_IZ_TERMINALA_V1 — какие этажи спрашиваем у терминала.
     # Не все подряд: минутка и двухчасовка редко нужны, а опрос платный
     # временем. Пустые этажи на полку не кладём.
-    # OKNO_MOGLO_UYTI_V1: было девять этажей — на большом обзоре рынка это
-    # сотни походов в терминал, опрос тянулся минутами, и страница успевала
-    # уйти из-под него. Шесть рабочих этажей и потолок по инструментам:
-    # быстро, и хватает на всё, чем торгуют.
-    _TERM_ETAZHI = ("M15", "M30", "H1", "H4", "D1", "W1")
-    _TERM_POTOLOK = 25      # инструментов за раз; обзор рынка длиннее — режем
+    _TERM_ETAZHI = ("M5", "M15", "M30", "H1", "H4", "H8", "D1", "W1", "MN1")
 
     def _sobrat_iz_terminala() -> tuple:
         """Спросить сам терминал: что открыто в обзоре рынка и что живо.
@@ -1943,8 +1938,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
         vidnye = [s for s in vse if getattr(s, "visible", False)]
         if not vidnye:
-            vidnye = list(vse)[:10]      # обзор пуст — берём хоть что-то
-        vidnye = vidnye[:_TERM_POTOLOK]
+            vidnye = list(vse)[:20]      # обзор пуст — берём хоть что-то
 
         aktivy = []
         for s in vidnye:
@@ -1993,28 +1987,13 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         return aktivy, ""
 
     async def sobrat_terminal():
-        """Кнопка ТЕРМИНАЛ: сходить и разложить котировки по полке.
-
-        OKNO_MOGLO_UYTI_V1: опрос долгий, а страница за это время могла
-        перезагрузиться. Тогда окно, в которое мы собрались рисовать,
-        уже мертво — NiceGUI роняет KeyError изнутри. Поэтому всё, что
-        трогает экран ПОСЛЕ похода, обёрнуто: данные ложатся в state
-        всегда, а рисуем — если есть куда.
-        """
-        def _tiho(chto, *a, **kw):
-            try:
-                chto(*a, **kw)
-            except Exception:
-                pass       # окна нет — не беда, данные уже сохранены
-
-        _tiho(ui.notify, "📡 спрашиваю терминал… это небыстро",
-              type="info")
+        """Кнопка ТЕРМИНАЛ: сходить и разложить котировки по полке."""
+        ui.notify("📡 спрашиваю терминал…", type="info")
         import asyncio as _a
         aktivy, beda = await _a.get_event_loop().run_in_executor(
             None, _sobrat_iz_terminala)
         if beda:
-            _tiho(ui.notify, f"⚠ {beda}", type="warning")
-            print(f"[ТЕРМИНАЛ] ⚠️  {beda}")
+            ui.notify(f"⚠ {beda}", type="warning")
             return
         # файлы не выкидываем: живое и история лежат рядом, но помечены
         bylo = [x for x in state.get("loaded_assets", [])
@@ -2022,11 +2001,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         state["loaded_assets"] = aktivy + bylo
         if state.get("active_asset") is None and aktivy:
             state["active_asset"] = 0
+        update_files_display()
         simvolov = len({x["symbol"] for x in aktivy})
-        print(f"[ТЕРМИНАЛ] 📡 инструментов {simvolov}, этажей {len(aktivy)}")
-        _tiho(update_files_display)
-        _tiho(ui.notify, f"📡 с терминала: инструментов {simvolov}, "
-                         f"этажей {len(aktivy)}", type="positive")
+        ui.notify(f"📡 с терминала: инструментов {simvolov}, "
+                  f"этажей {len(aktivy)}", type="positive")
 
     def _scan_test_data():
         assets = []
@@ -2506,5 +2484,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # POLKA_IZ_TERMINALA_V1 - marker
 
 # SVYAZ_S_TERMINALOM_V1 - marker
-
-# OKNO_MOGLO_UYTI_V1 - marker
