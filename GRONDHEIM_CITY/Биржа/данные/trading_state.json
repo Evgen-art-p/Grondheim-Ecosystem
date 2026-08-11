@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-10T05:15:08.755560",
+  "updated": "2026-08-11T23:12:47.467912",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -46,11 +46,11 @@
   ],
   "feed": {
     "mode": "real",
-    "symbol": "GBPUSD"
+    "symbol": "EURUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Жду подтверждения для входа, так как текущий бар не показывает достаточной силы для установки заявки.",
+    "reason": "",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -61,12 +61,12 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "агент не ответил (вакансия — за столом никого, смотреть некому)",
+    "reason": "",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },

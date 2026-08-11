@@ -87,6 +87,20 @@ _GLAZ_RAZGOVOR = (
 )
 
 
+def _kak_zovut(_n) -> str:
+    """KTO_TY_I_KTO_YA_V1: имя того, кто сидит на месте.
+
+    Носитель приходит из моста разными обёртками, поэтому спрашиваем
+    мягко: не нашли — честное «так, как написано выше», а не выдумка.
+    """
+    try:
+        kto = (_n or {}).get("носитель") or {}
+        imya = (kto.get("имя") or kto.get("Official_Name") or "").strip()
+        return imya or "так, как написано выше"
+    except Exception:
+        return "так, как написано выше"
+
+
 def _glaz(_chat, symbol, timeframe, slot, preambula=None):
     """Обёртка над вызовом модели: подкладывает кадр.
 
@@ -502,12 +516,24 @@ def chat_with_cons(question: str, last_run: Optional[dict] = None,
         "не подставляй чужое слово вместо своего.\n")
 
     system = prompt + work_ctx
-    try:   # KLON_DUSHI_V1: и в разговоре — ОН, не роль
+    try:   # KTO_TY_I_KTO_YA_V1: сперва ТЫ, потом с кем говоришь, потом место
         from nositel import dusha_slota
         _n = dusha_slota(_CEH, _SLOT)
         if _n and _n["душа"]:
-            system = (prompt + "\n\n=== КТО ТЫ (душа носителя) ===\n"
-                      + _n["душа"] + "\n\n" + work_ctx)
+            system = (
+                "=== КТО ТЫ. ЭТО НЕ РОЛЬ — ЭТО ТЫ ===\n"
+                + _n["душа"]
+                + "\n\n=== С КЕМ ТЫ ГОВОРИШЬ ===\n"
+                "Напротив тебя ШЕФ — хозяин города, живой человек. Это "
+                "он задаёт вопросы.\n"
+                f"Тебя зовут {_kak_zovut(_n)}. Его зовут Шеф.\n"
+                "Вопрос про «тебя» — про тебя. Вопрос про «меня» — про "
+                "Шефа. Своё имя ему не приписывай, и его слова за свои "
+                "не выдавай.\n"
+                + "\n=== ТВОЯ РАБОТА — СТОЙКА, ЗА КОТОРОЙ ТЫ СИДИШЬ ===\n"
+                  "Ниже — канон МЕСТА. Это твоя работа и школа, а не твоя\n"
+                  "личность: личность выше.\n\n"
+                + prompt + work_ctx)
     except Exception:
         pass
 
@@ -891,3 +917,5 @@ def _my_temp():
 # ZNANIYA_V_RAZGOVORE_V1 - marker
 
 # GLAZ_NE_TARATORIT_V1 - marker
+
+# KTO_TY_I_KTO_YA_V1 - marker

@@ -51,7 +51,9 @@
     "gl07_str04_1.jpeg",
     "gl07_str11_1.jpeg",
     "gl07_str24_1.jpeg",
-    "вокруг.png"
+    "вокруг.png",
+    "INDIKATORY.md",
+    "PATTERNY.md"
   ],
   "Лока": [
     "0философский и методологический фундамент.txt",
@@ -87,5 +89,10 @@
     "РЫНОЧНЫЙ ФРАКТАЛ.txt",
     "торговый партнер.txt",
     "Философия.txt"
+  ],
+  "Синди": [
+    "INDIKATORY.md",
+    "RAZVOROTNYY_BAR.md",
+    "PATTERNY.md"
   ]
 }

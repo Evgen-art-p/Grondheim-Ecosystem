@@ -1797,14 +1797,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 return
 
             active = state.get("active_asset")
-            # POLKA_IZ_TERMINALA_V1: живое и история лежат рядом — пусть
-            # будет видно, что есть что. Спутать их дороже всего.
-            _zhivyh = sum(1 for _a in assets
-                          if _a.get("источник") == "терминал")
-            if _zhivyh:
-                ui.label(f"из терминала: {_zhivyh}").style(
-                    "color:rgba(0,255,136,0.55); font-size:9px; "
-                    "letter-spacing:.08em; padding:0 4px 4px;")
 
             groups = {}
             order = []
@@ -1876,96 +1868,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             "name": p.name, "path": str(p), "symbol": symbol, "timeframe": tf,
             "bars": len(bars), "date_from": bars[0].get("date", "?"), "date_to": bars[-1].get("date", "?"),
         }
-
-    # POLKA_IZ_TERMINALA_V1 — какие этажи спрашиваем у терминала.
-    # Не все подряд: минутка и двухчасовка редко нужны, а опрос платный
-    # временем. Пустые этажи на полку не кладём.
-    _TERM_ETAZHI = ("M5", "M15", "M30", "H1", "H4", "H8", "D1", "W1", "MN1")
-
-    def _sobrat_iz_terminala() -> tuple:
-        """Спросить сам терминал: что открыто в обзоре рынка и что живо.
-
-        Возвращает (активы, беда). Беда — текстом, чтобы кабинет мог
-        сказать её вслух, а не молчать.
-        """
-        try:
-            import sys as _s
-            _b = str(_HERE)
-            if _b not in _s.path:
-                _s.path.insert(0, _b)
-            import mt5_feed as _mf
-        except Exception as e:
-            return [], f"насос не поднялся: {e}"
-
-        mt5 = _mf._terminal()
-        if mt5 is None:
-            return [], ("терминал молчит: не установлен MetaTrader5 для "
-                        "питона или сам терминал не запущен")
-
-        try:
-            vse = mt5.symbols_get() or []
-        except Exception as e:
-            return [], f"терминал не отдал список инструментов: {e}"
-
-        vidnye = [s for s in vse if getattr(s, "visible", False)]
-        if not vidnye:
-            vidnye = list(vse)[:20]      # обзор пуст — берём хоть что-то
-
-        aktivy = []
-        for s in vidnye:
-            imya = getattr(s, "name", "")
-            if not imya:
-                continue
-            for tf in _TERM_ETAZHI:
-                kod = _mf._TF_MAP.get(tf)
-                if kod is None:
-                    continue
-                try:
-                    bary = mt5.copy_rates_from_pos(imya, kod, 0, 2)
-                except Exception:
-                    bary = None
-                if bary is None or len(bary) == 0:
-                    continue          # этаж молчит — на полку не кладём
-                try:
-                    from datetime import datetime as _dt
-                    posledniy = _dt.fromtimestamp(
-                        int(bary[-1]["time"])).strftime("%Y.%m.%d %H:%M")
-                except Exception:
-                    posledniy = "?"
-                aktivy.append({
-                    "name": f"{imya} {tf}", "path": "", "symbol": imya,
-                    "timeframe": tf, "bars": 0,
-                    "date_from": "терминал", "date_to": posledniy,
-                    "источник": "терминал",
-                })
-        try:
-            mt5.shutdown()
-        except Exception:
-            pass
-        if not aktivy:
-            return [], ("терминал на связи, но ни один этаж не отдал баров "
-                        "— выходной или инструменты не открыты в обзоре")
-        return aktivy, ""
-
-    async def sobrat_terminal():
-        """Кнопка ТЕРМИНАЛ: сходить и разложить котировки по полке."""
-        ui.notify("📡 спрашиваю терминал…", type="info")
-        import asyncio as _a
-        aktivy, beda = await _a.get_event_loop().run_in_executor(
-            None, _sobrat_iz_terminala)
-        if beda:
-            ui.notify(f"⚠ {beda}", type="warning")
-            return
-        # файлы не выкидываем: живое и история лежат рядом, но помечены
-        bylo = [x for x in state.get("loaded_assets", [])
-                if x.get("источник") != "терминал"]
-        state["loaded_assets"] = aktivy + bylo
-        if state.get("active_asset") is None and aktivy:
-            state["active_asset"] = 0
-        update_files_display()
-        simvolov = len({x["symbol"] for x in aktivy})
-        ui.notify(f"📡 с терминала: инструментов {simvolov}, "
-                  f"этажей {len(aktivy)}", type="positive")
 
     def _scan_test_data():
         assets = []
@@ -2179,10 +2081,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         ui.label("ЗАГРУЗЧИК").style(
                             "color:rgba(255,255,255,0.92); font-weight:900; letter-spacing:.12em; "
                             "text-transform:uppercase; font-size:11px;")
-                        # POLKA_IZ_TERMINALA_V1: живые котировки на полку
-                        ui.button("ТЕРМИНАЛ", on_click=sobrat_terminal).props(
-                            "flat dense size=xs").style(
-                            "color:rgba(0,255,136,0.75); font-size:9px;")
                         ui.button("CLEAR", on_click=clear_files).props("flat dense size=xs").style(
                             "color:rgba(255,80,80,0.5); font-size:9px;")
                     files_ref["uploader"] = ui.upload(
@@ -2441,5 +2339,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # GEMINI_PO_UMOLCHANIYU_V1 - marker
 
 # VAHTA_NOVAYA_SVECHA_V1 - marker
-
-# POLKA_IZ_TERMINALA_V1 - marker
