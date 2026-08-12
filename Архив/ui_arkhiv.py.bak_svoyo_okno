@@ -783,10 +783,10 @@ def page_arkhiv() -> None:
 
     # ── навигация ──────────────────────────────────────────
     def idti_v_biblioteku():
-        ui.navigate.to("/akademia", new_tab=True)
+        ui.navigate.to("/akademia")
 
     def idti_v_gorod():
-        ui.navigate.to("/grondheim", new_tab=True)
+        ui.navigate.to("/grondheim")
 
     def idti_k_khranitelyu():
         if not zanyato:
@@ -918,7 +918,7 @@ def page_arkhiv() -> None:
                         ui.html('<div style="color:rgba(255,255,255,0.55);font-size:11px;'
                                 'letter-spacing:.14em;font-weight:900;">АРХИВ ГОРОДА</div>')
                     with ui.row().style("gap:8px; justify-content:flex-end;"):
-                        ui.button("← Брат", on_click=lambda: ui.navigate.to("/brat", new_tab=True)).props("flat").style(
+                        ui.button("← Брат", on_click=lambda: ui.navigate.to("/brat")).props("flat").style(
                             "padding:6px 14px; border-radius:8px; font-size:12px; "
                             "background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.25); "
                             "color:rgba(220,200,160,0.8);")
@@ -975,5 +975,3 @@ if __name__ in {"__main__", "__mp_main__"}:
     ui.run(title="Архив · Грондхейм", port=8106, reload=False)
 
 # ARKHIV_KABINET_V1 — маркер идемпотентности
-
-# SVOYO_OKNO_V1 - marker

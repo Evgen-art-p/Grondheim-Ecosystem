@@ -145,7 +145,7 @@ def page_rabota():
                     "color:rgba(139,233,253,0.9); "
                     "background:rgba(139,233,253,0.10);")
         ui.element("div").style("flex:1")
-        ui.button("← БРАТ", on_click=lambda: ui.navigate.to("/brat", new_tab=True)).props(
+        ui.button("← БРАТ", on_click=lambda: ui.navigate.to("/brat")).props(
             "flat no-caps").style("font-size:0.72rem; "
                                   "color:rgba(139,233,253,0.85);")
 
@@ -545,5 +545,3 @@ def page_rabota():
 # KOROTKIY_BLANK_V1 - marker
 
 # ZHITELI_V_RABOTE_V1 - marker
-
-# SVOYO_OKNO_V1 - marker

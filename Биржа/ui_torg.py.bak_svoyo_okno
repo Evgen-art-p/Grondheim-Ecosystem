@@ -2294,7 +2294,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     _opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
                     ui.select(_opts, value=state["model"], on_change=on_model_change) \
                         .props('dense borderless dark options-dense').style("min-width:190px;")
-                ui.button("← Город", on_click=lambda: ui.navigate.to("/grondheim", new_tab=True)).props("flat").style(
+                ui.button("← Город", on_click=lambda: ui.navigate.to("/grondheim")).props("flat").style(
                     "color:rgba(255,255,255,0.5);")
 
         with ui.element("div").classes("area-left"):
@@ -2483,7 +2483,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     # наезжала на кнопку ОЧИСТИТЬ, и была избыточна
                     # (страница подписана вкладками и хедером Совета).
                     with ui.row().style("gap:8px; justify-content:flex-end;"):
-                        ui.button("← Брат", on_click=lambda: ui.navigate.to("/brat", new_tab=True)).props("flat").style(
+                        ui.button("← Брат", on_click=lambda: ui.navigate.to("/brat")).props("flat").style(
                             "padding:6px 14px; border-radius:8px; font-size:12px; "
                             "background:rgba(99,130,255,0.08); border:1px solid rgba(99,130,255,0.25); "
                             "color:rgba(180,190,220,0.8);")
@@ -2580,5 +2580,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # OKNO_MOGLO_UYTI_V1 - marker
 
 # VAHTA_GORODSKAYA_V1 - marker
-
-# SVOYO_OKNO_V1 - marker

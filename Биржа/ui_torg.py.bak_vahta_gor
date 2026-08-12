@@ -577,88 +577,6 @@ body{
 """
 
 
-# ══════════════════════════════════════════════════════════════
-# ВАХТА ГОРОДСКАЯ (VAHTA_GORODSKAYA_V1)
-# ══════════════════════════════════════════════════════════════
-# Была вахта комнатная: таймер жил в открытой вкладке. Ушёл на другую
-# страницу — вахта встала, и никто об этом не сказал.
-#
-# Теперь она живёт при ГОРОДЕ, а не при окне: заводится один раз на
-# запуск, тикает на сервере и работает, пока город поднят. Закрыл
-# браузер — она всё равно стоит на посту. Вернулся — кнопка горит.
-_VAHTA = {
-    "идёт": False,      # стоим ли на вахте
-    "инструмент": "",   # что сторожим — запомнили в миг нажатия
-    "этаж": "",
-    "бар": "",          # на какой свече стоим
-    "работает": False,  # прогон уже идёт — второй не начинаем
-    "последнее": "",    # что случилось в прошлый раз (для кнопки)
-}
-_VAHTA_ZAVEDENA = False
-
-
-def _vahta_posledniy_bar(symbol: str, tf: str) -> str:
-    try:
-        from feed_source import bars as _src_bars
-        _bs, _ = _src_bars(symbol, tf, 3)
-        if _bs:
-            return str(_bs[-1].get("date", ""))
-    except Exception:
-        pass
-    return ""
-
-
-async def _vahta_sluzhba():
-    """Тик вахты. Живёт на сервере, окна не касается.
-
-    VAHTA_GORODSKAYA_V1: Совет зовём НАПРЯМУЮ, а не через кнопку
-    кабинета — кнопка рисует в окно, а окна может не быть вовсе.
-    """
-    if not _VAHTA["идёт"] or _VAHTA["работает"]:
-        return
-    sym, tf = _VAHTA["инструмент"], _VAHTA["этаж"]
-    if not sym or not tf:
-        return
-    bar = _vahta_posledniy_bar(sym, tf)
-    if not bar:
-        return
-    if not _VAHTA["бар"]:
-        _VAHTA["бар"] = bar          # первый тик — только запомнить
-        return
-    if bar == _VAHTA["бар"]:
-        return
-
-    _VAHTA["бар"] = bar
-    _VAHTA["работает"] = True
-    print(f"[ВАХТА] 🔔 новая свеча {sym} {tf} · {bar[:16]} — зову Совет")
-    try:
-        import asyncio as _a
-        import council
-        await _a.get_event_loop().run_in_executor(
-            None, lambda: council.wake_council(sym, tf))
-        _VAHTA["последнее"] = f"{bar[:16]} · Совет отработал"
-        print(f"[ВАХТА] ✓ {sym} {tf} · {bar[:16]} — Совет отработал")
-    except Exception as e:
-        _VAHTA["последнее"] = f"{bar[:16]} · сбой: {e}"
-        print(f"[ВАХТА] ⚠️  сбой на {sym} {tf}: {e}")
-    finally:
-        _VAHTA["работает"] = False
-
-
-def _vahta_zavesti():
-    """Один таймер на весь город, не на каждое окно."""
-    global _VAHTA_ZAVEDENA
-    if _VAHTA_ZAVEDENA:
-        return
-    try:
-        from nicegui import app as _app
-        _app.timer(20.0, _vahta_sluzhba)
-        _VAHTA_ZAVEDENA = True
-        print("[ВАХТА] ⏱ городская вахта заведена (тик 20 сек)")
-    except Exception as e:
-        print(f"[ВАХТА] ⚠️  не завелась: {e}")
-
-
 def page_torg(tseh_id: str = "торговый_хаос") -> None:
     """Кабинет Совета Биржи — тот же, что был /exchange в -2."""
 
@@ -1667,21 +1585,15 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         ui.notify(tail, type="positive" if not stopped else "warning")
 
     def _vahta_vid():
-        """Вид кнопки: горит — стоим на вахте.
-
-        VAHTA_GORODSKAYA_V1: спрашиваем ГОРОДСКУЮ вахту, не окно. Зашёл
-        с другой страницы или из другого окна — кнопка всё равно
-        показывает правду.
-        """
+        """Вид кнопки: горит — стоим на вахте."""
         el = toolbar_refs.get("vahta_btn")
         ht = toolbar_refs.get("vahta_html")
         if el is None or ht is None:
             return
-        if _VAHTA["идёт"]:
+        if state.get("vahta"):
             el.style("background:rgba(0,204,255,0.15);color:#00ccff;"
                      "border:1px solid rgba(0,204,255,0.45);")
-            ht.content = (f'⏱ ВАХТА ● {_VAHTA["инструмент"]} '
-                          f'{_VAHTA["этаж"]}')
+            ht.content = "⏱ ВАХТА ●"
         else:
             el.style("background:rgba(255,255,255,0.03);"
                      "color:rgba(255,255,255,0.45);"
@@ -1689,30 +1601,51 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             ht.content = "⏱ ВАХТА"
 
     def _vahta_pereklyuchit():
-        if _VAHTA["идёт"]:
-            _VAHTA.update({"идёт": False, "бар": ""})
-            _vahta_vid()
+        state["vahta"] = not state.get("vahta")
+        # забываем, где стояли: включаем — начинаем считать заново
+        state["vahta_bar"] = ""
+        _vahta_vid()
+        if state["vahta"]:
+            _s, _t = _aktivnyy_rynok()
+            ui.notify(f"⏱ вахта: жду новую свечу {_s} {_t}", type="info")
+        else:
             ui.notify("⏱ вахта снята", type="info")
-            print("[ВАХТА] ⏹ снята")
+
+    def _posledniy_bar(symbol: str, tf: str) -> str:
+        """Время последнего бара по тому же крану, что и кадр."""
+        try:
+            from feed_source import bars as _src_bars
+            _bs, _ = _src_bars(symbol, tf, 3)
+            if _bs:
+                return str(_bs[-1].get("date", ""))
+        except Exception:
+            pass
+        return ""
+
+    async def _vahta_tik():
+        """Раз в двадцать секунд: не сменилась ли свеча.
+
+        VAHTA_NOVAYA_SVECHA_V1. Первый тик только запоминает бар —
+        иначе Совет дёргался бы посреди уже начатой свечи. В тестере
+        молчим: там время идёт из файла, а не из жизни.
+        """
+        if not state.get("vahta") or state.get("running"):
             return
         if state.get("mode") == "tester":
-            ui.notify("⏱ в тестере вахта не нужна — там время из файла",
-                      type="warning")
             return
         _s, _t = _aktivnyy_rynok()
-        # что сторожим — запоминаем СЕЙЧАС: вахта живёт при городе и
-        # полки кабинета потом не увидит.
-        _VAHTA.update({"идёт": True, "инструмент": _s, "этаж": _t,
-                       "бар": ""})
-        _vahta_zavesti()
-        _vahta_vid()
-        ui.notify(f"⏱ вахта: сторожу {_s} {_t}. Идёт, пока поднят город "
-                  f"— окно можно закрыть", type="info")
-        print(f"[ВАХТА] ▶ стою на {_s} {_t}")
-
-    # VAHTA_GORODSKAYA_V1: комнатный тик убран — вахту несёт город
-    # (см. _vahta_sluzhba наверху файла). Здесь осталась только
-    # синхронизация кнопки при заходе на страницу.
+        _bar = _posledniy_bar(_s, _t)
+        if not _bar:
+            return
+        if not state.get("vahta_bar"):
+            state["vahta_bar"] = _bar
+            return
+        if _bar == state["vahta_bar"]:
+            return
+        state["vahta_bar"] = _bar
+        ui.notify(f"🔔 новая свеча {_s} {_t} · {_bar[:16]} — смотрю",
+                  type="positive")
+        await market_dispatch()
 
     async def market_dispatch():
         if state.get("mode") == "tester":
@@ -2294,7 +2227,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     _opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
                     ui.select(_opts, value=state["model"], on_change=on_model_change) \
                         .props('dense borderless dark options-dense').style("min-width:190px;")
-                ui.button("← Город", on_click=lambda: ui.navigate.to("/grondheim", new_tab=True)).props("flat").style(
+                ui.button("← Город", on_click=lambda: ui.navigate.to("/grondheim")).props("flat").style(
                     "color:rgba(255,255,255,0.5);")
 
         with ui.element("div").classes("area-left"):
@@ -2346,10 +2279,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             toolbar_refs["vahta_html"] = ui.html("⏱ ВАХТА")
                         toolbar_refs["vahta_btn"].on(
                             "click", lambda: _vahta_pereklyuchit())
-                        # VAHTA_GORODSKAYA_V1: таймер вахты живёт при
-                        # городе. Здесь только подтягиваем вид кнопки —
-                        # чтобы, зайдя из другого окна, видеть правду.
-                        ui.timer(3.0, _vahta_vid)
+                        ui.timer(20.0, _vahta_tik)   # async-колбэк NiceGUI ждёт сам
                         toolbar_refs["mode_real"] = ui.element("div").style(
                             "padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;"
                             "cursor:pointer;background:rgba(0,255,136,0.15);color:#00ff88;"
@@ -2483,7 +2413,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     # наезжала на кнопку ОЧИСТИТЬ, и была избыточна
                     # (страница подписана вкладками и хедером Совета).
                     with ui.row().style("gap:8px; justify-content:flex-end;"):
-                        ui.button("← Брат", on_click=lambda: ui.navigate.to("/brat", new_tab=True)).props("flat").style(
+                        ui.button("← Брат", on_click=lambda: ui.navigate.to("/brat")).props("flat").style(
                             "padding:6px 14px; border-radius:8px; font-size:12px; "
                             "background:rgba(99,130,255,0.08); border:1px solid rgba(99,130,255,0.25); "
                             "color:rgba(180,190,220,0.8);")
@@ -2578,7 +2508,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # SVYAZ_S_TERMINALOM_V1 - marker
 
 # OKNO_MOGLO_UYTI_V1 - marker
-
-# VAHTA_GORODSKAYA_V1 - marker
-
-# SVOYO_OKNO_V1 - marker

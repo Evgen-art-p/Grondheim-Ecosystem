@@ -1627,12 +1627,12 @@ def page_brat():
                     # PATCH_BRAT_GOROD_REMOVED_V1: раньше вела на /karta,
                     # теперь открывает карту напрямую — кнопка ГОРОД убрана
                     ui.button("ГРОНДХЕЙМ",
-                              on_click=lambda: ui.navigate.to("/grondheim", new_tab=True)
+                              on_click=lambda: ui.navigate.to("/grondheim")
                               ).props("flat no-caps").classes("birzha-header-btn")
                     # PATCH_BRAT_TIK_PROPISKA_ROL_TO_STAGE_V1: Тик / Прописка / Роль
                     # переехали в тулбар стола, в один ряд с кнопкой ГОРОД (см. ниже)
                     ui.button("Страница Жизни",
-                              on_click=lambda: ui.navigate.to("/registry", new_tab=True)  # PATCH_ROZH_BTN
+                              on_click=lambda: ui.navigate.to("/registry")  # PATCH_ROZH_BTN
                               ).props("flat no-caps").classes("birzha-header-btn")
                 ui.element("div").style("flex:1")
                 with ui.element("div").style(
@@ -1730,7 +1730,7 @@ def page_brat():
                         # STRANICA_RABOTY_V1: та табличка не тянулась на
                         # город — теперь кнопка ведёт на Страницу Работы.
                         ui.button("Работа",
-                                  on_click=lambda: ui.navigate.to("/rabota", new_tab=True)
+                                  on_click=lambda: ui.navigate.to("/rabota")
                                   ).props("flat").classes("brat-gate")
                         # PEREVOZKA_KNOPKI_V1: собрать жителя в дорогу
                         ui.button("Перевозка",
@@ -1849,5 +1849,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # UBRAT_MYORTVOE_V1 - marker
 
 # PEREVOZKA_KNOPKI_V1 - marker
-
-# SVOYO_OKNO_V1 - marker

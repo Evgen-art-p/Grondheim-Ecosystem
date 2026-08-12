@@ -684,8 +684,8 @@ def page_mayak() -> None:
                             .props('dense borderless dark options-dense').style("min-width:180px;")
                     for podpis, deystvie in (
                         ("✕ ГАСИТЬ", pogasit),
-                        ("🏙 ГОРОД", lambda: ui.navigate.to("/grondheim", new_tab=True)),
-                        ("← БРАТ", lambda: ui.navigate.to("/brat", new_tab=True)),
+                        ("🏙 ГОРОД", lambda: ui.navigate.to("/grondheim")),
+                        ("← БРАТ", lambda: ui.navigate.to("/brat")),
                     ):
                         b = ui.element("div").classes("mbtn")
                         b.on("click", deystvie)
@@ -744,5 +744,3 @@ if __name__ in {"__main__", "__mp_main__"}:
     ui.run(title="Маяк · Грондхейм", port=8106, reload=False)
 
 # MAYAK_KABINET_V2 — маркер идемпотентности
-
-# SVOYO_OKNO_V1 - marker
