@@ -46,6 +46,8 @@ CSS = """
 POLYA = [
     ("название", "Название должности"),
     ("чем_занят", "Чем занят — одной строкой"),
+    # INSTRUMENT_NAZNACHIT_ILI_SAM_V1: пусто — работник выберет сам
+    ("инструмент", "Инструмент (пусто — выберет сам)"),
 ]
 
 # под «подробнее» — свёрнуто, пусто по умолчанию, никого не держит
@@ -549,5 +551,3 @@ def page_rabota():
 # SVOYO_OKNO_V1 - marker
 
 # INSTRUMENT_NAZNACHIT_ILI_SAM_V1 - marker
-
-# PANEL_TREYDERA_V1 - marker

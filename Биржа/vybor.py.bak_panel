@@ -167,12 +167,21 @@ SLOVO_INSTR = "ИНСТРУМЕНТ:"
 
 
 def instrument_mesta(ceh: str, slot: str) -> str:
-    """Что Шеф задал этому месту. Пусто — не задавал, выбирает сам.
-
-    PANEL_TREYDERA_V1: читаем листок назначений при Бирже, а не бланк
-    должности — бланк про должность, а это про сегодняшнюю работу.
-    """
-    return (_nazn_chitat().get(f"{ceh}/{slot}") or "").strip().upper()
+    """Что назначено месту в бланке должности. Пусто — не назначено."""
+    try:
+        import sys as _s
+        from pathlib import Path as _P
+        _g = str(_P(__file__).resolve().parent.parent / "ГОРОД")
+        if _g not in _s.path:
+            _s.path.insert(0, _g)
+        import rabota as _rab
+        for m in _rab.mesta():
+            if m.get("цех") == ceh and m.get("слот") == slot:
+                d = _rab.chitat(m["id"]) or {}
+                return (d.get("инструмент") or "").strip().upper()
+    except Exception:
+        pass
+    return ""
 
 
 def instrument_zhitelya(ceh: str, slot: str) -> dict:
@@ -265,42 +274,3 @@ def blok_instrumenta(ceh: str, slot: str, dostupnye=None,
             "тоже честно.\n")
 
 # INSTRUMENT_NAZNACHIT_ILI_SAM_V1 - marker
-
-
-# ══════════════════════════════════════════════════════════════
-# НАЗНАЧЕНИЯ ШЕФА (PANEL_TREYDERA_V1)
-# ══════════════════════════════════════════════════════════════
-# Сперва я положил инструмент в бланк должности — и был неправ.
-# Бланк про должность, он живёт месяцами; а инструмент — рабочее
-# задание на сегодня. Теперь назначения лежат отдельным листком при
-# Бирже: Шеф кликнул трейдера, кликнул инструмент — записалось.
-_NAZN = Path(__file__).resolve().parent / "данные" / "naznacheniya.json"
-
-
-def _nazn_chitat() -> dict:
-    try:
-        import json as _j
-        return _j.loads(_NAZN.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def naznachit(ceh: str, slot: str, symbol: str) -> tuple:
-    """Шеф даёт трейдеру инструмент. Пусто — снимает задание."""
-    import json as _j
-    d = _nazn_chitat()
-    klyuch = f"{ceh}/{slot}"
-    symbol = (symbol or "").strip().upper()
-    if symbol:
-        d[klyuch] = symbol
-    else:
-        d.pop(klyuch, None)
-    try:
-        _NAZN.parent.mkdir(parents=True, exist_ok=True)
-        _NAZN.write_text(_j.dumps(d, ensure_ascii=False, indent=2),
-                         encoding="utf-8")
-    except Exception as e:
-        return False, str(e)
-    return True, (f"задание: {symbol}" if symbol else "задание снято")
-
-# PANEL_TREYDERA_V1 - marker

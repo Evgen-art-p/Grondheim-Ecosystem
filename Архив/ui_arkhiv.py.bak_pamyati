@@ -782,69 +782,6 @@ def page_arkhiv() -> None:
                 pass
 
     # ── навигация ──────────────────────────────────────────
-    def otkryt_pamyati():
-        """PAMYATI_GORODA_V1: Архив как ДОСТУП, а не как склад.
-
-        Ничего к себе не тащим: спрашиваем реестр памятей, он обходит
-        папку `Архив/памяти/` и отдаёт только то, что в этом городе
-        реально есть. Выбранное показываем в правом окне.
-        """
-        try:
-            import sys as _sys
-            _p = str(Path(__file__).resolve().parent)
-            if _p not in _sys.path:
-                _sys.path.insert(0, _p)
-            import pamyat as _pam
-        except Exception as e:
-            ui.notify(f"⚠ реестр памятей не поднялся: {e}", color="negative")
-            return
-
-        spisok = _pam.vse()
-        if not spisok:
-            ui.notify("Памятей не нашёл — в этом городе пока пусто",
-                      color="warning")
-            return
-
-        with ui.dialog() as dlg, ui.card().style(
-            "background:#0d1117; border:1px solid rgba(201,168,76,0.30); "
-            "border-radius:16px; min-width:420px; padding:20px;"
-        ):
-            ui.html('<div style="color:rgba(255,255,255,0.92); '
-                    'font-weight:800; letter-spacing:0.10em; '
-                    'font-size:0.9rem; margin-bottom:4px;">'
-                    '🧠 ПАМЯТИ ГОРОДА</div>')
-            ui.html('<div style="color:rgba(255,255,255,0.45); '
-                    'font-size:0.72rem; margin-bottom:12px;">'
-                    'Архив ничего из этого у себя не держит — он знает, '
-                    'где лежит, и показывает.</div>')
-
-            def _otkryt(p):
-                zapisi = _pam.zapisi(p["ключ"], 200)
-                stroki = [f'# {p["имя"]}', "",
-                          f'*записей: {len(zapisi)}*', ""]
-                if not zapisi:
-                    stroki.append("*пусто — память есть, а записей ещё нет*")
-                for z in zapisi:
-                    kogda = z.get("когда") or "—"
-                    otkuda = f'  ·  `{z.get("откуда","")}`' if z.get("откуда") else ""
-                    stroki.append(f'**{kogda}**{otkuda}  \n{z.get("что","")}')
-                    stroki.append("")
-                update_viewer("\n".join(stroki))
-                dlg.close()
-
-            for p in spisok:
-                ui.button(p["имя"], on_click=lambda p=p: _otkryt(p)).props(
-                    "flat no-caps").style(
-                    "width:100%; text-align:left; padding:8px 12px; "
-                    "border-radius:8px; margin-bottom:4px; font-size:0.8rem; "
-                    "color:rgba(255,255,255,0.85); "
-                    "background:rgba(255,255,255,0.04);")
-
-            ui.button("закрыть", on_click=dlg.close).props("flat").style(
-                "margin-top:8px; color:rgba(255,255,255,0.4); "
-                "font-size:0.75rem;")
-        dlg.open()
-
     def idti_v_biblioteku():
         ui.navigate.to("/akademia", new_tab=True)
 
@@ -945,11 +882,6 @@ def page_arkhiv() -> None:
                     _b2.on("click", lambda: idti_k_khranitelyu())
                     with _b2:
                         ui.html("🏠 ДОМ ХРАНИТЕЛЯ")
-                    # PAMYATI_GORODA_V1: окно во все памяти города
-                    _b0 = ui.element("div").classes("arkhiv-btn")
-                    _b0.on("click", lambda: otkryt_pamyati())
-                    with _b0:
-                        ui.html("🧠 ПАМЯТИ")
                     _b3 = ui.element("div").classes("arkhiv-btn")
                     _b3.on("click", lambda: idti_v_gorod())
                     with _b3:
@@ -1045,5 +977,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # ARKHIV_KABINET_V1 — маркер идемпотентности
 
 # SVOYO_OKNO_V1 - marker
-
-# PAMYATI_GORODA_V1 - marker

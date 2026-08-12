@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-12T02:24:33.304940",
+  "updated": "2026-08-12T18:32:14.371506",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -50,7 +50,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "",
+    "reason": "нет условий для входа по стратегии, рынок в боковике",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -61,7 +61,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "нет отката к новой волне, AO падает, нет разворотного бара на откате",
+    "reason": "нет импульса и коррекции для входа по моему паттерну",
     "direction": null,
     "entry": null,
     "stop": null,

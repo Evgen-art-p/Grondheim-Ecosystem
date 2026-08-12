@@ -29,8 +29,8 @@ KOVCHEG = CITY / "жители" / "ковчег"
 STUDIA_PUT = _GOROD / "студия_путь.txt"
 
 POLYA_BLANKA = ("название", "локация", "где", "квартал", "цех", "слот",
-                "чем_занят", "инструмент", "обязанности", "судья",
-                "требования", "условия", "движок")
+                "чем_занят", "обязанности", "судья", "требования",
+                "условия", "движок")
 
 
 def _teper() -> str:
@@ -69,8 +69,6 @@ def blank(post_id: str, polya: dict | None = None) -> dict:
         "цех": "",
         "слот": "",
         "чем_занят": "",
-        # INSTRUMENT_NAZNACHIT_ILI_SAM_V1: пусто — работник выберет сам
-        "инструмент": "",
         "обязанности": [],
         "судья": "",
         "требования": "",
@@ -429,5 +427,3 @@ def est_post_na_slote(ceh: str, slot: str) -> bool:
     return False
 
 # LOKACIYA_DAYOT_MESTA_V1 - marker
-
-# INSTRUMENT_NAZNACHIT_ILI_SAM_V1 - marker

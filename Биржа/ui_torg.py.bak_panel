@@ -1836,19 +1836,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         update_vitals()
         update_avatar_states()
         update_stats_panel()
-        # PANEL_TREYDERA_V1: панель котировок теперь его — перерисуем,
-        # чтобы было видно, чем он работает.
-        try:
-            update_files_display()
-            _slot = _slot_agenta(agent_id)
-            if _slot:
-                from vybor import instrument_dlya as _idl
-                _ins, _otk = _idl(tseh_id, _slot, "")
-                if _ins:
-                    ui.notify(f"🎯 {_agent_label(roster, agent_id)}: "
-                              f"{_ins} ({_otk})", type="info")
-        except Exception:
-            pass
         label = _agent_label(roster, agent_id)
         if agent_id in state["reports"]:
             update_viewer(f"# {label} ({agent_id})\n\n{state['reports'][agent_id]}")
@@ -1856,37 +1843,13 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             update_viewer(f"# {label} ({agent_id})\n\n*Отчёт пока не создан.*")
 
     # ── загрузчик (левая колонка) ────────────────────────────
-    def _slot_agenta(agent_id: str) -> str:
-        """Слот, если это торговое место. Морж и прочие — не в счёт."""
-        row = _agent_row(roster, agent_id) or {}
-        slot = row.get("slot") or row.get("old_id") or agent_id
-        return slot if slot in ("A06", "A07", "A08") else ""
-
     def set_active(i):
-        """PANEL_TREYDERA_V1: полка принадлежит АКТИВНОМУ трейдеру.
-
-        Кликнул человека наверху — панель стала его. Кликнул инструмент
-        — он взял его в работу. Переключился на другого — у того свой.
-        """
         assets = state.get("loaded_assets", [])
-        if not (0 <= i < len(assets)):
-            return
-        state["active_asset"] = i
-        a = assets[i]
-        slot = _slot_agenta(state.get("active_agent", ""))
-        if slot:
-            try:
-                from vybor import naznachit as _nazn
-                ok, msg = _nazn(tseh_id, slot, a["symbol"])
-                imya = _agent_label(roster, state["active_agent"])
-                ui.notify(f"🎯 {imya}: {msg}" if ok else f"⚠ {msg}",
-                          type="positive" if ok else "negative")
-                print(f"[ПАНЕЛЬ] 🎯 {imya} ({slot}) ← {a['symbol']}")
-            except Exception as e:
-                ui.notify(f"⚠ задание не записалось: {e}", type="negative")
-        else:
+        if 0 <= i < len(assets):
+            state["active_asset"] = i
+            update_files_display()
+            a = assets[i]
             ui.notify(f"Активен: {a['symbol']} {a['timeframe']}", type="info")
-        update_files_display()
 
     def update_files_display():
         # ZAGRUZCHIK_PAPKI_TORG_V1: активы сгруппированы в папки по symbol.
@@ -2619,5 +2582,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # VAHTA_GORODSKAYA_V1 - marker
 
 # SVOYO_OKNO_V1 - marker
-
-# PANEL_TREYDERA_V1 - marker
