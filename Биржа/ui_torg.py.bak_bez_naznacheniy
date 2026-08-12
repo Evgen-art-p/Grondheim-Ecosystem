@@ -646,68 +646,17 @@ async def _vahta_sluzhba():
 
 
 def _vahta_zavesti():
-    """Один тик на весь город, не на каждое окно.
-
-    VAHTA_ZAVEDI_LYUBOY_V1: раньше звался только app.timer — в NiceGUI
-    постарше его нет, и вахта молча не заводилась. Кнопка горела, а
-    тика не было: худший вид поломки. Теперь три захода по очереди,
-    и если не вышло ни одного — говорим об этом вслух, а не молчим.
-    """
+    """Один таймер на весь город, не на каждое окно."""
     global _VAHTA_ZAVEDENA
     if _VAHTA_ZAVEDENA:
         return
-    # 1. городской таймер NiceGUI — если он в этой версии есть
     try:
         from nicegui import app as _app
-        if hasattr(_app, "timer"):
-            _app.timer(20.0, _vahta_sluzhba)
-            _VAHTA_ZAVEDENA = True
-            print("[ВАХТА] ⏱ заведена городским таймером (тик 20 сек)")
-            return
-    except Exception as e:
-        print(f"[ВАХТА] городской таймер не вышел: {e}")
-    # 2. своя петля в общем круге — работает в любой версии
-    try:
-        import asyncio as _a
-
-        async def _petlya():
-            print("[ВАХТА] ⏱ заведена своей петлёй (тик 20 сек)")
-            while True:
-                await _a.sleep(20)
-                try:
-                    await _vahta_sluzhba()
-                except Exception as e:
-                    print(f"[ВАХТА] ⚠️  сбой тика: {e}")
-
-        _a.get_event_loop().create_task(_petlya())
+        _app.timer(20.0, _vahta_sluzhba)
         _VAHTA_ZAVEDENA = True
-        return
+        print("[ВАХТА] ⏱ городская вахта заведена (тик 20 сек)")
     except Exception as e:
-        print(f"[ВАХТА] своя петля не вышла: {e}")
-    # 3. отдельная нитка — последний заход
-    try:
-        import asyncio as _a
-        import threading as _t
-
-        def _nitka():
-            print("[ВАХТА] ⏱ заведена отдельной ниткой (тик 20 сек)")
-            while True:
-                _time.sleep(20)
-                try:
-                    _a.run(_vahta_sluzhba())
-                except Exception as e:
-                    print(f"[ВАХТА] ⚠️  сбой тика: {e}")
-
-        import time as _time
-        _t.Thread(target=_nitka, daemon=True).start()
-        _VAHTA_ZAVEDENA = True
-        return
-    except Exception as e:
-        print(f"[ВАХТА] ⚠️  НЕ ЗАВЕЛАСЬ ВОВСЕ: {e}")
-        print("[ВАХТА] ⚠️  кнопка гореть будет, а сторожить некому — "
-              "нажимай РЫНОК руками")
-
-
+        print(f"[ВАХТА] ⚠️  не завелась: {e}")
 
 
 def page_torg(tseh_id: str = "торговый_хаос") -> None:
@@ -1760,23 +1709,14 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                       type="warning")
             return
         _s, _t = _aktivnyy_rynok()
-        # VAHTA_ZA_POLKOY_V1: берём выбранное сейчас, и дальше вахта
-        # идёт за полкой — сменил инструмент, сменилось и то, что она
-        # сторожит. Помнить старое оказалось хуже, чем не помнить.
+        # что сторожим — запоминаем СЕЙЧАС: вахта живёт при городе и
+        # полки кабинета потом не увидит.
         _VAHTA.update({"идёт": True, "инструмент": _s, "этаж": _t,
                        "бар": ""})
         _vahta_zavesti()
         _vahta_vid()
-        if _VAHTA_ZAVEDENA:
-            ui.notify(f"⏱ вахта: сторожу {_s} {_t}. Идёт, пока поднят "
-                      f"город — окно можно закрыть", type="info")
-        else:
-            # VAHTA_ZAVEDI_LYUBOY_V1: не завелась — так и скажем, а не
-            # оставим гореть кнопку впустую.
-            _VAHTA["идёт"] = False
-            _vahta_vid()
-            ui.notify("⚠ вахта не завелась — смотри чёрное окно. "
-                      "Пока жми РЫНОК руками.", type="negative")
+        ui.notify(f"⏱ вахта: сторожу {_s} {_t}. Идёт, пока поднят город "
+                  f"— окно можно закрыть", type="info")
         print(f"[ВАХТА] ▶ стою на {_s} {_t}")
 
     # VAHTA_GORODSKAYA_V1: комнатный тик убран — вахту несёт город
@@ -1897,31 +1837,18 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
         try:
             _s, _t = _aktivnyy_rynok()
-            # PODPISI_POD_PUZYRKAMI_V1: по людям, а не общей кашей.
-            # Видно сразу, кто чем занят и у кого своё.
-            from vybor import instrument_dlya as _idl
-            kuski = []
+            kuski = [f'<b style="color:rgba(0,255,136,0.85)">{_s} {_t}</b>']
             for _sl in ("A06", "A07", "A08"):
                 _row = _agent_row(roster, _sl)
-                if not (_row and _row.get("resident")):
-                    continue
-                _imya = _row["resident"].get("имя", _sl)
-                try:
-                    _ins, _otk = _idl(tseh_id, _sl, _s)
-                except Exception:
-                    _ins, _otk = _s, ""
-                _svoy = _otk in ("назначен", "выбрал сам")
-                _cvet = "rgba(0,255,136,0.9)" if _svoy else \
-                        "rgba(255,255,255,0.6)"
-                kuski.append(f'{_imya} — <b style="color:{_cvet}">'
-                             f'{_ins or _s} {_t}</b>')
-            if not kuski:
-                kuski = ['<span style="opacity:.5">за столом никого</span>']
-            _text = "&nbsp;&nbsp;·&nbsp;&nbsp;".join(kuski)
+                if _row and _row.get("resident"):
+                    kuski.append(_row["resident"].get("имя", _sl))
+                else:
+                    kuski.append(f'<span style="opacity:.4">{_sl} свободно'
+                                 f'</span>')
             if _VAHTA["идёт"]:
-                _text += ('&nbsp;&nbsp;·&nbsp;&nbsp;'
-                          '<span style="color:#00ccff">вахта идёт</span>')
-            el.content = _text
+                kuski.append(f'<span style="color:#00ccff">вахта: '
+                             f'{_VAHTA["инструмент"]} {_VAHTA["этаж"]}</span>')
+            el.content = "  ·  ".join(kuski)
         except Exception:
             pass
 
@@ -1944,11 +1871,17 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         update_vitals()
         update_avatar_states()
         update_stats_panel()
-        # NAZNACHENIYA_PROCH_V1: было уведомление про инструмент —
-        # мелькало и пропадало. Теперь всё в строке состава.
+        # PANEL_TREYDERA_V1: панель котировок теперь его — перерисуем,
+        # чтобы было видно, чем он работает.
         try:
             update_files_display()
-            update_sostav()
+            _slot = _slot_agenta(agent_id)
+            if _slot:
+                from vybor import instrument_dlya as _idl
+                _ins, _otk = _idl(tseh_id, _slot, "")
+                if _ins:
+                    ui.notify(f"🎯 {_agent_label(roster, agent_id)}: "
+                              f"{_ins} ({_otk})", type="info")
         except Exception:
             pass
         label = _agent_label(roster, agent_id)
@@ -1965,11 +1898,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         return slot if slot in ("A06", "A07", "A08") else ""
 
     def set_active(i):
-        """Клик по полке: чем работает ВЫБРАННЫЙ сейчас трейдер.
+        """PANEL_TREYDERA_V1: полка принадлежит АКТИВНОМУ трейдеру.
 
-        PODPISI_POD_PUZYRKAMI_V1: кликнул человека наверху, кликнул
-        инструмент слева — он взял его. Кто чем занят, тут же написано
-        строкой ниже, по именам. Никого не выбрал — меняем общий.
+        Кликнул человека наверху — панель стала его. Кликнул инструмент
+        — он взял его в работу. Переключился на другого — у того свой.
         """
         assets = state.get("loaded_assets", [])
         if not (0 <= i < len(assets)):
@@ -1980,18 +1912,15 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         if slot:
             try:
                 from vybor import naznachit as _nazn
-                _nazn(tseh_id, slot, a["symbol"])
+                ok, msg = _nazn(tseh_id, slot, a["symbol"])
                 imya = _agent_label(roster, state["active_agent"])
-                ui.notify(f"{imya} → {a['symbol']} {a['timeframe']}",
-                          type="positive")
-                print(f"[РАБОТА] {imya} ({slot}) → {a['symbol']}")
+                ui.notify(f"🎯 {imya}: {msg}" if ok else f"⚠ {msg}",
+                          type="positive" if ok else "negative")
+                print(f"[ПАНЕЛЬ] 🎯 {imya} ({slot}) ← {a['symbol']}")
             except Exception as e:
-                ui.notify(f"⚠ не записалось: {e}", type="negative")
+                ui.notify(f"⚠ задание не записалось: {e}", type="negative")
         else:
-            ui.notify(f"Работаем: {a['symbol']} {a['timeframe']}", type="info")
-        if _VAHTA["идёт"]:
-            _VAHTA.update({"инструмент": a["symbol"],
-                           "этаж": a["timeframe"], "бар": ""})
+            ui.notify(f"Активен: {a['symbol']} {a['timeframe']}", type="info")
         update_files_display()
 
     def update_files_display():
@@ -2742,11 +2671,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PANEL_TREYDERA_V1 - marker
 
 # PROSTO_I_ROVNO_V1 - marker
-
-# NAZNACHENIYA_PROCH_V1 - marker
-
-# VAHTA_ZA_POLKOY_V1 - marker
-
-# PODPISI_POD_PUZYRKAMI_V1 - marker
-
-# VAHTA_ZAVEDI_LYUBOY_V1 - marker

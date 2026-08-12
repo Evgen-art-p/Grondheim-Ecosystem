@@ -646,68 +646,17 @@ async def _vahta_sluzhba():
 
 
 def _vahta_zavesti():
-    """Один тик на весь город, не на каждое окно.
-
-    VAHTA_ZAVEDI_LYUBOY_V1: раньше звался только app.timer — в NiceGUI
-    постарше его нет, и вахта молча не заводилась. Кнопка горела, а
-    тика не было: худший вид поломки. Теперь три захода по очереди,
-    и если не вышло ни одного — говорим об этом вслух, а не молчим.
-    """
+    """Один таймер на весь город, не на каждое окно."""
     global _VAHTA_ZAVEDENA
     if _VAHTA_ZAVEDENA:
         return
-    # 1. городской таймер NiceGUI — если он в этой версии есть
     try:
         from nicegui import app as _app
-        if hasattr(_app, "timer"):
-            _app.timer(20.0, _vahta_sluzhba)
-            _VAHTA_ZAVEDENA = True
-            print("[ВАХТА] ⏱ заведена городским таймером (тик 20 сек)")
-            return
-    except Exception as e:
-        print(f"[ВАХТА] городской таймер не вышел: {e}")
-    # 2. своя петля в общем круге — работает в любой версии
-    try:
-        import asyncio as _a
-
-        async def _petlya():
-            print("[ВАХТА] ⏱ заведена своей петлёй (тик 20 сек)")
-            while True:
-                await _a.sleep(20)
-                try:
-                    await _vahta_sluzhba()
-                except Exception as e:
-                    print(f"[ВАХТА] ⚠️  сбой тика: {e}")
-
-        _a.get_event_loop().create_task(_petlya())
+        _app.timer(20.0, _vahta_sluzhba)
         _VAHTA_ZAVEDENA = True
-        return
+        print("[ВАХТА] ⏱ городская вахта заведена (тик 20 сек)")
     except Exception as e:
-        print(f"[ВАХТА] своя петля не вышла: {e}")
-    # 3. отдельная нитка — последний заход
-    try:
-        import asyncio as _a
-        import threading as _t
-
-        def _nitka():
-            print("[ВАХТА] ⏱ заведена отдельной ниткой (тик 20 сек)")
-            while True:
-                _time.sleep(20)
-                try:
-                    _a.run(_vahta_sluzhba())
-                except Exception as e:
-                    print(f"[ВАХТА] ⚠️  сбой тика: {e}")
-
-        import time as _time
-        _t.Thread(target=_nitka, daemon=True).start()
-        _VAHTA_ZAVEDENA = True
-        return
-    except Exception as e:
-        print(f"[ВАХТА] ⚠️  НЕ ЗАВЕЛАСЬ ВОВСЕ: {e}")
-        print("[ВАХТА] ⚠️  кнопка гореть будет, а сторожить некому — "
-              "нажимай РЫНОК руками")
-
-
+        print(f"[ВАХТА] ⚠️  не завелась: {e}")
 
 
 def page_torg(tseh_id: str = "торговый_хаос") -> None:
@@ -1767,16 +1716,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                        "бар": ""})
         _vahta_zavesti()
         _vahta_vid()
-        if _VAHTA_ZAVEDENA:
-            ui.notify(f"⏱ вахта: сторожу {_s} {_t}. Идёт, пока поднят "
-                      f"город — окно можно закрыть", type="info")
-        else:
-            # VAHTA_ZAVEDI_LYUBOY_V1: не завелась — так и скажем, а не
-            # оставим гореть кнопку впустую.
-            _VAHTA["идёт"] = False
-            _vahta_vid()
-            ui.notify("⚠ вахта не завелась — смотри чёрное окно. "
-                      "Пока жми РЫНОК руками.", type="negative")
+        ui.notify(f"⏱ вахта: сторожу {_s} {_t}. Идёт, пока поднят город "
+                  f"— окно можно закрыть", type="info")
         print(f"[ВАХТА] ▶ стою на {_s} {_t}")
 
     # VAHTA_GORODSKAYA_V1: комнатный тик убран — вахту несёт город
@@ -2748,5 +2689,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # VAHTA_ZA_POLKOY_V1 - marker
 
 # PODPISI_POD_PUZYRKAMI_V1 - marker
-
-# VAHTA_ZAVEDI_LYUBOY_V1 - marker

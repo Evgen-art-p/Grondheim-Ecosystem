@@ -646,68 +646,17 @@ async def _vahta_sluzhba():
 
 
 def _vahta_zavesti():
-    """Один тик на весь город, не на каждое окно.
-
-    VAHTA_ZAVEDI_LYUBOY_V1: раньше звался только app.timer — в NiceGUI
-    постарше его нет, и вахта молча не заводилась. Кнопка горела, а
-    тика не было: худший вид поломки. Теперь три захода по очереди,
-    и если не вышло ни одного — говорим об этом вслух, а не молчим.
-    """
+    """Один таймер на весь город, не на каждое окно."""
     global _VAHTA_ZAVEDENA
     if _VAHTA_ZAVEDENA:
         return
-    # 1. городской таймер NiceGUI — если он в этой версии есть
     try:
         from nicegui import app as _app
-        if hasattr(_app, "timer"):
-            _app.timer(20.0, _vahta_sluzhba)
-            _VAHTA_ZAVEDENA = True
-            print("[ВАХТА] ⏱ заведена городским таймером (тик 20 сек)")
-            return
-    except Exception as e:
-        print(f"[ВАХТА] городской таймер не вышел: {e}")
-    # 2. своя петля в общем круге — работает в любой версии
-    try:
-        import asyncio as _a
-
-        async def _petlya():
-            print("[ВАХТА] ⏱ заведена своей петлёй (тик 20 сек)")
-            while True:
-                await _a.sleep(20)
-                try:
-                    await _vahta_sluzhba()
-                except Exception as e:
-                    print(f"[ВАХТА] ⚠️  сбой тика: {e}")
-
-        _a.get_event_loop().create_task(_petlya())
+        _app.timer(20.0, _vahta_sluzhba)
         _VAHTA_ZAVEDENA = True
-        return
+        print("[ВАХТА] ⏱ городская вахта заведена (тик 20 сек)")
     except Exception as e:
-        print(f"[ВАХТА] своя петля не вышла: {e}")
-    # 3. отдельная нитка — последний заход
-    try:
-        import asyncio as _a
-        import threading as _t
-
-        def _nitka():
-            print("[ВАХТА] ⏱ заведена отдельной ниткой (тик 20 сек)")
-            while True:
-                _time.sleep(20)
-                try:
-                    _a.run(_vahta_sluzhba())
-                except Exception as e:
-                    print(f"[ВАХТА] ⚠️  сбой тика: {e}")
-
-        import time as _time
-        _t.Thread(target=_nitka, daemon=True).start()
-        _VAHTA_ZAVEDENA = True
-        return
-    except Exception as e:
-        print(f"[ВАХТА] ⚠️  НЕ ЗАВЕЛАСЬ ВОВСЕ: {e}")
-        print("[ВАХТА] ⚠️  кнопка гореть будет, а сторожить некому — "
-              "нажимай РЫНОК руками")
-
-
+        print(f"[ВАХТА] ⚠️  не завелась: {e}")
 
 
 def page_torg(tseh_id: str = "торговый_хаос") -> None:
@@ -1717,8 +1666,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         update_avatar_states()
         ui.notify(tail, type="positive" if not stopped else "warning")
 
-    sostav_ref: dict = {"element": None}
-
     def _vahta_vid():
         """Вид кнопки: горит — стоим на вахте.
 
@@ -1732,16 +1679,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
         if _VAHTA["идёт"]:
             el.style("background:rgba(0,204,255,0.15);color:#00ccff;"
-                     "border:1px solid rgba(0,204,255,0.45);"
-                     "white-space:nowrap;")
-            # PROSTO_I_ROVNO_V1: в подписи коротко, что сторожит — в
-            # подсказке и в строке состава под пузырьками.
-            ht.content = "⏱ ВАХТА ●"
-            try:
-                el.tooltip(f'сторожу {_VAHTA["инструмент"]} '
-                           f'{_VAHTA["этаж"]}')
-            except Exception:
-                pass
+                     "border:1px solid rgba(0,204,255,0.45);")
+            ht.content = (f'⏱ ВАХТА ● {_VAHTA["инструмент"]} '
+                          f'{_VAHTA["этаж"]}')
         else:
             el.style("background:rgba(255,255,255,0.03);"
                      "color:rgba(255,255,255,0.45);"
@@ -1760,23 +1700,14 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                       type="warning")
             return
         _s, _t = _aktivnyy_rynok()
-        # VAHTA_ZA_POLKOY_V1: берём выбранное сейчас, и дальше вахта
-        # идёт за полкой — сменил инструмент, сменилось и то, что она
-        # сторожит. Помнить старое оказалось хуже, чем не помнить.
+        # что сторожим — запоминаем СЕЙЧАС: вахта живёт при городе и
+        # полки кабинета потом не увидит.
         _VAHTA.update({"идёт": True, "инструмент": _s, "этаж": _t,
                        "бар": ""})
         _vahta_zavesti()
         _vahta_vid()
-        if _VAHTA_ZAVEDENA:
-            ui.notify(f"⏱ вахта: сторожу {_s} {_t}. Идёт, пока поднят "
-                      f"город — окно можно закрыть", type="info")
-        else:
-            # VAHTA_ZAVEDI_LYUBOY_V1: не завелась — так и скажем, а не
-            # оставим гореть кнопку впустую.
-            _VAHTA["идёт"] = False
-            _vahta_vid()
-            ui.notify("⚠ вахта не завелась — смотри чёрное окно. "
-                      "Пока жми РЫНОК руками.", type="negative")
+        ui.notify(f"⏱ вахта: сторожу {_s} {_t}. Идёт, пока поднят город "
+                  f"— окно можно закрыть", type="info")
         print(f"[ВАХТА] ▶ стою на {_s} {_t}")
 
     # VAHTA_GORODSKAYA_V1: комнатный тик убран — вахту несёт город
@@ -1886,45 +1817,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         if summary.get("idle"):
             ui.notify("📣 Спуск не нашёл точку — Совет не собирается", type="info")
 
-    def update_sostav():
-        """PROSTO_I_ROVNO_V1: кто на местах и чем работаем — одной строкой.
-
-        Раньше это было видно только по мелькающим уведомлениям, и
-        выходило «говорят одно, написано другое». Теперь висит на месте.
-        """
-        el = sostav_ref.get("element")
-        if el is None:
-            return
-        try:
-            _s, _t = _aktivnyy_rynok()
-            # PODPISI_POD_PUZYRKAMI_V1: по людям, а не общей кашей.
-            # Видно сразу, кто чем занят и у кого своё.
-            from vybor import instrument_dlya as _idl
-            kuski = []
-            for _sl in ("A06", "A07", "A08"):
-                _row = _agent_row(roster, _sl)
-                if not (_row and _row.get("resident")):
-                    continue
-                _imya = _row["resident"].get("имя", _sl)
-                try:
-                    _ins, _otk = _idl(tseh_id, _sl, _s)
-                except Exception:
-                    _ins, _otk = _s, ""
-                _svoy = _otk in ("назначен", "выбрал сам")
-                _cvet = "rgba(0,255,136,0.9)" if _svoy else \
-                        "rgba(255,255,255,0.6)"
-                kuski.append(f'{_imya} — <b style="color:{_cvet}">'
-                             f'{_ins or _s} {_t}</b>')
-            if not kuski:
-                kuski = ['<span style="opacity:.5">за столом никого</span>']
-            _text = "&nbsp;&nbsp;·&nbsp;&nbsp;".join(kuski)
-            if _VAHTA["идёт"]:
-                _text += ('&nbsp;&nbsp;·&nbsp;&nbsp;'
-                          '<span style="color:#00ccff">вахта идёт</span>')
-            el.content = _text
-        except Exception:
-            pass
-
     def update_avatar_states():
         for aid, el in avatars_ref["elements"].items():
             row = _agent_row(roster, aid)
@@ -1944,11 +1836,17 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         update_vitals()
         update_avatar_states()
         update_stats_panel()
-        # NAZNACHENIYA_PROCH_V1: было уведомление про инструмент —
-        # мелькало и пропадало. Теперь всё в строке состава.
+        # PANEL_TREYDERA_V1: панель котировок теперь его — перерисуем,
+        # чтобы было видно, чем он работает.
         try:
             update_files_display()
-            update_sostav()
+            _slot = _slot_agenta(agent_id)
+            if _slot:
+                from vybor import instrument_dlya as _idl
+                _ins, _otk = _idl(tseh_id, _slot, "")
+                if _ins:
+                    ui.notify(f"🎯 {_agent_label(roster, agent_id)}: "
+                              f"{_ins} ({_otk})", type="info")
         except Exception:
             pass
         label = _agent_label(roster, agent_id)
@@ -1965,11 +1863,10 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         return slot if slot in ("A06", "A07", "A08") else ""
 
     def set_active(i):
-        """Клик по полке: чем работает ВЫБРАННЫЙ сейчас трейдер.
+        """PANEL_TREYDERA_V1: полка принадлежит АКТИВНОМУ трейдеру.
 
-        PODPISI_POD_PUZYRKAMI_V1: кликнул человека наверху, кликнул
-        инструмент слева — он взял его. Кто чем занят, тут же написано
-        строкой ниже, по именам. Никого не выбрал — меняем общий.
+        Кликнул человека наверху — панель стала его. Кликнул инструмент
+        — он взял его в работу. Переключился на другого — у того свой.
         """
         assets = state.get("loaded_assets", [])
         if not (0 <= i < len(assets)):
@@ -1980,22 +1877,18 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         if slot:
             try:
                 from vybor import naznachit as _nazn
-                _nazn(tseh_id, slot, a["symbol"])
+                ok, msg = _nazn(tseh_id, slot, a["symbol"])
                 imya = _agent_label(roster, state["active_agent"])
-                ui.notify(f"{imya} → {a['symbol']} {a['timeframe']}",
-                          type="positive")
-                print(f"[РАБОТА] {imya} ({slot}) → {a['symbol']}")
+                ui.notify(f"🎯 {imya}: {msg}" if ok else f"⚠ {msg}",
+                          type="positive" if ok else "negative")
+                print(f"[ПАНЕЛЬ] 🎯 {imya} ({slot}) ← {a['symbol']}")
             except Exception as e:
-                ui.notify(f"⚠ не записалось: {e}", type="negative")
+                ui.notify(f"⚠ задание не записалось: {e}", type="negative")
         else:
-            ui.notify(f"Работаем: {a['symbol']} {a['timeframe']}", type="info")
-        if _VAHTA["идёт"]:
-            _VAHTA.update({"инструмент": a["symbol"],
-                           "этаж": a["timeframe"], "бар": ""})
+            ui.notify(f"Активен: {a['symbol']} {a['timeframe']}", type="info")
         update_files_display()
 
     def update_files_display():
-        update_sostav()          # PROSTO_I_ROVNO_V1: состав всегда свеж
         # ZAGRUZCHIK_PAPKI_TORG_V1: активы сгруппированы в папки по symbol.
         # Внутри папки — список ТФ. Папка с активным ТФ раскрыта сама.
         if not files_ref["element"]:
@@ -2431,14 +2324,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             if not occupied:
                                 ui.label(old_id).style("font-size: 9px")
                         avatars_ref["elements"][old_id] = avatar
-                # PROSTO_I_ROVNO_V1: строка состава. Всегда на виду, кто
-                # на местах и чем работаем — чтобы не гадать по кликам и
-                # не ловить пропадающие уведомления.
-                sostav_ref["element"] = ui.html("").style(
-                    "color:rgba(255,255,255,0.55); font-size:11px; "
-                    "letter-spacing:0.04em; margin-right:14px; "
-                    "white-space:nowrap; overflow:hidden; "
-                    "text-overflow:ellipsis; max-width:46vw;")
                 with ui.element("div").style(
                     "margin-right:10px; background:rgba(255,255,255,0.06); "
                     "border:1px solid rgba(255,255,255,0.12); border-radius:10px;"
@@ -2488,13 +2373,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
                         # VAHTA_NOVAYA_SVECHA_V1 — стоять на вахте и
                         # смотреть каждую новую свечу рабочего этажа.
-                        # PROSTO_I_ROVNO_V1: кнопка сворачивалась в две
-                        # строки и поднимала соседей — ряд разъезжался.
-                        # Теперь одна строка и та же высота, что у прочих.
                         toolbar_refs["vahta_btn"] = ui.element("div").style(
-                            "padding:8px 16px;border-radius:8px;font-size:12px;"
-                            "font-weight:700;cursor:pointer;white-space:nowrap;"
-                            "display:flex;align-items:center;flex-shrink:0;"
+                            "padding:6px 14px;border-radius:7px;font-size:12px;"
+                            "font-weight:700;cursor:pointer;"
                             "background:rgba(255,255,255,0.03);"
                             "color:rgba(255,255,255,0.45);"
                             "border:1px solid rgba(255,255,255,0.08);")
@@ -2740,13 +2621,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # SVOYO_OKNO_V1 - marker
 
 # PANEL_TREYDERA_V1 - marker
-
-# PROSTO_I_ROVNO_V1 - marker
-
-# NAZNACHENIYA_PROCH_V1 - marker
-
-# VAHTA_ZA_POLKOY_V1 - marker
-
-# PODPISI_POD_PUZYRKAMI_V1 - marker
-
-# VAHTA_ZAVEDI_LYUBOY_V1 - marker
