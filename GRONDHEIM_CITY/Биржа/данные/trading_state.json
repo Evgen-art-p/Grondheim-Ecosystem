@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-12T22:37:15.615555",
+  "updated": "2026-08-13T15:24:50.490016",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -61,7 +61,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "нет четкого отката к линиям Аллигатора для входа по моей стратегии; AO падает, что не подтверждает продолжение импульса.",
+    "reason": "нет подтвержденного разворотного бара на откате D1",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -72,12 +72,12 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "агент не ответил (вакансия — за столом никого, смотреть некому)",
+    "reason": "нет импульса и коррекции для входа по стратегии 'первый откат к новой волне'",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": null,
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null
   },
