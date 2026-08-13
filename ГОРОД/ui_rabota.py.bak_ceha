@@ -145,11 +145,6 @@ def page_rabota():
                     "color:rgba(139,233,253,0.9); "
                     "background:rgba(139,233,253,0.10);")
         ui.element("div").style("flex:1")
-        # STRANICA_CEHOV_V1: отсюда к картриджам Биржи
-        ui.button("ЦЕХА",
-                  on_click=lambda: ui.navigate.to("/ceha", new_tab=True)).props(
-            "flat no-caps").style("font-size:0.72rem; "
-                                  "color:rgba(139,233,253,0.85);")
         ui.button("← БРАТ", on_click=lambda: ui.navigate.to("/brat", new_tab=True)).props(
             "flat no-caps").style("font-size:0.72rem; "
                                   "color:rgba(139,233,253,0.85);")

@@ -70,10 +70,10 @@ NE_ZAHODIT = {"_ARCHIVE", "_OLD", "_АРХИВ_ЧИСТКИ", "_УБОРКА",
               ".git", ".vscode", "__pycache__", "node_modules"}
 
 # ── папки, которые грузятся ЦЕЛИКОМ, по имени папки ───────────
-# `истоки/` — плагины крана: istoki.py обходит папку и подхватывает
+# `истоки/` и `памяти/` — плагины: обходчик берёт папку и подхватывает
 # каждый файл сам. Их никто не импортирует по имени, и это НОРМАЛЬНО:
 # так задумано. Без этой оговорки уборщик записал бы их в мёртвые.
-PLAGINY = ("истоки",)
+PLAGINY = ("истоки", "памяти")
 
 # ── что не трогаем ни при каких условиях ──────────────────────
 # Точки входа и живые двери города. Их «никто не импортирует» — это
@@ -103,10 +103,23 @@ RAZOVYE = {
     "zigzag_chart.py": "разовая рисовалка зигзага, в работе не участвует",
     "razvedka_slepka.py": "разовая разведка слепка стола",
     "voronka_bdb.py": "разовая воронка БДБ",
+    # мои же временные инструменты: сделали дело, дальше мешают
+    "obnovit.py": "накатчик патчей — патчи накатаны, больше не нужен",
+    "vernut.py": "откатчик патчей — держи, пока не убедишься; потом в чулан",
+    "vybor_pokazat.py": "смотрелец выбора — разовая проверка, не движок",
+    "ceh_kartridzh.py": "менеджер цехов через терминал — переезжает на страницу",
 }
 
 # ── заменённое: работу делает кто-то другой ───────────────────
 OTSLUZHIVSHIE = {
+    "mt5_feed_с_step_up.py":
+        "старый насос ИЗ СТУДИИ (в шапке studio/modules/trading, 16.06); "
+        "работает нынешний Биржа/mt5_feed.py — это дубль прошлой жизни",
+    "rezident_menedzher.py":
+        "«единая дверь к резиденту» от 21.07 — дверью стали nositel.py "
+        "и стандарт постов",
+    "strazh.py":
+        "сторож при Сите 1 — Сита нет с 06.08, вместе с сенсорами",
     "vakansiya_treydera.py":
         "заменён стандартом работы: места заводятся в /rabota и rabota_pult.py",
     "udalit_otslujivshie.py":
@@ -208,6 +221,8 @@ def sobrat_pod_voprosom(teksty: dict) -> list:
             continue
         if p.name in RAZOVYE or p.name in OTSLUZHIVSHIE:
             continue
+        if p.name == "kalibrovka.py":
+            continue          # показан отдельно, как недоделка
         if p.stem in importy:
             continue
         if any(part in PLAGINY for part in p.relative_to(KOREN).parts):
@@ -305,6 +320,21 @@ def main() -> int:
         print(f"\n── ПАТЧИ, КОТОРЫЕ НЕ ТРОГАЮ — {len(zhdut)} ──")
         for p, prichina in zhdut:
             print(f"   {p.name}\n      · {prichina}")
+
+    # не мусор, а НЕДОДЕЛКА: задумка живёт в манифесте цеха, кода никто
+    # не зовёт. Такое не выбрасывают — про такое напоминают.
+    NEDODELKI = {
+        "kalibrovka.py": "калибровка единиц на торговый такт — задумка "
+                         "есть в манифесте цеха, код никем не зовётся",
+    }
+    nedodelano = [p for p in _vse_faily() if p.name in NEDODELKI]
+    if nedodelano:
+        print(f"\n── НЕ ПОДКЛЮЧЕНО (показываю, НЕ трогаю) — "
+              f"{len(nedodelano)} ──")
+        print("   Это не мусор. Это задумка, до которой руки не дошли.")
+        for p in sorted(nedodelano, key=str):
+            print(f"   {p.relative_to(KOREN)}")
+            print(f"      · {NEDODELKI[p.name]}")
 
     pod_voprosom = sobrat_pod_voprosom(teksty)
     if pod_voprosom:

@@ -105,13 +105,6 @@ from ui_rabota import page_rabota
 def _rabota():
     page_rabota()
 
-# ── ЦЕХА — картриджи Биржи (STRANICA_CEHOV_V1) ──
-# Заводятся и вынимаются здесь, а не двойным щелчком по батнику.
-from ui_ceha import page_ceha
-@ui.page("/ceha")
-def _ceha():
-    page_ceha()
-
 # ── КАБИНЕТ ЖИТЕЛЯ — единое окно в любого жителя ──
 # Путь: запустил Брата → ГРОНДХЕЙМ (карта) → клик «открыть →» на жителе → сюда.
 # /zhitel/{id} открывает конкретного жителя по ID_Object (напр. 0001_Liya_Heat).
