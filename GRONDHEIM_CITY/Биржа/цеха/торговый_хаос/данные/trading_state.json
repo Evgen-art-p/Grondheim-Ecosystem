@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "updated": "2026-08-13T21:30:46.246612",
+  "iskra": {
+    "t1_status": "NOT_FOUND",
+    "zero_point_price": null,
+    "history_dna": ""
+  },
+  "positions": [
+    {
+      "trader": "BRUT",
+      "magic": 100001,
+      "direction": "LONG",
+      "entry": 4371.74,
+      "stop": 4220.77,
+      "tp": null,
+      "lot": 0.1,
+      "status": "PENDING",
+      "_ждёт_с": "2026.08.10 00:00",
+      "_ждёт_баров": 0,
+      "mode": "PAPER",
+      "opened_at": "2026.08.10 00:00",
+      "pnl": null,
+      "iskra_zero_point": null,
+      "стол_входа": {
+        "iskra": {
+          "t1_status": "NOT_FOUND",
+          "zero_point_price": null,
+          "trend_direction": "BULL"
+        },
+        "morj": {
+          "morj_status": "AWAKE",
+          "wave_1_validated": false,
+          "tension_peak": true
+        },
+        "panic": {
+          "panic_phase": "GREED"
+        },
+        "hans": {
+          "fractal_valid": false,
+          "fractal_side": null,
+          "fractal_price": null
+        }
+      }
+    }
+  ],
+  "feed": {
+    "mode": "real",
+    "symbol": "EURUSD"
+  },
+  "brut": {
+    "verdict": "REJECTED",
+    "reason": "рынок в боковике, нет условий для входа",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "avan": {
+    "verdict": "REJECTED",
+    "reason": "нет четкого импульса для отката, Аллигатор почти спит, AO падает, противоречие ТФ",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "cons": {
+    "verdict": "REJECTED",
+    "reason": "",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "action": "WAIT",
+    "new_stop": null,
+    "add_lot": null
+  },
+  "morj": {
+    "morj_status": "AWAKE",
+    "wave_1_validated": false,
+    "tension_peak": true,
+    "history_dna": "",
+    "scale_timeframe": "H4",
+    "inherited_dir": "BULL",
+    "alligator_state": {
+      "sleeping": false,
+      "opening": false,
+      "mature": true,
+      "bars_open": 32
+    }
+  },
+  "panic": {
+    "panic_phase": "GREED",
+    "crowd_sentiment": "РАЗВОРОТ! Все берут, поезд уходит! Я успел, я гений!",
+    "action_for_traders": "HIGH_SKEPTICISM",
+    "history_dna": "",
+    "scale_timeframe": "H4"
+  },
+  "hans": {
+    "fractal_valid": false,
+    "fractal_side": null,
+    "fractal_price": null,
+    "absorption_ratio": 0.6,
+    "scale_timeframe": "H4",
+    "history_dna": ""
+  }
+}

@@ -107,7 +107,16 @@ RAZOVYE = {
     "obnovit.py": "накатчик патчей — патчи накатаны, больше не нужен",
     "vernut.py": "откатчик патчей — держи, пока не убедишься; потом в чулан",
     "vybor_pokazat.py": "смотрелец выбора — разовая проверка, не движок",
-    "ceh_kartridzh.py": "менеджер цехов через терминал — переезжает на страницу",
+    "ceh_kartridzh.py": "менеджер цехов через терминал — переехал на /ceha",
+}
+
+# батники: у каждого теперь есть кнопка или страница в городе
+BATNIKI = {
+    "ПЕРЕВОЗКА.bat": "перевозка живёт кнопкой у Брата и страницей на острове",
+    "ЦЕХ.bat": "цеха живут на странице /ceha",
+    "ВЫБОР.bat": "выбор живёт вкладкой на Странице Работы",
+    "ОБНОВИТЬ.bat": "патчи накатаны — накатчик больше не нужен",
+    "ВЕРНУТЬ.bat": "откатчик: держи, пока не убедишься; потом сюда",
 }
 
 # ── заменённое: работу делает кто-то другой ───────────────────
@@ -187,6 +196,16 @@ def sobrat_patchi(teksty: dict) -> tuple:
         else:
             zhdut.append((p, "маркера в репо нет — патч ещё НЕ накатан"))
     return gotovye, zhdut
+
+
+def sobrat_batniki() -> list:
+    """Батники, которым в городе нашлась кнопка. Ищем только в корне."""
+    out = []
+    for imya, prichina in BATNIKI.items():
+        p = KOREN / imya
+        if p.exists():
+            out.append((p, prichina))
+    return out
 
 
 def sobrat_poimenno(spisok: dict) -> list:
@@ -307,6 +326,7 @@ def main() -> int:
         gruppy.append(("РАЗОВЫЕ ИНСТРУМЕНТЫ", sobrat_poimenno(RAZOVYE)))
     if hochu["заменённое"]:
         gruppy.append(("ЗАМЕНЁННОЕ ДРУГИМ", sobrat_poimenno(OTSLUZHIVSHIE)))
+        gruppy.append(("БАТНИКИ, У КОТОРЫХ ЕСТЬ КНОПКА", sobrat_batniki()))
 
     nahodki = []
     for imya, spisok in gruppy:
