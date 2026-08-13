@@ -55,62 +55,10 @@ ATLAS_PATH = _REPO / "GRONDHEIM_CITY" / "Биржа" / "данные" / "atlas_t
 # Закрывает две дыры:
 #   1. Состояние Искры между прогонами (t1_status — машина состояний)
 #   2. Открытые позиции между прогонами (что закрывать по exit_bell)
-# ═══════════════════════════════════════════════════════════
-# SVOY_STOL_CEHA_V1 — У КАЖДОГО ЦЕХА СВОЙ СТОЛ
-# ═══════════════════════════════════════════════════════════
-# Стол был один на всю Биржу: `Биржа/данные/trading_state.json`.
-# Пока цех один — незаметно. Поставь второй такой же (женский и
-# мужской) — и они начнут писать вердикты в одну тетрадь и затирать
-# друг друга.
-#
-# А в манифесте цеха уже давно объявлено своё: `журналы/pnl.jsonl`,
-# `журналы/atlas.jsonl`. Задумка была верной, просто код брал общий
-# файл. Теперь берёт цеховой.
-#
-# Цех говорит Совет перед прогоном (`postavit_ceh`). Не сказали —
-# работаем по-старому, на общем столе: ничего не ломается.
-_OBSHCHIY_DIR = _REPO / "GRONDHEIM_CITY" / "Биржа" / "данные"
-STATE_PATH = _OBSHCHIY_DIR / "trading_state.json"      # запасной, общий
-PNL_PATH = _OBSHCHIY_DIR / "trading_pnl.jsonl"         # запасной, общий
+STATE_PATH = _REPO / "GRONDHEIM_CITY" / "Биржа" / "данные" / "trading_state.json"
 
-_TEKUSHCHIY_CEH = ""
-
-
-def postavit_ceh(ceh_id: str = ""):
-    """Чей стол накрываем. Зовётся Советом в начале прогона."""
-    global _TEKUSHCHIY_CEH
-    _TEKUSHCHIY_CEH = (ceh_id or "").strip()
-
-
-def _dom_ceha() -> Path:
-    if not _TEKUSHCHIY_CEH:
-        return _OBSHCHIY_DIR
-    return (_REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха" / _TEKUSHCHIY_CEH
-            / "данные")
-
-
-def _put_stola() -> Path:
-    """Стол этого цеха. Первый раз — переносим общий, чтобы не начинать
-    с чистого листа: открытые позиции и состояние остаются при цехе."""
-    d = _dom_ceha()
-    p = d / "trading_state.json"
-    if not _TEKUSHCHIY_CEH:
-        return p
-    if not p.exists() and STATE_PATH.exists():
-        try:
-            d.mkdir(parents=True, exist_ok=True)
-            p.write_text(STATE_PATH.read_text(encoding="utf-8"),
-                         encoding="utf-8")
-            print(f"[СТОЛ] переехал в цех {_TEKUSHCHIY_CEH} "
-                  f"(общий остался как был)")
-        except Exception as e:
-            print(f"[СТОЛ] не смог перенести общий стол: {e}")
-    return p
-
-
-def _put_pnl() -> Path:
-    return (_dom_ceha() / "trading_pnl.jsonl") if _TEKUSHCHIY_CEH \
-        else PNL_PATH
+# Журнал PnL сделок (НЕ billing_ledger — тот про LLM-расходы)
+PNL_PATH = _REPO / "GRONDHEIM_CITY" / "Биржа" / "данные" / "trading_pnl.jsonl"
 
 # Magic numbers — константа КОДА (реальный MT5-мост возьмёт отсюда,
 # не из памяти LLM). Промт A09 дублирует таблицу для летописи.
@@ -135,25 +83,23 @@ _DEFAULT_STATE = {
 
 
 def load_trading_state() -> dict:
-    """Читает рабочую память ЭТОГО цеха. Файла нет — дефолт."""
-    p = _put_stola()
-    if not p.exists():
+    """Читает рабочую память цеха. Если файла нет — дефолт."""
+    if not STATE_PATH.exists():
         return json.loads(json.dumps(_DEFAULT_STATE))
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        return json.loads(STATE_PATH.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as e:
-        print(f"[STATE] ⚠️  Повреждён {p.name} ({e}) — дефолт")
+        print(f"[STATE] ⚠️  Повреждён trading_state.json ({e}) — дефолт")
         return json.loads(json.dumps(_DEFAULT_STATE))
 
 
 def save_trading_state(tstate: dict):
-    """Сохраняет рабочую память ЭТОГО цеха."""
-    p = _put_stola()
-    p.parent.mkdir(parents=True, exist_ok=True)
+    """Сохраняет рабочую память цеха."""
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     tstate["updated"] = datetime.now().isoformat()
-    p.write_text(
+    STATE_PATH.write_text(
         json.dumps(tstate, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"[STATE] 💾 стол сохранён ({_TEKUSHCHIY_CEH or 'общий'}): "
+    print(f"[STATE] 💾 trading_state сохранён: "
           f"t1={tstate['iskra']['t1_status']}, "
           f"позиций={len(tstate['positions'])}")
 
@@ -2202,5 +2148,3 @@ def run_live_council(bars: list, symbol: str, timeframe: str,
 # BIRZHA_CLEAN_MEMORY_V2 — маркер идемпотентности
 
 # VASILY_ZASADA_V1 — маркер идемпотентности
-
-# SVOY_STOL_CEHA_V1 - marker

@@ -25,7 +25,6 @@
 # Порядок, ворота по спуску, мягкость к сбоям — как в -2, один-в-один.
 # ─────────────────────────────────────────────────────────────
 
-import json
 import importlib.util
 from pathlib import Path
 from typing import Optional, Callable
@@ -80,75 +79,12 @@ _SENSORS = [
 # Архивариус — память, без рынка (сам читает шину). Живёт в конторе.
 _ARKHIV = ("A05", "контора", "архивариус", "run_arkhiv")
 
-# ═══════════════════════════════════════════════════════════
-# ZAKON_KARTRIDZHA_V1 — СОВЕТ БОЛЬШЕ НЕ ДЕРЖИТ СПИСКА
-# ═══════════════════════════════════════════════════════════
-# Здесь лежал вбитый список трёх трейдеров. Это было единственное
-# место в городе, где Закон Картриджа нарушался: слот несёт с собой
-# всё, но Совет звал троих ПОИМЁННО — и новый картридж, сколько его
-# ни клади в папку, никто не звал.
-#
-# Теперь Совет СКАНИРУЕТ цех, как всё прочее в городе сканирует папки.
-# Вставил картридж — он в Совете. Вынул — его нет. Хоть три, хоть
-# десять.
-#
-# Как Совет понимает, как звать мозг:
-#   1. запись слота в манифесте цеха: «движок» (какую функцию звать)
-#      и «ключ» (приставка полей решения);
-#   2. записи нет — зовём функцию `run`, ключ выводим из имени слота.
-_CEH_TORGOVYY = "торговый_хаос"
-
-
-def _dver_mozga(brain, skazano: str = "") -> str:
-    """Как звать этот мозг. Сказано в манифесте — зовём так."""
-    if skazano and getattr(brain, skazano, None):
-        return skazano
-    if getattr(brain, "run", None):
-        return "run"                       # общая дверь картриджа
-    est = [n for n in dir(brain)
-           if n.startswith("run_") and callable(getattr(brain, n, None))]
-    return est[0] if len(est) == 1 else ""
-
-
-def _treydery(ceh_id: str = _CEH_TORGOVYY) -> list:
-    """Кто сегодня за столом. Списка не держим — смотрим цех."""
-    korn = _REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха" / ceh_id
-    sloty_dir = korn / "слоты"
-    if not sloty_dir.is_dir():
-        return []
-
-    skazano = {}
-    try:
-        m = json.loads((korn / "manifest.json").read_text(encoding="utf-8"))
-        for s in m.get("слоты", []) or []:
-            if s.get("слот"):
-                skazano[s["слот"]] = s
-    except Exception:
-        pass
-
-    imena = list(skazano) + [d.name for d in sorted(sloty_dir.iterdir())
-                             if d.is_dir() and d.name not in skazano]
-    out = []
-    for slot in imena:
-        if not (sloty_dir / slot / "мозг.py").exists():
-            continue                       # папка без мозга — не картридж
-        zapis = skazano.get(slot, {})
-        brain = _slot_brain(ceh_id, slot)
-        if brain is None:
-            continue
-        dver = _dver_mozga(brain, zapis.get("движок", ""))
-        if not dver:
-            print(f"[СОВЕТ] не понял, как звать {ceh_id}/{slot} — пропускаю. "
-                  f"Впиши «движок» в манифест цеха.")
-            continue
-        klyuch = (zapis.get("ключ") or slot).strip().lower()
-        out.append((slot, ceh_id, slot, dver, klyuch))
-    return out
-
-
-def _stol_klyuchi(ceh_id: str = _CEH_TORGOVYY) -> dict:
-    """слот -> ключ на столе. Тоже из сканера, не из головы."""
-    return {slot: pre for _aid, _c, slot, _fn, pre in _treydery(ceh_id)}
+# трое трейдеров за столом
+_TRADERS = [
+    ("A06", "торговый_хаос", "A06", "run_brut", "brut"),
+    ("A07", "торговый_хаос", "A07", "run_avan", "avan"),
+    ("A08", "торговый_хаос", "A08", "run_cons", "cons"),
+]
 
 # Исполнитель — рука-код, замыкает петлю. Живёт в конторе.
 _EXECUTOR = ("A09", "контора", "исполнитель", "run_executor")
@@ -169,14 +105,14 @@ _EXECUTOR = ("A09", "контора", "исполнитель", "run_executor")
 # которого он не принимал — и это отравит его опыт КЛЕВЕТОЙ.
 # ═══════════════════════════════════════════════════════════
 
-# ZAKON_KARTRIDZHA_V1: было вбито {"A06": "brut", ...}. Теперь ключи
-# приходят от того же сканера, что и сами трейдеры, — один источник.
+# кто где живёт в столе (проверено на диске: A06/A07/A08 :: мозг.py)
+_STOL_KEY = {"A06": "brut", "A07": "avan", "A08": "cons"}
 
 
 def _steret_verdikt(slot: str, prichina: str = ""):
     """Стирает вердикт упавшего трейдера со стола. Он молчал — значит
     REJECTED. Старый вердикт с прошлого бара торговать НЕ ИМЕЕТ ПРАВА."""
-    key = _stol_klyuchi().get(slot)
+    key = _STOL_KEY.get(slot)
     if not key:
         return
     try:
@@ -305,8 +241,7 @@ def _deshyovaya_proverka_tochki(symbol: str, timeframe: str,
 
 def wake_council(symbol: str, timeframe: str,
                  on_event: Optional[Callable] = None,
-                 window=None, point=None,
-                 ceh_id: str = _CEH_TORGOVYY) -> dict:
+                 window=None, point=None) -> dict:
     """
     ОЧЕРЁДНОСТЬ РАБОТЫ на текущем баре. Имя осталось прежним, чтобы
     кабинет и тестер звали как звали, но собрания больше нет.
@@ -336,15 +271,6 @@ def wake_council(symbol: str, timeframe: str,
             except Exception:
                 pass
 
-    # SVOY_STOL_CEHA_V1: сказать столу, чей цех сегодня работает —
-    # чтобы стол и позиции легли к нему, а не в общую тетрадь.
-    try:
-        import hooks as _h
-        if hasattr(_h, "postavit_ceh"):
-            _h.postavit_ceh(ceh_id)
-    except Exception:
-        pass
-
     summary = {"woke": [], "verdicts": {}, "orders": None,
                "idle": False, "results": {}}
 
@@ -361,11 +287,8 @@ def wake_council(symbol: str, timeframe: str,
     _emit({"type": "agent", "id": aid, "ok": ra.get("ok"),
            "result": ra, "narrative": ra.get("narrative", "")})
 
-    # ── трейдеры: сколько картриджей в цехе, столько и зовём ──
-    _za_stolom = _treydery(ceh_id)
-    if not _za_stolom:
-        print("[СОВЕТ] в цехе нет ни одного картриджа с мозгом")
-    for aid, ceh, slot, fn, pre in _za_stolom:
+    # ── трое трейдеров ──
+    for aid, ceh, slot, fn, pre in _TRADERS:
         r = _call(ceh, slot, fn, symbol=symbol, timeframe=timeframe)
         summary["woke"].append(aid)
         summary["results"][aid] = r
@@ -387,7 +310,3 @@ def wake_council(symbol: str, timeframe: str,
            "narrative": rex.get("narrative", "")})
 
     return summary
-
-# ZAKON_KARTRIDZHA_V1 - marker
-
-# SVOY_STOL_CEHA_V1 - marker

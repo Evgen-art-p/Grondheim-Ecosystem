@@ -305,8 +305,7 @@ def _deshyovaya_proverka_tochki(symbol: str, timeframe: str,
 
 def wake_council(symbol: str, timeframe: str,
                  on_event: Optional[Callable] = None,
-                 window=None, point=None,
-                 ceh_id: str = _CEH_TORGOVYY) -> dict:
+                 window=None, point=None) -> dict:
     """
     ОЧЕРЁДНОСТЬ РАБОТЫ на текущем баре. Имя осталось прежним, чтобы
     кабинет и тестер звали как звали, но собрания больше нет.
@@ -336,15 +335,6 @@ def wake_council(symbol: str, timeframe: str,
             except Exception:
                 pass
 
-    # SVOY_STOL_CEHA_V1: сказать столу, чей цех сегодня работает —
-    # чтобы стол и позиции легли к нему, а не в общую тетрадь.
-    try:
-        import hooks as _h
-        if hasattr(_h, "postavit_ceh"):
-            _h.postavit_ceh(ceh_id)
-    except Exception:
-        pass
-
     summary = {"woke": [], "verdicts": {}, "orders": None,
                "idle": False, "results": {}}
 
@@ -362,7 +352,7 @@ def wake_council(symbol: str, timeframe: str,
            "result": ra, "narrative": ra.get("narrative", "")})
 
     # ── трейдеры: сколько картриджей в цехе, столько и зовём ──
-    _za_stolom = _treydery(ceh_id)
+    _za_stolom = _treydery()
     if not _za_stolom:
         print("[СОВЕТ] в цехе нет ни одного картриджа с мозгом")
     for aid, ceh, slot, fn, pre in _za_stolom:
@@ -389,5 +379,3 @@ def wake_council(symbol: str, timeframe: str,
     return summary
 
 # ZAKON_KARTRIDZHA_V1 - marker
-
-# SVOY_STOL_CEHA_V1 - marker

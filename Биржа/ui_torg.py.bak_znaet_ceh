@@ -591,7 +591,6 @@ _VAHTA = {
     "инструмент": "",   # что сторожим — запомнили в миг нажатия
     "этаж": "",
     "бар": "",          # на какой свече стоим
-    "цех": "",          # KABINET_ZNAET_CEH_V1: чей цех сторожим
     "работает": False,  # прогон уже идёт — второй не начинаем
     "последнее": "",    # что случилось в прошлый раз (для кнопки)
 }
@@ -635,11 +634,8 @@ async def _vahta_sluzhba():
     try:
         import asyncio as _a
         import council
-        # KABINET_ZNAET_CEH_V1: вахта сторожит СВОЙ цех, а не «какой-то».
-        _ceh = _VAHTA.get("цех") or ""
         await _a.get_event_loop().run_in_executor(
-            None, lambda: (council.wake_council(sym, tf, ceh_id=_ceh)
-                           if _ceh else council.wake_council(sym, tf)))
+            None, lambda: council.wake_council(sym, tf))
         _VAHTA["последнее"] = f"{bar[:16]} · Совет отработал"
         print(f"[ВАХТА] ✓ {sym} {tf} · {bar[:16]} — Совет отработал")
     except Exception as e:
@@ -1768,7 +1764,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         # идёт за полкой — сменил инструмент, сменилось и то, что она
         # сторожит. Помнить старое оказалось хуже, чем не помнить.
         _VAHTA.update({"идёт": True, "инструмент": _s, "этаж": _t,
-                       "бар": "", "цех": tseh_id})
+                       "бар": ""})
         _vahta_zavesti()
         _vahta_vid()
         if _VAHTA_ZAVEDENA:
@@ -1857,19 +1853,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         ui.notify(f"👁 смотрим {_sym_now} {_tf_now}", type="info")
         try:
             loop = asyncio.get_event_loop()
-            # KABINET_ZNAET_CEH_V1: кабинет открыт по адресу цеха —
-            # значит и Совет собираем по ЭТОМУ цеху, а не по зашитому.
-            # Совет постарше про цех не знает — тогда зовём как раньше.
-            def _zvat_sovet():
-                try:
-                    return council.wake_council(_sym_now, _tf_now,
-                                                on_event=_on_event,
-                                                ceh_id=tseh_id)
-                except TypeError:
-                    return council.wake_council(_sym_now, _tf_now,
-                                                on_event=_on_event)
-
-            _market_future = loop.run_in_executor(None, _zvat_sovet)
+            _market_future = loop.run_in_executor(
+                None, lambda: council.wake_council(_sym_now, _tf_now,
+                                                   on_event=_on_event))
             # Дренаж очереди на ГЛАВНОМ потоке, пока wake_council крутится.
             while not _market_future.done():
                 drained_any = False
@@ -2764,5 +2750,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PODPISI_POD_PUZYRKAMI_V1 - marker
 
 # VAHTA_ZAVEDI_LYUBOY_V1 - marker
-
-# KABINET_ZNAET_CEH_V1 - marker
