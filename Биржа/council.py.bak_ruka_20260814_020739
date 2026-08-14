@@ -345,20 +345,6 @@ def wake_council(symbol: str, timeframe: str,
     except Exception:
         pass
 
-    # ── РЫНОК СУДИТ ПЕРВЫМ (RUKA_RYNKA_V1) ──────────────────
-    # Физика раньше мнений: что рынок взял и что закрыл, решается до
-    # того, как за столом кто-то откроет рот. Без этого шага заявка
-    # висела вечно, а позиция не закрывалась никогда — обе руки в
-    # hooks.py были целы, но их не звал никто с 06.08.
-    try:
-        import hooks as _hr
-        _rynok = _hr.rynok_novyy_bar(symbol, timeframe,
-                                     window=window, point=point)
-        if _rynok.get("активировано") or _rynok.get("закрыто"):
-            _emit({"type": "рынок", **_rynok})
-    except Exception as _er:
-        print(f"[РЫНОК] ⚠️  бар не рассужен: {_er}")
-
     summary = {"woke": [], "verdicts": {}, "orders": None,
                "idle": False, "results": {}}
 

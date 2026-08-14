@@ -163,26 +163,7 @@ def _fetch(mt5, symbol: str, tf_name: str, count: int) -> tuple[list, Optional[f
 # Маршрут спуска Шефа: НЕ весь справочник MT5, а его человеческий шаг.
 # Намеренно пропущены H6/H3/H2/M20/M12 — это выбор крупности, не дыры.
 # Дно спуска — M5 ("до 5 минут максимум"): ниже шум съедает волну.
-# PARA_MESTA_V1: лесенка переехала в Биржа/masshtab.py —
-# ею пользуется не только насос, но и трейдер, и кадр.
-# Здесь оставлен только читающий конец, чтобы старые
-# вызовы step_down() работали как работали.
-try:
-    from masshtab import LESTNICA as _TF_LADDER
-except Exception:
-    _TF_LADDER = ["MN1", "W1", "D1", "H12", "H8", "H4",
-                  "H1", "M30", "M15", "M10", "M5"]
-
-
-def step_up(tf_name: str):
-    """Ступень ВВЕРХ по лесенке. Была потеряна: файл
-    mt5_feed_с_step_up.py лежал в уборке отдельной копией,
-    вместо того чтобы жить рукой здесь."""
-    try:
-        from masshtab import vyshe
-        return vyshe(tf_name)
-    except Exception:
-        return None
+_TF_LADDER = ["MN1", "W1", "D1", "H12", "H8", "H4", "H1", "M30", "M15", "M10", "M5"]
 
 
 def step_down(tf_name: str):

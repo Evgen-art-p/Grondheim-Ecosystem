@@ -766,7 +766,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
     chat_log_ref: dict[str, Any] = {"element": None}
     toolbar_refs: dict[str, Any] = {}
     viewer_ref:   dict[str, Any] = {"element": None}
-    vremya_ref:   dict[str, Any] = {"element": None}   # VREMYA_GORODA_V1
     kadr_ref:     dict[str, Any] = {"element": None}   # KABINET_GRAFIK_V1
     files_ref:    dict[str, Any] = {"element": None}
     avatar_ref:   dict[str, Any] = {"element": None}
@@ -2454,26 +2453,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     "letter-spacing:0.04em; margin-right:14px; "
                     "white-space:nowrap; overflow:hidden; "
                     "text-overflow:ellipsis; max-width:46vw;")
-                # VREMYA_GORODA_V1: часы и сессия — текстом, всегда на
-                # виду. Пояс сервера город узнаёт сам у терминала, руками
-                # ничего не вбивается. Сессии берутся из kalibrovka —
-                # второй правды о рынке не заводим.
-                vremya_ref["element"] = ui.label("").style(
-                    "color:rgba(139,233,253,0.75); font-size:11px; "
-                    "letter-spacing:0.05em; margin-right:14px; "
-                    "white-space:nowrap;")
-
-                def _vremya_obnovit():
-                    try:
-                        import vremya
-                        if vremya_ref["element"]:
-                            vremya_ref["element"].text = vremya.stroka()
-                    except Exception:
-                        pass
-
-                _vremya_obnovit()
-                ui.timer(30.0, _vremya_obnovit)
-
                 with ui.element("div").style(
                     "margin-right:10px; background:rgba(255,255,255,0.06); "
                     "border:1px solid rgba(255,255,255,0.12); border-radius:10px;"
