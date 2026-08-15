@@ -208,7 +208,6 @@ def chat_with_tools(
     agent_id: str = "unknown",
     slot_id: str = "unknown",
     knowledge_source: str = "internal",
-    executors: Optional[dict] = None,       # RUKI_TREYDERA_V1
 ) -> str:
     """Вызов LLM с поддержкой Tool Use (синхронный).
 
@@ -229,14 +228,9 @@ def chat_with_tools(
         messages.append({"role": "assistant", "content": "Принял базу знаний. Готов к работе."})
     messages.append({"role": "user", "content": user})
 
-    # RUKI_TREYDERA_V1: список рук был зашит здесь намертво — только
-    # поиск Маяка. Значит своей руки не мог завести никто, кроме
-    # Архива. Теперь вызывающий передаёт свои; встроенная остаётся.
     tool_executors = {
         "web_search": lambda args: _exec_tavily_search(args.get("query", "")),
     }
-    if executors:
-        tool_executors.update(executors)
 
     tool_calls_made = 0
 
@@ -607,131 +601,3 @@ def chat_with_images(system: str, user_text: str, images: Optional[list] = None,
 # LLM_TYPING_V1 — маркер идемпотентности
 
 # LLM_TYPING_V2 — маркер идемпотентности
-
-
-# ═══════════════════════════════════════════════════════════
-# КАРТИНКА И РУКИ ВМЕСТЕ (RUKI_TREYDERA_V1)
-# ═══════════════════════════════════════════════════════════
-# Было две двери и ни одной нужной: chat_with_images — кадр без рук,
-# chat_with_tools — руки без кадра. А трейдеру нужно и то, и другое:
-# он смотрит на картинку и по ней просит числа. Дверь одна.
-def chat_with_images_and_tools(
-    system: str,
-    user_text: str,
-    images: Optional[list] = None,
-    knowledge: str = "",
-    tools_schema: Optional[list] = None,
-    executors: Optional[dict] = None,
-    max_tool_rounds: int = 4,
-    temperature: Optional[float] = None,
-    history: Optional[list] = None,
-    on_tool_call: Optional[Callable] = None,
-    agent_id: str = "unknown",
-    slot_id: str = "unknown",
-    knowledge_source: str = "internal",
-) -> str:
-    """Разговор с кадром, где собеседник может сам просить математику.
-
-    Руки исполняются здесь же и их ответы возвращаются в тот же
-    разговор, поэтому он видит и картинку, и числа, которые запросил
-    ПО ЭТОЙ картинке. Не попросил — ничего лишнего не считали.
-    """
-    proxies = {"http": PROXY_URL, "https": PROXY_URL} if PROXY_URL else None
-    headers = {"Authorization": f"Bearer {OPENROUTER_API_KEY}",
-               "Content-Type": "application/json"}
-
-    messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-    if knowledge:
-        messages.append({"role": "user",
-                         "content": f"БАЗА ЗНАНИЙ:\n{knowledge}"})
-        messages.append({"role": "assistant",
-                         "content": "Принял базу знаний. Готов к работе."})
-    if history:
-        for m in history:
-            if m.get("role") in ("user", "assistant") and m.get("content"):
-                messages.append({"role": m["role"], "content": m["content"]})
-
-    user_content: list = []
-    for img in (images or []):
-        b64 = img.get("base64", "")
-        if not b64:
-            continue
-        mime = img.get("mime_type", "image/png")
-        user_content.append({"type": "image_url",
-                             "image_url": {"url": f"data:{mime};base64,{b64}"}})
-        user_content.append({"type": "text",
-                             "text": f"[Изображение: {img.get('name', 'кадр')}]"})
-    user_content.append({"type": "text", "text": user_text})
-    messages.append({"role": "user", "content": user_content})
-
-    ruki = dict(executors or {})
-    sdelano = 0
-
-    for _ in range(max_tool_rounds + 1):
-        payload: dict = {"model": _CURRENT_MODEL, "messages": messages,
-                         "max_tokens": LLM_MAX_TOKENS}
-        if temperature is not None:
-            payload["temperature"] = temperature
-        if tools_schema and sdelano < max_tool_rounds:
-            payload["tools"] = tools_schema
-            payload["tool_choice"] = "auto"
-
-        r = _post_with_retry(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers, json_payload=payload, proxies=proxies,
-            timeout=HTTP_TIMEOUT)
-        if r.status_code != 200:
-            try:
-                err = r.json().get("error", {}).get("message", r.text[:300])
-            except Exception:
-                err = r.text[:300]
-            raise RuntimeError(f"OpenRouter [{r.status_code}]: {err}")
-
-        data = r.json()
-        msg = (data.get("choices") or [{}])[0].get("message", {}) or {}
-
-        if not msg.get("tool_calls"):
-            content = msg.get("content") or ""
-            if not content.strip():
-                raise RuntimeError("Модель вернула пустой ответ (кадр+руки)")
-            usage = data.get("usage", {})
-            _ledger.record(agent_id=agent_id, slot_id=slot_id,
-                           model=payload["model"],
-                           prompt_tokens=usage.get("prompt_tokens", 0),
-                           completion_tokens=usage.get("completion_tokens", 0),
-                           call_type="chat_with_images_and_tools",
-                           knowledge_source=knowledge_source)
-            return content
-
-        messages.append({"role": "assistant",
-                         "content": msg.get("content") or "",
-                         "tool_calls": msg["tool_calls"]})
-        for tc in msg["tool_calls"]:
-            imya = tc["function"]["name"]
-            try:
-                args = json.loads(tc["function"].get("arguments", "{}"))
-            except json.JSONDecodeError:
-                args = {}
-            ruka = ruki.get(imya)
-            if ruka:
-                try:
-                    otvet = str(ruka(args))
-                except Exception as e:
-                    otvet = f"рука {imya} сорвалась: {e}"
-                sdelano += 1
-                print(f"[РУКА] 🖐 {imya}({args}) → {len(otvet)} симв. "
-                      f"({sdelano}/{max_tool_rounds})")
-            else:
-                otvet = f"Такой руки нет: {imya}"
-            if on_tool_call:
-                try:
-                    on_tool_call(imya, args, otvet)
-                except Exception:
-                    pass
-            messages.append({"role": "tool", "tool_call_id": tc["id"],
-                             "content": otvet})
-
-    return "Разговор с руками не сошёлся — рук попросили больше, чем можно."
-
-
-# RUKI_TREYDERA_V1 - marker
