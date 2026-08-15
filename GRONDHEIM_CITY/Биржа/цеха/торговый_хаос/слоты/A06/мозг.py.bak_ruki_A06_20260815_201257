@@ -159,50 +159,6 @@ def _glaz(_chat, symbol, timeframe, slot, preambula=None):
     return obertka
 
 
-
-def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
-                   preambula=None):
-    """Кадр + руки: смотрит картинку и сам просит математику.
-
-    RUKI_VSEM_V1. Не вышло с руками — падаем на обычный глаз, а не
-    молчим: зрение важнее рук.
-    """
-    def obertka(system="", user="", knowledge="", **kw):
-        put = None
-        try:
-            import grafik
-            put = grafik.kadr(symbol, timeframe)
-        except Exception as e:
-            print(f"[КАДР] не нарисовался ({e}) — работаю без глаз")
-        if put:
-            try:
-                import base64
-                from pathlib import Path as _P
-                from llm import chat_with_images_and_tools
-                import ruki_treydera as _rt
-                return chat_with_images_and_tools(
-                    system=system,
-                    user_text=(preambula if preambula is not None
-                               else _GLAZ_PREAMBULA) + user,
-                    knowledge=knowledge,
-                    images=[{"base64": base64.b64encode(
-                                 _P(put).read_bytes()).decode("ascii"),
-                             "mime_type": "image/png",
-                             "name": _P(put).name}],
-                    tools_schema=_rt.shema(timeframe),
-                    executors=_rt.ruki(symbol, ceh, slot, self_key,
-                                       dnevnik_fn=_read_recent_diary),
-                    history=kw.get("history"),
-                    temperature=kw.get("temperature"),
-                    agent_id=kw.get("agent_id", slot),
-                    slot_id=kw.get("slot_id", slot))
-            except Exception as e:
-                print(f"[РУКИ] не сработали ({e}) — иду обычным глазом")
-        return _glaz(_chat, symbol, timeframe, slot, preambula)(
-            system=system, user=user, knowledge=knowledge, **kw)
-    return obertka
-
-
 def _znaniya_roli() -> str:
     """Вся база знаний роли — все .md и .txt из папки, по алфавиту.
 
@@ -762,12 +718,7 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
     # накрывается на три рабочих этажа сразу, и он сам говорит, на
     # каком работает. Цены входа и стопа от этажа не зависят — они
     # одни для всех; на разных этажах видны разные вещи, вот и всё.
-    # RUKI_VSEM_V1: три этажа были зашиты здесь намертво и считались
-    # КАЖДЫЙ раз, спрашивала она их или нет. Кадр при этом рисуется
-    # один — по её рабочему этажу, значит по двум из трёх она ходила
-    # вслепую, по одним числам. Теперь этажи — её дело: нужен
-    # соседний, попросит рукой stol_na_etazhe.
-    _RABOCHIE_ETAZHI = (timeframe,)
+    _RABOCHIE_ETAZHI = ("D1", "H4", "H1")
 
     def _lesenka_slovami() -> str:
         try:
@@ -976,10 +927,7 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
         # обёртка честно зовёт прежнее, и мозг ничего не замечает.
         # TREYDER_ZHIV_V1: обёртка в СВОЁ имя. Присваивание в `chat`
         # делало его местным на всю функцию — вызов падал всегда.
-        # RUKI_VSEM_V1: кадр как был, но теперь с руками — она может
-        # сама попросить числа по тому, что видит.
-        _chat_glazami = _glaz_s_rukami(chat, symbol, timeframe, _SLOT,
-                                       _CEH, _SELF_KEY)
+        _chat_glazami = _glaz(chat, symbol, timeframe, _SLOT)
         response = _chat_glazami(system=system_full, user=user_msg, knowledge=knowledge,
                         agent_id="A06_BRUT", slot_id="trading", temperature=_my_temp())
     except Exception as e:
@@ -1074,5 +1022,3 @@ def _my_temp():
 # DVIZHOK_NE_RESHAET_V1 - marker
 
 # VYBOR_SVOY_NE_KNIZHNYY_V1 - marker
-
-# RUKI_VSEM_V1 - marker

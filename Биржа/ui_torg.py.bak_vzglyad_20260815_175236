@@ -638,8 +638,8 @@ async def _vahta_sluzhba():
         # KABINET_ZNAET_CEH_V1: вахта сторожит СВОЙ цех, а не «какой-то».
         _ceh = _VAHTA.get("цех") or ""
         await _a.get_event_loop().run_in_executor(
-            None, lambda: (council.wake_council("", "", ceh_id=_ceh)
-                           if _ceh else council.wake_council("", "")))
+            None, lambda: (council.wake_council(sym, tf, ceh_id=_ceh)
+                           if _ceh else council.wake_council(sym, tf)))
         _VAHTA["последнее"] = f"{bar[:16]} · Совет отработал"
         print(f"[ВАХТА] ✓ {sym} {tf} · {bar[:16]} — Совет отработал")
     except Exception as e:
@@ -820,93 +820,18 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     return s, tf
         except Exception:
             pass
-        # UBRAT_CHETVERTOGO_V1: выдуманного запасного «XAUUSD H4»
-        # больше нет. Это и был четвёртый инструмент при трёх
-        # трейдерах: ничей, никем не выбранный, а работали по нему
-        # все. Полка пуста — так и говорим, пустотой.
-        return "", ""
-
-    # ── VZGLYAD_KAZHDOGO_V1: память полки и пара активного ──
-    def _klyuch_aktiva(a: dict) -> str:
-        """Имя строки полки. Номер строки для этого не годится:
-        ТЕРМИНАЛ кладёт свежее в НАЧАЛО списка, всё съезжает вниз, а
-        номер остаётся — и выбор указывает уже на чужую строку. Так и
-        получался вечный сброс на M15: он первый в опросе этажей."""
-        if not a:
-            return ""
-        return (f"{a.get('symbol', '')}|{a.get('timeframe', '')}"
-                f"|{a.get('источник', '')}")
-
-    def _zapomnit_vybor() -> str:
-        aktivy = state.get("loaded_assets") or []
-        i = state.get("active_asset")
-        if i is None or not (0 <= i < len(aktivy)):
-            return ""
-        return _klyuch_aktiva(aktivy[i])
-
-    def _vernut_vybor(klyuch: str, tiho: bool = False):
-        """Вернуть курсор на ту же строку после перестройки полки."""
-        aktivy = state.get("loaded_assets") or []
-        if not aktivy:
-            state["active_asset"] = None
-            return
-        if klyuch:
-            for j, a in enumerate(aktivy):
-                if _klyuch_aktiva(a) == klyuch:
-                    state["active_asset"] = j
-                    return
-            if not tiho:
-                _tiho(ui.notify, "⚠ прежний актив с полки ушёл — "
-                                 "выбери заново", type="warning")
-                state["active_asset"] = None
-                return
-        if state.get("active_asset") is None:
-            state["active_asset"] = 0
-
-    def _para_aktivnogo() -> tuple:
-        """(инструмент, этаж, чей, чего не хватает) активного трейдера.
-
-        Взгляд принадлежит трейдеру, а не полке: у каждого свой
-        инструмент и свой этаж, и смотреть Шеф должен именно на его
-        картинку, иначе проверить его нечем.
-        """
-        aid = state.get("active_agent") or ""
-        imya = _agent_label(roster, aid) or aid
-        if aid not in ("A06", "A07", "A08"):
-            s, t = _aktivnyy_rynok()
-            if not s or not t:
-                return "", "", imya, "на полке ничего не выбрано"
-            return s, t, "", ""
-        try:
-            import vybor
-            r = vybor.rabota_dlya(tseh_id, aid)
-            if r.get("инструмент") and r.get("этаж"):
-                return r["инструмент"], r["этаж"], imya, ""
-            return "", "", imya, vybor.pochemu_molchit(tseh_id, aid)
-        except Exception as e:
-            return "", "", imya, f"пара не прочиталась ({e})"
+        return "XAUUSD", "H4"
 
     def pokazat_kadr(put=None):
-        """Рисует кадр АКТИВНОГО ТРЕЙДЕРА и кладёт направо.
+        """Рисует кадр и кладёт в верхнюю половину правой части.
 
-        VZGLYAD_KAZHDOGO_V1: раньше брали пару с полки — и на экране
-        висел один общий кадр, одинаковый для всех троих, хотя
-        работают они разными инструментами. Теперь кадр про того,
-        чей пузырёк нажат.
-
-        Модель не трогаем: Шеф смотрит, трейдер спит.
+        Модель не трогаем: Шеф смотрит, трейдер спит. Это и есть
+        дешёвый способ проверить, читается ли картинка, ПЕРЕД тем как
+        отдавать её глазу.
         """
         if not kadr_ref["element"]:
             return None
-        symbol, tf, chey, nehvatka = _para_aktivnogo()
-        if nehvatka:
-            kadr_ref["element"].clear()
-            with kadr_ref["element"]:
-                ui.label(f"👁 {chey}: смотреть нечего").style(
-                    "color:rgba(255,180,120,0.85); font-size:13px;")
-                ui.label(nehvatka).style(
-                    "color:rgba(255,255,255,0.55); font-size:11px;")
-            return None
+        symbol, tf = _aktivnyy_rynok()
         try:
             import grafik
             p = Path(put) if put else grafik.kadr(symbol, tf)
@@ -933,15 +858,12 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             _kogda = ""
             try:
                 from feed_source import bars as _src_bars
-                _bs, _ = _src_bars(symbol, tf, 3)   # VZGLYAD_KAZHDOGO_V1
+                _bs, _ = _src_bars(symbol, tf, 3)
                 if _bs:
                     _kogda = f" · {str(_bs[-1].get('date', ''))[:16]}"
             except Exception:
                 pass
-            # VZGLYAD_KAZHDOGO_V1: чей это взгляд — теперь в подписи,
-            # иначе три разных кадра не отличить друг от друга.
-            _chey = f"{chey} · " if chey else ""
-            ui.label(f"👁 {_chey}{symbol} · {tf} · {_kran}{_kogda}").style(
+            ui.label(f"👁 {symbol} · {tf} · {_kran}{_kogda}").style(
                 "color:rgba(139,233,253,0.75); font-size:11px; "
                 "letter-spacing:0.06em; padding-top:6px; "
                 "flex-shrink:0; width:100%; text-align:center;")
@@ -1843,14 +1765,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                       type="warning")
             return
         _s, _t = _aktivnyy_rynok()
-        # UBRAT_CHETVERTOGO_V1: вахта — это ДЕЖУРСТВО, будильник. По
-        # какой свече звонить — берём с полки, как и раньше; но
-        # разбуженные работают КАЖДЫЙ СВОИМ, а не тем, что на полке.
-        # Полка пуста — дежурить не по чему, честно откажемся.
-        if not _s or not _t:
-            ui.notify("⏱ выбери слева, по какой свече дежурить",
-                      type="warning")
-            return
+        # VAHTA_ZA_POLKOY_V1: берём выбранное сейчас, и дальше вахта
+        # идёт за полкой — сменил инструмент, сменилось и то, что она
+        # сторожит. Помнить старое оказалось хуже, чем не помнить.
         _VAHTA.update({"идёт": True, "инструмент": _s, "этаж": _t,
                        "бар": "", "цех": tseh_id})
         _vahta_zavesti()
@@ -1937,10 +1854,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
         # KABINET_VZGLYAD_V1: инструмент и этаж — с полки, не из кода.
         # Одна пара на кадр и на трейдера: смотрят одно и то же.
-        # UBRAT_CHETVERTOGO_V1: кабинет Совету пару НЕ передаёт.
-        # Каждый берёт свою — инструмент из поста, этаж свой.
-        _sym_now, _tf_now = "", ""
-        ui.notify("📡 Совет: каждый смотрит своё", type="info")
+        _sym_now, _tf_now = _aktivnyy_rynok()
+        ui.notify(f"👁 смотрим {_sym_now} {_tf_now}", type="info")
         try:
             loop = asyncio.get_event_loop()
             # KABINET_ZNAET_CEH_V1: кабинет открыт по адресу цеха —
@@ -2056,13 +1971,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             update_viewer(f"# {label} ({agent_id})\n\n{state['reports'][agent_id]}")
         else:
             update_viewer(f"# {label} ({agent_id})\n\n*Отчёт пока не создан.*")
-        # VZGLYAD_KAZHDOGO_V1: кликнул трейдера — сразу его взгляд.
-        # Кадр рисуется из готовых баров, модель не зовётся: это
-        # по-прежнему бесплатный просмотр для Шефа.
-        try:
-            pokazat_kadr()
-        except Exception as _e:
-            print(f"[ВЗГЛЯД] кадр не показался: {_e}")
 
     # ── загрузчик (левая колонка) ────────────────────────────
     def _slot_agenta(agent_id: str) -> str:
@@ -2337,14 +2245,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         # файлы не выкидываем: живое и история лежат рядом, но помечены
         bylo = [x for x in state.get("loaded_assets", [])
                 if x.get("источник") != "терминал"]
-        # VZGLYAD_KAZHDOGO_V1: запомнили выбор ИМЕНЕМ до перестройки.
-        # Свежее ложится в начало, всё съезжает вниз — и прежний
-        # номер строки начинает показывать на чужой актив. Первым в
-        # опросе этажей идёт M15, поэтому сброс всегда выглядел как
-        # «скинуло на M15».
-        _bylo_vybrano = _zapomnit_vybor()
         state["loaded_assets"] = aktivy + bylo
-        _vernut_vybor(_bylo_vybrano)
+        if state.get("active_asset") is None and aktivy:
+            state["active_asset"] = 0
         simvolov = len({x["symbol"] for x in aktivy})
         print(f"[ТЕРМИНАЛ] 📡 инструментов {simvolov}, этажей {len(aktivy)}")
         _tiho(update_files_display)
@@ -2364,11 +2267,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         print(f"[TORG·SCAN] {f.name}: {_e}")
         except Exception as _e:
             print(f"[TORG·SCAN] папка: {_e}")
-        # VZGLYAD_KAZHDOGO_V1: пересканирование папки роняло выбор
-        # так же молча, как ТЕРМИНАЛ.
-        _bylo_vybrano = _zapomnit_vybor()
         state["loaded_assets"] = assets
-        _vernut_vybor(_bylo_vybrano, tiho=True)
+        state["active_asset"] = 0 if assets else None
 
     async def handle_upload(e):
         name = e.name
@@ -2887,7 +2787,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # VAHTA_ZAVEDI_LYUBOY_V1 - marker
 
 # KABINET_ZNAET_CEH_V1 - marker
-
-# VZGLYAD_KAZHDOGO_V1 - marker
-
-# UBRAT_CHETVERTOGO_V1 - marker

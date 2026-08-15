@@ -638,8 +638,8 @@ async def _vahta_sluzhba():
         # KABINET_ZNAET_CEH_V1: вахта сторожит СВОЙ цех, а не «какой-то».
         _ceh = _VAHTA.get("цех") or ""
         await _a.get_event_loop().run_in_executor(
-            None, lambda: (council.wake_council("", "", ceh_id=_ceh)
-                           if _ceh else council.wake_council("", "")))
+            None, lambda: (council.wake_council(sym, tf, ceh_id=_ceh)
+                           if _ceh else council.wake_council(sym, tf)))
         _VAHTA["последнее"] = f"{bar[:16]} · Совет отработал"
         print(f"[ВАХТА] ✓ {sym} {tf} · {bar[:16]} — Совет отработал")
     except Exception as e:
@@ -820,11 +820,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     return s, tf
         except Exception:
             pass
-        # UBRAT_CHETVERTOGO_V1: выдуманного запасного «XAUUSD H4»
-        # больше нет. Это и был четвёртый инструмент при трёх
-        # трейдерах: ничей, никем не выбранный, а работали по нему
-        # все. Полка пуста — так и говорим, пустотой.
-        return "", ""
+        return "XAUUSD", "H4"
 
     # ── VZGLYAD_KAZHDOGO_V1: память полки и пара активного ──
     def _klyuch_aktiva(a: dict) -> str:
@@ -874,8 +870,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         imya = _agent_label(roster, aid) or aid
         if aid not in ("A06", "A07", "A08"):
             s, t = _aktivnyy_rynok()
-            if not s or not t:
-                return "", "", imya, "на полке ничего не выбрано"
             return s, t, "", ""
         try:
             import vybor
@@ -1843,14 +1837,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                       type="warning")
             return
         _s, _t = _aktivnyy_rynok()
-        # UBRAT_CHETVERTOGO_V1: вахта — это ДЕЖУРСТВО, будильник. По
-        # какой свече звонить — берём с полки, как и раньше; но
-        # разбуженные работают КАЖДЫЙ СВОИМ, а не тем, что на полке.
-        # Полка пуста — дежурить не по чему, честно откажемся.
-        if not _s or not _t:
-            ui.notify("⏱ выбери слева, по какой свече дежурить",
-                      type="warning")
-            return
+        # VAHTA_ZA_POLKOY_V1: берём выбранное сейчас, и дальше вахта
+        # идёт за полкой — сменил инструмент, сменилось и то, что она
+        # сторожит. Помнить старое оказалось хуже, чем не помнить.
         _VAHTA.update({"идёт": True, "инструмент": _s, "этаж": _t,
                        "бар": "", "цех": tseh_id})
         _vahta_zavesti()
@@ -1937,10 +1926,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
         # KABINET_VZGLYAD_V1: инструмент и этаж — с полки, не из кода.
         # Одна пара на кадр и на трейдера: смотрят одно и то же.
-        # UBRAT_CHETVERTOGO_V1: кабинет Совету пару НЕ передаёт.
-        # Каждый берёт свою — инструмент из поста, этаж свой.
-        _sym_now, _tf_now = "", ""
-        ui.notify("📡 Совет: каждый смотрит своё", type="info")
+        _sym_now, _tf_now = _aktivnyy_rynok()
+        ui.notify(f"👁 смотрим {_sym_now} {_tf_now}", type="info")
         try:
             loop = asyncio.get_event_loop()
             # KABINET_ZNAET_CEH_V1: кабинет открыт по адресу цеха —
@@ -2889,5 +2876,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # KABINET_ZNAET_CEH_V1 - marker
 
 # VZGLYAD_KAZHDOGO_V1 - marker
-
-# UBRAT_CHETVERTOGO_V1 - marker

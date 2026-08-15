@@ -303,7 +303,8 @@ def _deshyovaya_proverka_tochki(symbol: str, timeframe: str,
 # COUNCIL_GATE_TROYNOY_V1 - marker
 
 
-def _para_slota(ceh_id: str, slot: str) -> dict:
+def _para_slota(ceh_id: str, slot: str, zapasnoy_sym: str = "",
+                zapasnoy_tf: str = "") -> dict:
     """Чем и на каком этаже работает ЭТО место. RABOTA_PO_PARE_V1.
 
     Один трейдер — один инструмент, свой. Кабинетного «общего» тут
@@ -319,14 +320,15 @@ def _para_slota(ceh_id: str, slot: str) -> dict:
         if r.get("готов"):
             return {"symbol": r["инструмент"], "timeframe": r["этаж"],
                     "готов": True, "почему": ""}
-        # UBRAT_CHETVERTOGO_V1: запасной пары БОЛЬШЕ НЕТ. Она была
-        # задумана «для тестера», но кабинет всегда передавал свою —
-        # и запасная срабатывала всегда, подменяя собой всю
-        # постройку. Три трейдера получали четвёртый инструмент.
-        # Не выбрал — молчит. Молчание честнее подставного рынка.
+        if zapasnoy_sym and zapasnoy_tf:
+            return {"symbol": zapasnoy_sym, "timeframe": zapasnoy_tf,
+                    "готов": True, "почему": ""}
         return {"symbol": "", "timeframe": "", "готов": False,
                 "почему": vybor.pochemu_molchit(ceh_id, slot)}
     except Exception as e:
+        if zapasnoy_sym and zapasnoy_tf:
+            return {"symbol": zapasnoy_sym, "timeframe": zapasnoy_tf,
+                    "готов": True, "почему": ""}
         return {"symbol": "", "timeframe": "", "готов": False,
                 "почему": f"пара не прочиталась ({e})"}
 
@@ -386,7 +388,7 @@ def wake_council(symbol: str = "", timeframe: str = "",
     _za_stolom = _treydery(ceh_id)
     _pary = {}
     for _aid, _c, _slot, _fn, _pre in _za_stolom:
-        _p = _para_slota(ceh_id, _slot)   # UBRAT_CHETVERTOGO_V1
+        _p = _para_slota(ceh_id, _slot, symbol, timeframe)
         _pary[_slot] = _p
         if not _p["готов"]:
             print(f"[СОВЕТ] 🤐 {_slot} молчит: {_p['почему']}")
@@ -402,8 +404,6 @@ def wake_council(symbol: str = "", timeframe: str = "",
                 _p["symbol"], _p["timeframe"],
                 window=window if _klyuch == (symbol, timeframe) else None,
                 point=point if _klyuch == (symbol, timeframe) else None)
-            # окно передаём только если кабинет прислал бары ИМЕННО
-            # этой пары; иначе рука сама возьмёт из крана — свои.
             if _rynok.get("активировано") or _rynok.get("закрыто"):
                 _emit({"type": "рынок", "рынок": _p["symbol"],
                        "этаж": _p["timeframe"], **_rynok})
@@ -432,7 +432,7 @@ def wake_council(symbol: str = "", timeframe: str = "",
         print("[СОВЕТ] в цехе нет ни одного картриджа с мозгом")
     for aid, ceh, slot, fn, pre in _za_stolom:
         # RABOTA_PO_PARE_V1: каждому — ЕГО инструмент и ЕГО этаж.
-        _p = _pary.get(slot) or _para_slota(ceh_id, slot)
+        _p = _pary.get(slot) or _para_slota(ceh_id, slot, symbol, timeframe)
         if not _p["готов"]:
             summary["verdicts"][aid] = None
             summary["results"][aid] = {"ok": False, "error": _p["почему"],
@@ -467,5 +467,3 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # SVOY_STOL_CEHA_V1 - marker
 
 # RABOTA_PO_PARE_V1 - marker
-
-# UBRAT_CHETVERTOGO_V1 - marker

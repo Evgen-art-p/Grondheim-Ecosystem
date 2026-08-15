@@ -1012,18 +1012,6 @@ def _aktivirovat_ordera(state: dict):
         if _bar_sym and _psym and _psym != _bar_sym:
             ostalis.append(pos)
             continue
-        # UBRAT_CHETVERTOGO_V1: симметрия с закрытием. Заявка без
-        # инструмента (открыта до 14.08) НЕ активируется чужим баром:
-        # в логе 15.08 такая заявка по 0.708 «активировалась» баром
-        # евро по 1.15 и стала позицией, которую закрытие потом
-        # трогать отказалось. Защита в одной руке из двух хуже, чем
-        # никакой — она плодит вечные позиции.
-        if _bar_sym and not _psym:
-            print(f"[ОРДЕР] ⚠️  {pos.get('trader')} без инструмента "
-                  f"(открыта до 14.08) — не активирую баром {_bar_sym}. "
-                  f"Решение по старым заявкам за Шефом.")
-            ostalis.append(pos)
-            continue
         # VASILY_ZASADA_V1: засада Консерватора — своя ветка, до PENDING.
         if pos.get("status") == "WATCHING":
             _sostoyanie = _proverit_otkat_vasily(pos, md)
@@ -2333,5 +2321,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # RUKA_RYNKA_V1 - marker
 
 # RABOTA_PO_PARE_V1 - marker
-
-# UBRAT_CHETVERTOGO_V1 - marker

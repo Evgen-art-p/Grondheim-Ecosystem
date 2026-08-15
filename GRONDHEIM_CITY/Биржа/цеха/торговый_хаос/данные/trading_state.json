@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-15T17:38:44.102073",
+  "updated": "2026-08-15T17:46:03.127927",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -63,7 +63,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "",
+    "reason": "нет четкой первой волны и подтвержденного отката к ней",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -74,7 +74,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "нет отката к новой волне",
+    "reason": "нет импульса и коррекции",
     "direction": null,
     "entry": null,
     "stop": null,
