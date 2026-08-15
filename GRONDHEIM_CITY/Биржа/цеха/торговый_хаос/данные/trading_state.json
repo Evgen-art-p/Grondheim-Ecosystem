@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-13T21:30:46.246612",
+  "updated": "2026-08-15T03:09:59.521635",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -11,8 +11,8 @@
       "trader": "BRUT",
       "magic": 100001,
       "direction": "LONG",
-      "entry": 4371.74,
-      "stop": 4220.77,
+      "entry": 0.70843,
+      "stop": 0.70788,
       "tp": null,
       "lot": 0.1,
       "status": "PENDING",
@@ -41,7 +41,11 @@
           "fractal_side": null,
           "fractal_price": null
         }
-      }
+      },
+      "stop_initial": 0.70788,
+      "signal_start": 0.70788,
+      "entry_fractal_price": 0.70843,
+      "entry_fractal_idx": 296
     }
   ],
   "feed": {
@@ -50,7 +54,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "рынок в боковике, нет условий для входа",
+    "reason": "Аллигатор спит, цена в пасти, фракталы не валидны. Нет условий для входа по стратегии первого отката к новой волне.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -61,7 +65,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "нет четкого импульса для отката, Аллигатор почти спит, AO падает, противоречие ТФ",
+    "reason": "Нет четкого импульса и завершенного отката для моего входа; Аллигатор на M15 спит, а старшие таймфреймы противоречивы.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -72,7 +76,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "",
+    "reason": "нет импульса и отката, рынок во флэте",
     "direction": null,
     "entry": null,
     "stop": null,

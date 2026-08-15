@@ -303,37 +303,7 @@ def _deshyovaya_proverka_tochki(symbol: str, timeframe: str,
 # COUNCIL_GATE_TROYNOY_V1 - marker
 
 
-def _para_slota(ceh_id: str, slot: str, zapasnoy_sym: str = "",
-                zapasnoy_tf: str = "") -> dict:
-    """Чем и на каком этаже работает ЭТО место. RABOTA_PO_PARE_V1.
-
-    Один трейдер — один инструмент, свой. Кабинетного «общего» тут
-    нет: он и был тем четвёртым, которого никто не выбирал, а
-    работали по нему все трое.
-
-    Запасная пара нужна ровно одному случаю — прогону тестера, где
-    инструмент задан файлом истории. В живой работе она пустая.
-    """
-    try:
-        import vybor
-        r = vybor.rabota_dlya(ceh_id, slot)
-        if r.get("готов"):
-            return {"symbol": r["инструмент"], "timeframe": r["этаж"],
-                    "готов": True, "почему": ""}
-        if zapasnoy_sym and zapasnoy_tf:
-            return {"symbol": zapasnoy_sym, "timeframe": zapasnoy_tf,
-                    "готов": True, "почему": ""}
-        return {"symbol": "", "timeframe": "", "готов": False,
-                "почему": vybor.pochemu_molchit(ceh_id, slot)}
-    except Exception as e:
-        if zapasnoy_sym and zapasnoy_tf:
-            return {"symbol": zapasnoy_sym, "timeframe": zapasnoy_tf,
-                    "готов": True, "почему": ""}
-        return {"symbol": "", "timeframe": "", "готов": False,
-                "почему": f"пара не прочиталась ({e})"}
-
-
-def wake_council(symbol: str = "", timeframe: str = "",
+def wake_council(symbol: str, timeframe: str,
                  on_event: Optional[Callable] = None,
                  window=None, point=None,
                  ceh_id: str = _CEH_TORGOVYY) -> dict:
@@ -380,36 +350,14 @@ def wake_council(symbol: str = "", timeframe: str = "",
     # того, как за столом кто-то откроет рот. Без этого шага заявка
     # висела вечно, а позиция не закрывалась никогда — обе руки в
     # hooks.py были целы, но их не звал никто с 06.08.
-    _sudil = set()   # RABOTA_PO_PARE_V1: какие рынки уже рассудили
-    # RABOTA_PO_PARE_V1: у каждого свой рынок, значит и судить надо
-    # каждый рынок отдельно — своим баром. Пары повторяются редко, но
-    # если двое работают одним инструментом на одном этаже, второй
-    # раз не судим.
-    _za_stolom = _treydery(ceh_id)
-    _pary = {}
-    for _aid, _c, _slot, _fn, _pre in _za_stolom:
-        _p = _para_slota(ceh_id, _slot, symbol, timeframe)
-        _pary[_slot] = _p
-        if not _p["готов"]:
-            print(f"[СОВЕТ] 🤐 {_slot} молчит: {_p['почему']}")
-            _emit({"type": "молчит", "slot": _slot, "почему": _p["почему"]})
-            continue
-        _klyuch = (_p["symbol"], _p["timeframe"])
-        if _klyuch in _sudil:
-            continue
-        _sudil.add(_klyuch)
-        try:
-            import hooks as _hr
-            _rynok = _hr.rynok_novyy_bar(
-                _p["symbol"], _p["timeframe"],
-                window=window if _klyuch == (symbol, timeframe) else None,
-                point=point if _klyuch == (symbol, timeframe) else None)
-            if _rynok.get("активировано") or _rynok.get("закрыто"):
-                _emit({"type": "рынок", "рынок": _p["symbol"],
-                       "этаж": _p["timeframe"], **_rynok})
-        except Exception as _er:
-            print(f"[РЫНОК] ⚠️  {_p['symbol']} {_p['timeframe']} "
-                  f"не рассужен: {_er}")
+    try:
+        import hooks as _hr
+        _rynok = _hr.rynok_novyy_bar(symbol, timeframe,
+                                     window=window, point=point)
+        if _rynok.get("активировано") or _rynok.get("закрыто"):
+            _emit({"type": "рынок", **_rynok})
+    except Exception as _er:
+        print(f"[РЫНОК] ⚠️  бар не рассужен: {_er}")
 
     summary = {"woke": [], "verdicts": {}, "orders": None,
                "idle": False, "results": {}}
@@ -428,19 +376,11 @@ def wake_council(symbol: str = "", timeframe: str = "",
            "result": ra, "narrative": ra.get("narrative", "")})
 
     # ── трейдеры: сколько картриджей в цехе, столько и зовём ──
+    _za_stolom = _treydery(ceh_id)
     if not _za_stolom:
         print("[СОВЕТ] в цехе нет ни одного картриджа с мозгом")
     for aid, ceh, slot, fn, pre in _za_stolom:
-        # RABOTA_PO_PARE_V1: каждому — ЕГО инструмент и ЕГО этаж.
-        _p = _pary.get(slot) or _para_slota(ceh_id, slot, symbol, timeframe)
-        if not _p["готов"]:
-            summary["verdicts"][aid] = None
-            summary["results"][aid] = {"ok": False, "error": _p["почему"],
-                                       "молчит": True}
-            continue
-        print(f"[СОВЕТ] 👤 {slot}: {_p['symbol']} {_p['timeframe']}")
-        r = _call(ceh, slot, fn,
-                  symbol=_p["symbol"], timeframe=_p["timeframe"])
+        r = _call(ceh, slot, fn, symbol=symbol, timeframe=timeframe)
         summary["woke"].append(aid)
         summary["results"][aid] = r
         sig = r.get("signal", {}) or {}
@@ -465,5 +405,3 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # ZAKON_KARTRIDZHA_V1 - marker
 
 # SVOY_STOL_CEHA_V1 - marker
-
-# RABOTA_PO_PARE_V1 - marker

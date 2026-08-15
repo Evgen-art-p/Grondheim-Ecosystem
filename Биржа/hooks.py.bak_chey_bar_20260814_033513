@@ -1003,15 +1003,7 @@ def _aktivirovat_ordera(state: dict):
     dirty = False
     ostalis = []
 
-    _bar_sym = str(md.get("symbol", "") or "").strip().upper()
     for pos in live:
-        # RABOTA_PO_PARE_V1: заявку берёт ТОЛЬКО её собственный рынок.
-        # Иначе заявка Синди по золоту ждала бы, пока до неё дойдёт
-        # евро, и умирала бы «протухшей» на живом сигнале.
-        _psym = (pos.get("symbol") or "").strip().upper()
-        if _bar_sym and _psym and _psym != _bar_sym:
-            ostalis.append(pos)
-            continue
         # VASILY_ZASADA_V1: засада Консерватора — своя ветка, до PENDING.
         if pos.get("status") == "WATCHING":
             _sostoyanie = _proverit_otkat_vasily(pos, md)
@@ -1195,20 +1187,6 @@ def _settle_positions(state: dict):
 
     still_open, closed = [], []
     for pos in positions:
-        # RABOTA_PO_PARE_V1: ЧЕЙ БАР ПРИШЁЛ. Трое трейдеров — три
-        # разных инструмента, а стол цеха один. Позиция по золоту не
-        # имеет никакого отношения к барам евро: её нельзя ни закрыть
-        # по чужому стопу, ни записать в журнал чужим символом.
-        _psym = (pos.get("symbol") or "").strip().upper()
-        if _psym and symbol and _psym != str(symbol).strip().upper():
-            still_open.append(pos)
-            continue
-        if not _psym:
-            print(f"[SETTLE] ⚠️  позиция {pos.get('trader')} без инструмента "
-                  f"(открыта до 14.08) — не сужу её чужим баром {symbol}. "
-                  f"Решение по старым позициям за Шефом.")
-            still_open.append(pos)
-            continue
         # VASILY_ZASADA_V1: засада/заявка — не открытая позиция, закрывать
         # нечего (у WATCHING координаты входа заданы, но входа ещё НЕ БЫЛО).
         if pos.get("status") in ("WATCHING", "PENDING"):
@@ -2319,5 +2297,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 
 
 # RUKA_RYNKA_V1 - marker
-
-# RABOTA_PO_PARE_V1 - marker

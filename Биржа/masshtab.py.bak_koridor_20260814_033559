@@ -41,34 +41,6 @@ LESTNICA = ["MN1", "W1", "D1", "H12", "H8", "H4", "H1",
 BAROV_V_KADRE = 140
 OKNO = (100, 140)
 
-# ── КОРИДОР РАБОЧИХ ЭТАЖЕЙ (OBHOD_ETAZHEY_V1, слово Шефа 14.08) ──
-# Где трейдер ищет свой рабочий масштаб. Границы не выдуманы:
-#
-#   низ — M15. «Бывает и до 10 минут спускаешься, и до 5, но это ни
-#   разу своей эффективности мне лично не показало» (Шеф). Не запрет,
-#   а известное: пробовали, не показало. Захотим — сдвинем строкой.
-#
-#   верх — D1. Неделя и месяц остаются для ТРЕНДА (компас со старшего
-#   этажа), рабочими их не делаем.
-#
-# Частота работы задаётся именно этим: час — сигналы чаще, четыре
-# часа — реже, дневка — совсем редко, зато ждёт.
-KORIDOR = ["D1", "H12", "H8", "H4", "H1", "M30", "M15"]
-
-
-def v_koridore(tf: str) -> bool:
-    return (tf or "").strip().upper() in KORIDOR
-
-
-def koridor_ot(tf: str = "") -> list:
-    """Этажи для обхода. Начинаем с рабочего, если он задан и в
-    коридоре, — чтобы привычный шёл первым, а не последним."""
-    tf = (tf or "").strip().upper()
-    if tf in KORIDOR:
-        i = KORIDOR.index(tf)
-        return [tf] + [x for j, x in enumerate(KORIDOR) if j != i]
-    return list(KORIDOR)
-
 
 def est(tf: str) -> bool:
     return (tf or "").strip().upper() in LESTNICA
@@ -115,5 +87,3 @@ def poyasnenie(tf: str) -> str:
 
 
 # PARA_MESTA_V1 - marker
-
-# OBHOD_ETAZHEY_V1 - marker

@@ -458,14 +458,10 @@ def rabota_dlya(ceh: str, slot: str) -> dict:
     if instr:
         etazh = etazh_zhitelya(ceh, slot, instr)
         otk_e = "выбрал сам" if etazh else ""
-    # RABOTA_PO_PARE_V1: слово Шефа — «выбрал если инструмент и
-    # паттерн, то пусть работает». Значит готовность стоит на трёх
-    # ногах, и паттерн (место входа) — такая же нога, как инструмент.
-    pattern = (chitat(ceh, slot).get("текст") or "").strip()
-    return {"инструмент": instr, "этаж": etazh, "паттерн": pattern,
+    return {"инструмент": instr, "этаж": etazh,
             "откуда_инструмент": otk_i if instr else "",
             "откуда_этаж": otk_e,
-            "готов": bool(instr and etazh and pattern)}
+            "готов": bool(instr and etazh)}
 
 
 def pochemu_molchit(ceh: str, slot: str) -> str:
@@ -475,11 +471,7 @@ def pochemu_molchit(ceh: str, slot: str) -> str:
         return ""
     if not r["инструмент"]:
         return "инструмент не задан и не выбран"
-    if not r.get("паттерн"):
-        return "свой вход ещё не выбран"
     return "рабочий этаж не выбран"
 
 
 # PARA_MESTA_V1 - marker
-
-# RABOTA_PO_PARE_V1 - marker

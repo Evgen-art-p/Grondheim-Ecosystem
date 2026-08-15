@@ -291,27 +291,6 @@ def _snyat_stol_vhoda() -> dict:
     return stol
 
 
-# ═══════════════════════════════════════════════════════════
-# ЧЕЙ РЫНОК (RABOTA_PO_PARE_V1)
-# ═══════════════════════════════════════════════════════════
-# Раньше Исполнитель знал один инструмент на всех — тот, что пришёл
-# сверху. Теперь у каждого трейдера свой, и позиция обязана родиться
-# с ним: иначе физика не отличит заявку по золоту от заявки по евро.
-_KEY_SLOT = {"brut": "A06", "avan": "A07", "cons": "A08"}
-
-
-def _rynok_treydera(key: str, market: dict) -> tuple:
-    """(инструмент, этаж) того, чей вердикт исполняем."""
-    try:
-        import vybor
-        r = vybor.rabota_dlya("торговый_хаос", _KEY_SLOT.get(key, ""))
-        if r.get("инструмент"):
-            return r["инструмент"], r.get("этаж") or market.get("timeframe")
-    except Exception:
-        pass
-    return market.get("symbol"), market.get("timeframe")
-
-
 def _open_positions_from_table(traders: dict, market: dict) -> list:
     """
     Для каждого APPROVED-трейдера кладёт позицию в trading_state["positions"]
@@ -355,14 +334,8 @@ def _open_positions_from_table(traders: dict, market: dict) -> list:
         # механизмом на ЭТОМ ЖЕ баре: high/low его накроют.
         # Отложка не мешает войти по рынку — она мешает войти
         # ТУДА, КУДА РЫНОК НЕ ХОДИЛ.
-        # RABOTA_PO_PARE_V1: позиция рождается ЗНАЯ свой рынок, и
-        # рынок этот — ТОГО трейдера, чей вердикт исполняем. Общего
-        # инструмента больше нет: у троих их три.
-        _sym, _tf = _rynok_treydera(key, market)
         pos = {
             "trader":    TRADER_NAME[key],
-            "symbol":    _sym,
-            "timeframe": _tf,
             "magic":     magic,
             "direction": direction,
             "entry":     entry,
@@ -715,5 +688,3 @@ def _my_temp():
         return None
 
 # VASILY_ISP_WATCH_V1 — маркер идемпотентности
-
-# RABOTA_PO_PARE_V1 - marker
