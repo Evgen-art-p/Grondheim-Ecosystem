@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-15T03:09:59.521635",
+  "updated": "2026-08-15T17:38:44.102073",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -15,11 +15,9 @@
       "stop": 0.70788,
       "tp": null,
       "lot": 0.1,
-      "status": "PENDING",
-      "_ждёт_с": "2026.08.10 00:00",
-      "_ждёт_баров": 0,
+      "status": "OPEN",
       "mode": "PAPER",
-      "opened_at": "2026.08.10 00:00",
+      "opened_at": "2026.08.14 00:00",
       "pnl": null,
       "iskra_zero_point": null,
       "стол_входа": {
@@ -54,7 +52,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Аллигатор спит, цена в пасти, фракталы не валидны. Нет условий для входа по стратегии первого отката к новой волне.",
+    "reason": "",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -65,7 +63,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "Нет четкого импульса и завершенного отката для моего входа; Аллигатор на M15 спит, а старшие таймфреймы противоречивы.",
+    "reason": "",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -76,7 +74,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "нет импульса и отката, рынок во флэте",
+    "reason": "нет отката к новой волне",
     "direction": null,
     "entry": null,
     "stop": null,
