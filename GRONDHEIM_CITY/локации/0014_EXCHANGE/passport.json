@@ -31,9 +31,11 @@
   "Style_Tags": "#Торговля, #Решение, #Напряжение, #Экраны, #ВоенныйСовет",
   "Location_Connections": "Торговый Квартал, Гавань Смыслов, Портовый Узел",
   "Map_X": 2140,
-  "Map_Y": 172,
-  "Map_W": 130,
-  "Map_H": 73,
+  "Map_Y": 292,
+  "Map_W": 134,
+  "Map_H": 76,
   "_timestamp": "2026-07-07T02:18:03.511015",
-  "_Creator_Seal_Hash": "a4c58112b90678292fd71aa7a30b3d072af08c310da73bd6ef690e9646abf08c"
+  "_Creator_Seal_Hash": "a4c58112b90678292fd71aa7a30b3d072af08c310da73bd6ef690e9646abf08c",
+  "Map_Updated": "2026-08-15",
+  "Map_Marker": "KARTA_15_08_V3"
 }

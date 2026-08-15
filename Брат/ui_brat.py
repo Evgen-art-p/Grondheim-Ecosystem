@@ -1721,9 +1721,12 @@ def page_brat():
                         ui.button("Прописка",
                                   on_click=do_propiska  # PATCH_PROPISKA_BRAT
                                   ).props("flat").classes("brat-gate")
-                        ui.button("Роль",
-                                  on_click=do_naznachit_rol  # PATCH_NAZNACHIT_ROL
-                                  ).props("flat").classes("brat-gate")
+                        # ROL_V_RABOTU_V1: кнопка «Роль» снята — она делала
+                        # то же, что Страница Работы, только своей рукой.
+                        # Наследство перенесено туда: четыре типа-поста и
+                        # запись студента в Академию. Сам код «Роли» ниже
+                        # по файлу оставлен: zapisat_studenta теперь зовёт
+                        # Страница Работы.
                         # RABOTA_KNOPKI_V1: Биржа ходит своей дверью —
                         # приём и увольнение по документу места, без
                         # ручного вписывания цеха и слота в личность.
@@ -1851,3 +1854,5 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PEREVOZKA_KNOPKI_V1 - marker
 
 # SVOYO_OKNO_V1 - marker
+
+# ROL_V_RABOTU_V1 - marker

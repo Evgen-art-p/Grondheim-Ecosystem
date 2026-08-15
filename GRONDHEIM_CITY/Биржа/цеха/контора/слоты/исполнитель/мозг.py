@@ -562,7 +562,7 @@ def chat_with_executor(question: str, last_run: Optional[dict] = None,
                 history.append({"role": r, "content": c})
 
     try:
-        return chat(system=system, user=question, history=history,
+        return _chat_s_mayakom(system=system, user=question, history=history,
                     agent_id="A09_ISPOLNITEL", slot_id="trading", temperature=_my_temp())
     except Exception as e:
         return f"⚠️ Исполнитель не смог ответить: {e}"
@@ -664,7 +664,7 @@ def run_executor(symbol: str = "XAUUSD", timeframe: str = "H4") -> dict:
         system_full += "\n\n=== ТВОЁ СОСТОЯНИЕ (душа) ===\n" + soul
 
     try:
-        response = chat(system=system_full, user=user_msg,
+        response = _chat_s_mayakom(system=system_full, user=user_msg,
                         agent_id="A09_ISPOLNITEL", slot_id="trading", temperature=_my_temp())
     except Exception as e:
         # LLM упал — но позиции УЖЕ открыты кодом (петля цела). Летопись
@@ -717,3 +717,33 @@ def _my_temp():
 # VASILY_ISP_WATCH_V1 — маркер идемпотентности
 
 # RABOTA_PO_PARE_V1 - marker
+
+_KTO_YA = "Исполнитель"
+
+
+# ── RUKA_MAYAKA_V1: выход наружу и для конторы ───────────────
+# Раньше мозг конторы звал chat() — один проход, рук нет. Теперь тот
+# же разговор, но с рукой Маяка: не позвал — ничего не потрачено.
+def _chat_s_mayakom(**kw):
+    try:
+        import sys as _s
+        from pathlib import Path as _P
+        _g = _P(__file__).resolve()
+        for _ in range(8):
+            _g = _g.parent
+            if (_g / "ГОРОД" / "ruka_mayaka.py").exists():
+                break
+        if str(_g / "ГОРОД") not in _s.path:
+            _s.path.insert(0, str(_g / "ГОРОД"))
+        import ruka_mayaka
+        from llm import chat_with_tools
+        return chat_with_tools(tools_schema=ruka_mayaka.shema(),
+                               executors=ruka_mayaka.ruki(_KTO_YA),
+                               **kw)
+    except Exception as e:
+        print(f"[МАЯК] рука не подключилась ({e}) — говорю без неё")
+        from llm import chat as _chat_prostoy
+        return _chat_prostoy(**kw)
+
+
+# RUKA_MAYAKA_V1 - marker

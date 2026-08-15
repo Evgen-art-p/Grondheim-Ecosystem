@@ -209,6 +209,7 @@ def chat_with_tools(
     slot_id: str = "unknown",
     knowledge_source: str = "internal",
     executors: Optional[dict] = None,       # RUKI_TREYDERA_V1
+    history: Optional[list] = None,         # RUKA_MAYAKA_V1
 ) -> str:
     """Вызов LLM с поддержкой Tool Use (синхронный).
 
@@ -227,6 +228,12 @@ def chat_with_tools(
     if knowledge:
         messages.append({"role": "user", "content": f"БАЗА ЗНАНИЙ:\n{knowledge}"})
         messages.append({"role": "assistant", "content": "Принял базу знаний. Готов к работе."})
+    # RUKA_MAYAKA_V1: история разговора — как в chat(). Мозг конторы
+    # передаёт её всегда; без этого он терял руки на каждом ответе.
+    if history:
+        for _m in history:
+            if _m.get("role") in ("user", "assistant") and _m.get("content"):
+                messages.append({"role": _m["role"], "content": _m["content"]})
     messages.append({"role": "user", "content": user})
 
     # RUKI_TREYDERA_V1: список рук был зашит здесь намертво — только
@@ -735,3 +742,5 @@ def chat_with_images_and_tools(
 
 
 # RUKI_TREYDERA_V1 - marker
+
+# RUKA_MAYAKA_V1 - marker

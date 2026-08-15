@@ -61,6 +61,9 @@ def shema(rabochiy_etazh: str = "") -> list:
                 "этаж": {"type": "string",
                          "description": "например H1"}},
                 "required": ["этаж"]}}},
+        # RUKA_MAYAKA_V1: выход наружу. Раньше житель мог спросить мир
+        # только ДОМА — на работе мозг был глухой.
+        *_ruka_mayaka_shema(),
         {"type": "function", "function": {
             "name": "moy_dnevnik",
             "description": (
@@ -152,9 +155,40 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
         except Exception as e:
             return f"дневник не прочитался: {e}"
 
-    return {"stol_na_etazhe": _stol,
+    itog = {"stol_na_etazhe": _stol,
             "izmerit_volnu": _volna,
             "moy_dnevnik": _dnevnik}
+    itog.update(_ruka_mayaka_ruki(slot))   # RUKA_MAYAKA_V1
+    return itog
+
+
+# ── RUKA_MAYAKA_V1: одна дверь наружу на весь город ──────────
+def _ruka_mayaka_shema() -> list:
+    try:
+        import sys as _s
+        from pathlib import Path as _P
+        _g = str(_P(__file__).resolve().parent.parent / "ГОРОД")
+        if _g not in _s.path:
+            _s.path.insert(0, _g)
+        import ruka_mayaka
+        return ruka_mayaka.shema()
+    except Exception:
+        return []          # Маяка нет — руки просто не будет
+
+
+def _ruka_mayaka_ruki(kto: str) -> dict:
+    try:
+        import sys as _s
+        from pathlib import Path as _P
+        _g = str(_P(__file__).resolve().parent.parent / "ГОРОД")
+        if _g not in _s.path:
+            _s.path.insert(0, _g)
+        import ruka_mayaka
+        return ruka_mayaka.ruki(kto)
+    except Exception:
+        return {}
 
 
 # RUKI_TREYDERA_V1 - marker
+
+# RUKA_MAYAKA_V1 - marker

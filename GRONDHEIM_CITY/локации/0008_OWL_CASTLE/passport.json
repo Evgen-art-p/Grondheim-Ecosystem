@@ -34,10 +34,12 @@
   "Lighting": "mystical",
   "Style_Tags": "#Знания, #Мудрость, #Тишина, #Совы_смотрят, #Холодный_ум, #Пыль_на_книгах",
   "Location_Connections": "Квартал Мастеров, Площадь Резонанса, Студия \"Шесть Пальцев\"",
-  "Map_X": 365,
-  "Map_Y": 423,
-  "Map_W": 449,
-  "Map_H": 240,
+  "Map_X": 458,
+  "Map_Y": 63,
+  "Map_W": 380,
+  "Map_H": 420,
   "_timestamp": "2026-07-14T12:31:07.973942",
-  "_Creator_Seal_Hash": "4597bf5053c0e0cc579593a34b173911b263d779be1255838a39248ba8fadee9"
+  "_Creator_Seal_Hash": "4597bf5053c0e0cc579593a34b173911b263d779be1255838a39248ba8fadee9",
+  "Map_Updated": "2026-08-15",
+  "Map_Marker": "KARTA_15_08_V3"
 }

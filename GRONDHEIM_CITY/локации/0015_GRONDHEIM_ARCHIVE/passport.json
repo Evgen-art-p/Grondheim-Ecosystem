@@ -43,10 +43,12 @@
   "Lighting": "mystical",
   "Style_Tags": "#тишина, #архивы, #вечность, #память, #истина",
   "Location_Connections": "Замок Сов, Площадь резонанса, Студия",
-  "Map_X": 366,
-  "Map_Y": 786,
-  "Map_W": 307,
-  "Map_H": 254,
+  "Map_X": 261,
+  "Map_Y": 232,
+  "Map_W": 121,
+  "Map_H": 224,
   "_timestamp": "2026-07-26T23:51:39.466848",
-  "_Creator_Seal_Hash": "43e04cd19d88de5a497ec87b7cfb97bd478fc6a3f2563a34716866efeff3a5bf"
+  "_Creator_Seal_Hash": "43e04cd19d88de5a497ec87b7cfb97bd478fc6a3f2563a34716866efeff3a5bf",
+  "Map_Updated": "2026-08-15",
+  "Map_Marker": "KARTA_15_08_V3"
 }

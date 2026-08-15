@@ -75,7 +75,33 @@ def _zhiteli() -> list:
 
 # ZHITELI_V_RABOTE_V1: тип и фраза живут там же, где жили при «Роли» —
 # тип в паспорте, фраза в маске работы. Новых тетрадей не заводим.
-TIPY = ["резидент", "хранитель", "воркер", "студент"]
+# ROL_V_RABOTU_V1: четыре типа-поста приехали сюда со снесённой
+# вкладки «Роль» у Брата — библиотекарь, хранитель_архива, ректор,
+# хранитель_маяка. Без них эти четверо остались бы без типа: посадить
+# на пост можно во вкладке МЕСТА, а назвать — было негде.
+TIPY = ["резидент", "хранитель", "воркер", "студент",
+        "библиотекарь", "хранитель_архива", "ректор", "хранитель_маяка"]
+
+# Тип «студент» — не просто слово в паспорте: он занимает место в
+# Академии. Раньше это делала «Роль», теперь мы, но ТОЙ ЖЕ рукой —
+# не копией. Копия завела бы вторую правду о местах Академии, а
+# правда одна: GRONDHEIM_CITY/Академия/ученики.json.
+def _zapisat_v_akademiyu(imya: str) -> tuple:
+    """(получилось, что сказать). Место занято/мест нет — честно вернём."""
+    try:
+        import sys as _s
+        _repo = Path(__file__).resolve().parent.parent
+        for _p in (str(_repo), str(_repo / "Брат")):
+            if _p not in _s.path:
+                _s.path.insert(0, _p)
+        # VYPUSK_V1: зачисляет РЕКТОР — одна дверь. Раньше здесь была
+        # своя рука Брата, и она клала куцую запись без статуса,
+        # дисциплин и поля под диплом. Оттого в реестре и был разнобой.
+        _s.path.insert(0, str(_repo / "Академия"))
+        import rektor
+        return rektor.zachislit(imya)
+    except Exception as e:
+        return False, f"Академия недоступна ({e})"
 
 
 def _pasport(imya: str):
@@ -469,8 +495,16 @@ def page_rabota():
                 "width:100%; font-size:0.78rem;")
 
             def _sohr():
-                ok, msg = _sohranit_zhitelya(imya, (sel.value or "").strip(),
+                _tip_novyy = (sel.value or "").strip()
+                ok, msg = _sohranit_zhitelya(imya, _tip_novyy,
                                              (fr.value or "").strip())
+                # ROL_V_RABOTU_V1: студент — не только слово в паспорте.
+                # Раньше место в Академии занимала «Роль»; теперь мы.
+                if ok and _tip_novyy == "студент":
+                    ok_ak, msg_ak = _zapisat_v_akademiyu(imya)
+                    msg = f"{msg} · Академия: {msg_ak}"
+                    ui.notify(("🎓 " if ok_ak else "⚠ Академия: ") + msg_ak,
+                              color="positive" if ok_ak else "warning")
                 ui.notify(("🪑 " if ok else "⚠ ") + msg,
                           color="positive" if ok else "negative")
                 risovat_derevo()
@@ -688,3 +722,7 @@ def page_rabota():
 # PANEL_TREYDERA_V1 - marker
 
 # VYBOR_VKLADKOY_V1 - marker
+
+# ROL_V_RABOTU_V1 - marker
+
+# VYPUSK_V1 - marker

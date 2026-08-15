@@ -33,10 +33,12 @@
   "Lighting": "mystical",
   "Style_Tags": "#СветВТуман, #50Hz, #ТочкаОпо, #СкамейкаТепла, #МаякНадежды",
   "Location_Connections": "Гавань Смыслов, Площадь Резонанса, Студия",
-  "Map_X": 2545,
-  "Map_Y": 423,
-  "Map_W": 100,
-  "Map_H": 257,
+  "Map_X": 2555,
+  "Map_Y": 411,
+  "Map_W": 94,
+  "Map_H": 253,
   "_timestamp": "2026-07-26T01:10:49.138938",
-  "_Creator_Seal_Hash": "1449e09903a611238106333673adb3f402f66280c2b2f165b6f6ee899e3a7195"
+  "_Creator_Seal_Hash": "1449e09903a611238106333673adb3f402f66280c2b2f165b6f6ee899e3a7195",
+  "Map_Updated": "2026-08-15",
+  "Map_Marker": "KARTA_15_08_V3"
 }

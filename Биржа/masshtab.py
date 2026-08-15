@@ -70,6 +70,19 @@ def koridor_ot(tf: str = "") -> list:
     return list(KORIDOR)
 
 
+# MASHINA_VREMENI_V1: сколько минут длится один бар этажа. Нужно,
+# чтобы понять, ЗАКРЫТ ли бар к заданному моменту истории. Без этого
+# старший этаж показывает недожитый бар — то есть будущее.
+MINUTY = {"MN1": 43200, "W1": 10080, "D1": 1440, "H12": 720, "H8": 480,
+          "H4": 240, "H2": 120, "H1": 60, "M30": 30, "M15": 15,
+          "M10": 10, "M5": 5}
+
+
+def minut(tf: str) -> int:
+    """Длительность бара этажа в минутах. Неизвестный этаж — 0."""
+    return MINUTY.get((tf or "").strip().upper(), 0)
+
+
 def est(tf: str) -> bool:
     return (tf or "").strip().upper() in LESTNICA
 
@@ -117,3 +130,5 @@ def poyasnenie(tf: str) -> str:
 # PARA_MESTA_V1 - marker
 
 # OBHOD_ETAZHEY_V1 - marker
+
+# MASHINA_VREMENI_V1 - marker

@@ -741,6 +741,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         "bars_to_live": 1,
         "stop_requested": False,
         "tester_running": False,
+        "kandidaty": [],            # ISKATEL_V1: найденные места
+        "kandidat_i": None,         # на каком стоим
         "learn": False,          # TORG_LEARN_SWITCH_V1: учебный прогон (якоря растут)
         "morj_last_run": None,
         "panic_last_run": None,
@@ -885,6 +887,149 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return "", "", imya, vybor.pochemu_molchit(tseh_id, aid)
         except Exception as e:
             return "", "", imya, f"пара не прочиталась ({e})"
+
+    # ── VREMYA_V_KABINETE_V1: шаг по истории ──────────────────
+    def _para_dlya_shaga() -> tuple:
+        """По чьему этажу шагаем. По активному трейдеру: у каждого
+        свой рабочий этаж, и шаг должен быть в его барах."""
+        s, t, _chey, _net = _para_aktivnogo()
+        if s and t:
+            return s, t
+        return _aktivnyy_rynok()
+
+    def _vremya_vid():
+        """Обновить надпись «стоим: …»."""
+        el = toolbar_refs.get("moment_label")
+        if el is None:
+            return
+        try:
+            import istoriya
+            m = istoriya.gde_stoim()
+        except Exception:
+            m = ""
+        el.text = f"стоим: {m}" if m else "конец истории"
+
+    def _kandidat_vid():
+        """Надпись «3/12» — на каком кандидате стоим."""
+        el = toolbar_refs.get("kand_label")
+        if el is None:
+            return
+        spisok = state.get("kandidaty") or []
+        i = state.get("kandidat_i")
+        if not spisok:
+            el.text = "—"
+        elif i is None:
+            el.text = f"0/{len(spisok)}"
+        else:
+            el.text = f"{i + 1}/{len(spisok)}"
+
+    async def _iskat_kandidatov():
+        """ISKATEL_V1: код пробегает историю и приносит места, где
+        стоит взглянуть. Бесплатно — это математика, не модель."""
+        if state.get("mode") != "tester":
+            ui.notify("Искать по истории можно в ТЕСТЕРЕ", type="warning")
+            return
+        symbol, tf = _para_dlya_shaga()
+        if not symbol or not tf:
+            ui.notify("Не пойму, где искать — выбери трейдера или актив",
+                      type="warning")
+            return
+        ui.notify(f"🔍 ищу по {symbol} {tf}…", type="info")
+        try:
+            import asyncio
+            import istoriya
+            ot = istoriya.gde_stoim()
+
+            def _rabota():
+                import kandidaty
+                return kandidaty.iskat(symbol, tf, do_momenta=ot,
+                                       skolko=12, govorit=print)
+
+            spisok = await asyncio.get_event_loop().run_in_executor(
+                None, _rabota)
+        except Exception as e:
+            ui.notify(f"Искать не вышло: {e}", type="negative")
+            return
+        state["kandidaty"] = spisok
+        state["kandidat_i"] = None
+        _kandidat_vid()
+        if not spisok:
+            ui.notify("Ничего не нашлось — отмотай назад и поищи ещё",
+                      type="warning")
+            return
+        ui.notify(f"🔍 нашёл {len(spisok)} мест — жми ⟩", type="positive")
+        _k_kandidatu(0)
+
+    def _k_kandidatu(nomer):
+        """Встать на кандидата: курсор истории туда, кадр перерисовать."""
+        spisok = state.get("kandidaty") or []
+        if not spisok:
+            ui.notify("Сперва найди кандидатов — кнопка 🔍", type="warning")
+            return
+        nomer = max(0, min(len(spisok) - 1, nomer))
+        k = spisok[nomer]
+        try:
+            import istoriya
+            istoriya.postavit(k.get("дата", ""))
+        except Exception as e:
+            ui.notify(f"Не встал: {e}", type="negative")
+            return
+        state["kandidat_i"] = nomer
+        _kandidat_vid()
+        _vremya_vid()
+        try:
+            pokazat_kadr()
+        except Exception as e:
+            print(f"[ИСКАТЕЛЬ] кадр не перерисовался: {e}")
+        try:
+            import kandidaty as _kd
+            stroka = _kd.slovami(k)
+        except Exception:
+            stroka = k.get("дата", "")
+        print(f"[ИСКАТЕЛЬ] 📍 {nomer + 1}/{len(spisok)} · {stroka}")
+        ui.notify(f"📍 {stroka}", type="info")
+
+    def _kandidat_shag(kuda):
+        i = state.get("kandidat_i")
+        _k_kandidatu(0 if i is None else i + kuda)
+
+    def _shagnut(skolko):
+        """Шаг по истории. skolko=None — в конец (снять курсор)."""
+        if state.get("mode") != "tester":
+            ui.notify("Шаг по истории есть только в ТЕСТЕРЕ", type="warning")
+            return
+        symbol, tf = _para_dlya_shaga()
+        if not symbol or not tf:
+            ui.notify("Не пойму, по какому этажу шагать — "
+                      "выбери трейдера или актив слева", type="warning")
+            return
+        try:
+            import istoriya
+            if skolko is None:
+                istoriya.postavit("")
+                ui.notify("⏭ конец истории", type="info")
+            elif skolko == "начало":
+                pervyy, _ = istoriya.dokuda_est(symbol, tf)
+                if not pervyy:
+                    ui.notify(f"Нет истории {symbol} {tf} в test_data",
+                              type="warning")
+                    return
+                istoriya.postavit(pervyy)
+                ui.notify(f"⏮ {pervyy}", type="info")
+            else:
+                m = istoriya.shag(tf, int(skolko), symbol=symbol)
+                if not m:
+                    ui.notify(f"Нет истории {symbol} {tf} в test_data",
+                              type="warning")
+                    return
+        except Exception as e:
+            ui.notify(f"Шаг не вышел: {e}", type="negative")
+            return
+        _vremya_vid()
+        try:
+            pokazat_kadr()          # сразу видно следующий бар
+        except Exception as e:
+            print(f"[ВРЕМЯ] кадр не перерисовался: {e}")
 
     def pokazat_kadr(put=None):
         """Рисует кадр АКТИВНОГО ТРЕЙДЕРА и кладёт направо.
@@ -1358,6 +1503,21 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         except Exception as _e:
             print(f"[TORG] feed_source не подключён: {_e}")
         is_tester = (mode == "tester")
+        # VREMYA_V_KABINETE_V1: ушли в РЕАЛ — снимаем курсор истории,
+        # иначе живой рынок останется стоять в прошлом и будет тихо
+        # показывать вчерашние бары как сегодняшние.
+        if not is_tester:
+            try:
+                import istoriya
+                if istoriya.gde_stoim():
+                    istoriya.postavit("")
+                    print("[ВРЕМЯ] курсор истории снят — вернулись в реал")
+            except Exception:
+                pass
+        try:
+            _vremya_vid()
+        except Exception:
+            pass
         for key in ("bars_input", "stop_btn", "bars_label",
                     "learn_btn"):   # TORG_LEARN_SWITCH_V1
 
@@ -1871,9 +2031,147 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
     # (см. _vahta_sluzhba наверху файла). Здесь осталась только
     # синхронизация кнопки при заходе на страницу.
 
+    async def progon_po_istorii():
+        """ODNA_KNOPKA_V1: весь тестер в одной кнопке.
+
+        Раньше здесь был пульт из стрелок, а до него — tester_express
+        на упразднённой Искре. Теперь: код ищет места, город встаёт в
+        каждое, трейдер говорит. Шеф только читает ленту.
+        """
+        if state.get("tester_running"):
+            ui.notify("Прогон уже идёт", type="warning")
+            return
+        try:
+            import istoriya
+            import kandidaty as _kd
+            import vybor
+        except Exception as e:
+            ui.notify(f"Прогон недоступен: {e}", type="negative")
+            return
+
+        # кто может работать: у кого есть и инструмент, и этаж
+        rabotniki = []
+        for _sl in ("A06", "A07", "A08"):
+            r = vybor.rabota_dlya(tseh_id, _sl)
+            if r.get("готов"):
+                rabotniki.append((_sl, r["инструмент"], r["этаж"]))
+            else:
+                print(f"[ПРОГОН] {_sl} не участвует: "
+                      f"{vybor.pochemu_molchit(tseh_id, _sl)}")
+        if not rabotniki:
+            ui.notify("Некому работать: ни у кого нет инструмента и этажа",
+                      type="warning")
+            return
+
+        skolko = int(state.get("bars_to_live") or 1)
+        state["tester_running"] = True
+        state["stop_requested"] = False
+        _bylo_moment = ""
+        try:
+            _bylo_moment = istoriya.gde_stoim()
+        except Exception:
+            pass
+
+        state["chat_history"].append({
+            "role": "system",
+            "content": (f"▶ ПРОГОН ПО ИСТОРИИ · {len(rabotniki)} "
+                        f"трейдер(ов) · ищу до {skolko} мест каждому")})
+        update_chat_display()
+        ui.notify("🔍 ищу места в истории…", type="info")
+
+        import asyncio
+        loop = asyncio.get_event_loop()
+
+        # 1. код ищет места — бесплатно, поэтому ищем сразу всем
+        mesta = []
+        for _sl, _sym, _tf in rabotniki:
+            try:
+                spisok = await loop.run_in_executor(
+                    None, lambda s=_sym, t=_tf: _kd.iskat(
+                        s, t, skolko=skolko, govorit=print))
+            except Exception as e:
+                print(f"[ПРОГОН] {_sl}: искать не вышло — {e}")
+                continue
+            for k in spisok:
+                mesta.append((k.get("момент") or k.get("дата", ""),
+                              _sl, _sym, _tf, k))
+
+        if not mesta:
+            state["tester_running"] = False
+            state["chat_history"].append({
+                "role": "system",
+                "content": "Ничего не нашлось в истории — пусто."})
+            update_chat_display()
+            ui.notify("Мест не нашлось", type="warning")
+            return
+
+        # от старых к свежим — как шло время
+        mesta.sort(key=lambda x: x[0])
+        state["chat_history"].append({
+            "role": "system",
+            "content": f"Нашёл {len(mesta)} мест. Иду по ним."})
+        update_chat_display()
+
+        # 2. по каждому месту: встать туда и спросить того, чьё оно
+        proydeno = 0
+        try:
+            for data, _sl, _sym, _tf, k in mesta:
+                if state.get("stop_requested"):
+                    state["chat_history"].append({
+                        "role": "system", "content": "⏸ остановлено"})
+                    update_chat_display()
+                    break
+                istoriya.postavit(data)
+                try:
+                    pokazat_kadr()
+                except Exception:
+                    pass
+                imya = _agent_label(roster, _sl) or _sl
+                state["chat_history"].append({
+                    "role": "system",
+                    "content": f"📍 {_kd.slovami(k)} → спрашиваю {imya}"})
+                update_chat_display()
+
+                def _zvat():
+                    import council
+                    return council.wake_council("", "", ceh_id=tseh_id)
+
+                try:
+                    itog = await loop.run_in_executor(None, _zvat)
+                except Exception as e:
+                    print(f"[ПРОГОН] Совет сорвался на {data}: {e}")
+                    continue
+                proydeno += 1
+
+                r = (itog.get("results") or {}).get(_sl) or {}
+                skazal = (r.get("narrative") or "").strip()
+                if not skazal and r.get("error"):
+                    skazal = f"(промолчал: {r['error']})"
+                state["chat_history"].append({
+                    "role": "assistant", "agent": _sl,
+                    "content": skazal or "(без текста)"})
+                update_chat_display()
+        finally:
+            state["tester_running"] = False
+            state["stop_requested"] = False
+            try:
+                istoriya.postavit(_bylo_moment)
+            except Exception:
+                pass
+
+        state["chat_history"].append({
+            "role": "system",
+            "content": f"✓ прогон окончен · пройдено мест: {proydeno}"})
+        update_chat_display()
+        ui.notify(f"✓ прогон окончен · {proydeno} мест", type="positive")
+
     async def market_dispatch():
+        # ODNA_KNOPKA_V1: одна кнопка РЫНОК. В реале — живой Совет,
+        # в тестере — прогон по истории. Старый run_tester_session
+        # оставлен в файле нетронутым: он держится на упразднённой
+        # Искре и не заводится, но выкидывать чужой труд не мне.
         if state.get("mode") == "tester":
-            await run_tester_session()
+            await progon_po_istorii()
         else:
             await run_market()
 
@@ -2891,3 +3189,9 @@ if __name__ in {"__main__", "__mp_main__"}:
 # VZGLYAD_KAZHDOGO_V1 - marker
 
 # UBRAT_CHETVERTOGO_V1 - marker
+
+# VREMYA_V_KABINETE_V1 - marker
+
+# ISKATEL_V1 - marker
+
+# ODNA_KNOPKA_V1 - marker
