@@ -35,6 +35,28 @@ if str(_BIRZHA) not in _sys.path:
 
 OKNO_RASCHYOTA = 300      # сколько баров нужно математике для расчёта
 
+# ── OKNO_ISKATELYA_V1: на каком масштабе вообще стоит звать ──
+# Слова Шефа: «раскладываешь эту волну на 100-140, она может быть
+# немного меньше или больше, но точность не главное». Волна короче —
+# разворотный бар не разглядеть; длиннее — AO посчитан не под неё, и
+# дивергенция говорит о другой волне.
+#
+# Считано, а не придумано: на 3000 барах H4 (≈2 года) кандидатов 79,
+# из них в окне 100-140 — 31 (39%), в рамке 80-180 — 58 (73%).
+# Поток фильтр не осушает.
+#
+# Рамка здесь ЯВНАЯ и меняется одной строкой — если решишь, что она
+# узка, поправь тут, а не по коду.
+OKNO_VOLNY = (100, 140)
+
+
+def v_okne(dlina) -> bool:
+    """Ложится ли волна в рамку. Длина неизвестна — не наше дело
+    решать за трейдера: считаем, что не ложится, и не зовём."""
+    if not dlina:
+        return False
+    return OKNO_VOLNY[0] <= dlina <= OKNO_VOLNY[1]
+
 
 def _priznaki(bars: list, symbol: str, tf: str, point: float):
     """Факты последнего бара окна. Не кандидат — не None."""
@@ -94,7 +116,8 @@ def est_seychas(symbol: str, tf: str):
 
 
 def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
-          predel_barov: int = 4000, otstup: int = 12, govorit=None):
+          predel_barov: int = 4000, otstup: int = 12, govorit=None,
+          tolko_v_okne: bool = True):
     """Пробежать историю НАЗАД от точки и набрать кандидатов.
 
     do_momenta — откуда начинать искать (пусто = с конца истории).
@@ -135,6 +158,7 @@ def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
             return []
 
     nayden = []
+    mimo = 0                       # OKNO_ISKATELYA_V1: прошли мимо рамки
     posledniy_i = None
     nachalo = max(OKNO_RASCHYOTA, konec - predel_barov)
     for i in range(konec, nachalo - 1, -1):
@@ -146,12 +170,26 @@ def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
         p = _priznaki(okno, symbol, tf, point)
         if p:
             posledniy_i = i
+            # OKNO_ISKATELYA_V1: зовём только там, где масштаб годится.
+            # Мимо — считаем и идём дальше: место не потеряно, просто
+            # смотреть на нём нечего, и платить за это незачем.
+            if tolko_v_okne and not v_okne(p.get("длина_волны")):
+                mimo += 1
+                continue
             nayden.append(p)
             if govorit:
                 govorit(f"[ИСКАТЕЛЬ] · {p['дата']} · {p['разворотный']} · "
                         f"волна {p['длина_волны']} баров")
             if len(nayden) >= skolko:
                 break
+    # OKNO_ISKATELYA_V1: отсеянные не пропадают молча — иначе однажды
+    # фильтр съест всё, а мы будем гадать, почему пусто.
+    if mimo and govorit:
+        govorit(f"[ИСКАТЕЛЬ] мимо рамки {OKNO_VOLNY[0]}-{OKNO_VOLNY[1]} "
+                f"баров: {mimo} мест — там масштаб не тот")
+    elif mimo:
+        print(f"[ИСКАТЕЛЬ] мимо рамки {OKNO_VOLNY[0]}-{OKNO_VOLNY[1]}: "
+              f"{mimo} мест")
     return nayden
 
 
@@ -178,3 +216,5 @@ if __name__ == "__main__":
         print("  " + slovami(k))
 
 # ISKATEL_V1 - marker
+
+# OKNO_ISKATELYA_V1 - marker

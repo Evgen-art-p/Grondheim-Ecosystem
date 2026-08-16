@@ -1,49 +1,12 @@
 {
   "version": 1,
-  "updated": "2026-08-13T15:24:50.490016",
+  "updated": "2026-08-16T05:51:27.475517",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
     "history_dna": ""
   },
-  "positions": [
-    {
-      "trader": "BRUT",
-      "magic": 100001,
-      "direction": "LONG",
-      "entry": 4371.74,
-      "stop": 4220.77,
-      "tp": null,
-      "lot": 0.1,
-      "status": "PENDING",
-      "_ждёт_с": "2026.08.10 00:00",
-      "_ждёт_баров": 0,
-      "mode": "PAPER",
-      "opened_at": "2026.08.10 00:00",
-      "pnl": null,
-      "iskra_zero_point": null,
-      "стол_входа": {
-        "iskra": {
-          "t1_status": "NOT_FOUND",
-          "zero_point_price": null,
-          "trend_direction": "BULL"
-        },
-        "morj": {
-          "morj_status": "AWAKE",
-          "wave_1_validated": false,
-          "tension_peak": true
-        },
-        "panic": {
-          "panic_phase": "GREED"
-        },
-        "hans": {
-          "fractal_valid": false,
-          "fractal_side": null,
-          "fractal_price": null
-        }
-      }
-    }
-  ],
+  "positions": [],
   "feed": {
     "mode": "real",
     "symbol": "EURUSD"

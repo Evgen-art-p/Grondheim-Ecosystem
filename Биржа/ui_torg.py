@@ -763,6 +763,16 @@ def _vahta_zavesti():
 
 
 def page_torg(tseh_id: str = "торговый_хаос") -> None:
+    # OTPERET_V1: назвать цех столу СРАЗУ при входе в кабинет. Совет
+    # называет его сам, но до Совета стол успевает открыть тот, кто
+    # зовёт краном раньше — и запись уходила в общую тетрадь
+    # («[STATE] стол сохранён (общий)»).
+    try:
+        import hooks as _h_ceh
+        if hasattr(_h_ceh, "postavit_ceh"):
+            _h_ceh.postavit_ceh(tseh_id)
+    except Exception:
+        pass
     """Кабинет Совета Биржи — тот же, что был /exchange в -2."""
 
     static_prefix = "torg-static"
@@ -1540,6 +1550,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
     # ── ТУМБЛЕР ТЕСТЕР/РЕАЛ + ПЕРЕБОР ИСТОРИИ + СТОП ─────────────
 
     def set_mode(mode: str):
+        # TUMBLER_V1: след в консоли. Если нажатие не доходит — здесь
+        # будет пусто, и станет ясно, что беда не в переключении.
+        print(f"[ТУМБЛЕР] нажали: {mode}")
         state["mode"] = mode
         try:
             from feed_source import set_feed_mode
@@ -1587,6 +1600,12 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         "border:1px solid rgba(255,255,255,0.08);"
                     )
                 )
+        try:
+            from feed_source import get_feed_mode as _gfm
+            _kran = (_gfm() or {}).get("mode", "?")
+        except Exception as _e:
+            _kran = f"не спросить ({_e})"
+        print(f"[ТУМБЛЕР] режим встал: {mode} · кран {_kran}")
         ui.notify(f"Режим: {'ТЕСТЕР (история)' if is_tester else 'РЕАЛ (живой рынок)'}",
                   type="info")
 
@@ -2113,6 +2132,15 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
 
         skolko = int(state.get("bars_to_live") or 1)
+        # OTCHYOT_PROGONA_V1: заводим папку прогона — туда лягут
+        # таблица, строки машиной и кадр КАЖДОГО места.
+        try:
+            import otchyot as _ot
+            _otchyot = _ot.Otchyot(Path(__file__).resolve().parent.parent,
+                                   tseh_id)
+        except Exception as _e:
+            _otchyot = None
+            print(f"[ОТЧЁТ] не завёлся ({_e}) — прогон пойдёт без записи")
         state["tester_running"] = True
         state["stop_requested"] = False
         _bylo_moment = ""
@@ -2196,6 +2224,20 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 skazal = (r.get("narrative") or "").strip()
                 if not skazal and r.get("error"):
                     skazal = f"(промолчал: {r['error']})"
+                # OTCHYOT_PROGONA_V1: кадр этого места — в папку прогона,
+                # рядом со строкой. Раньше все кадры валились в общую
+                # кучу, и найти картинку к месту было нельзя.
+                if _otchyot is not None:
+                    _kadr = None
+                    try:
+                        import grafik as _gr
+                        _kadr = _gr.kadr(_sym, _tf)
+                    except Exception:
+                        pass
+                    try:
+                        _otchyot.zapisat(k, _sl, imya, _sym, _tf, r, _kadr)
+                    except Exception as _e:
+                        print(f"[ОТЧЁТ] место не записалось: {_e}")
                 state["chat_history"].append({
                     "role": "assistant", "agent": _sl,
                     "content": skazal or "(без текста)"})
@@ -2208,9 +2250,24 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             except Exception:
                 pass
 
+        # OTCHYOT_PROGONA_V1: закрываем отчёт и говорим, где он лёг.
+        _gde = None
+        if _otchyot is not None:
+            try:
+                _gde = _otchyot.zakryt()
+            except Exception as _e:
+                print(f"[ОТЧЁТ] не закрылся: {_e}")
+        _hvost = ""
+        if _gde:
+            try:
+                _otn = _gde.relative_to(Path(__file__).resolve().parent.parent)
+            except Exception:
+                _otn = _gde
+            _hvost = f" · отчёт: {_otn}"
+            print(f"[ОТЧЁТ] 📄 {_gde}")
         state["chat_history"].append({
             "role": "system",
-            "content": f"✓ прогон окончен · пройдено мест: {proydeno}"})
+            "content": f"✓ прогон окончен · пройдено мест: {proydeno}{_hvost}"})
         update_chat_display()
         ui.notify(f"✓ прогон окончен · {proydeno} мест", type="positive")
 
@@ -2988,20 +3045,23 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         # городе. Здесь только подтягиваем вид кнопки —
                         # чтобы, зайдя из другого окна, видеть правду.
                         ui.timer(3.0, _vahta_vid)
-                        toolbar_refs["mode_real"] = ui.element("div").style(
+                        # TUMBLER_V1: были голые div — клик держался на
+                        # всплытии события и терялся, если сверху лёг любой
+                        # слой. Выглядело как «кнопка не кликается»,
+                        # хотя обработчик был цел. Теперь настоящие кнопки:
+                        # клик обрабатывает сама кнопка.
+                        toolbar_refs["mode_real"] = ui.button(
+                            "РЕАЛ", on_click=lambda: set_mode("real")
+                        ).props("flat no-caps dense").style(
                             "padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;"
                             "cursor:pointer;background:rgba(0,255,136,0.15);color:#00ff88;"
                             "border:1px solid rgba(0,255,136,0.4);")
-                        toolbar_refs["mode_real"].on("click", lambda: set_mode("real"))
-                        with toolbar_refs["mode_real"]:
-                            ui.html("РЕАЛ")
-                        toolbar_refs["mode_tester"] = ui.element("div").style(
+                        toolbar_refs["mode_tester"] = ui.button(
+                            "ТЕСТЕР", on_click=lambda: set_mode("tester")
+                        ).props("flat no-caps dense").style(
                             "padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;"
                             "cursor:pointer;background:rgba(255,255,255,0.03);"
                             "color:rgba(255,255,255,0.45);border:1px solid rgba(255,255,255,0.08);")
-                        toolbar_refs["mode_tester"].on("click", lambda: set_mode("tester"))
-                        with toolbar_refs["mode_tester"]:
-                            ui.html("ТЕСТЕР")
                         toolbar_refs["bars_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
                         with toolbar_refs["bars_label"]:
                             ui.label("ловить:").style("color:rgba(255,255,255,0.45);font-size:11px;")
@@ -3244,3 +3304,9 @@ if __name__ in {"__main__", "__mp_main__"}:
 # ISKATEL_V1 - marker
 
 # ODNA_KNOPKA_V1 - marker
+
+# OTPERET_V1 - marker
+
+# TUMBLER_V1 - marker
+
+# OTCHYOT_PROGONA_V1 - marker

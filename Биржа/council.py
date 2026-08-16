@@ -451,7 +451,17 @@ def wake_council(symbol: str = "", timeframe: str = "",
 
     # ── Исполнитель (рука-код открывает по табло) ──
     aid, ceh, slot, fn = _EXECUTOR
-    rex = _call(ceh, slot, fn, symbol=symbol, timeframe=timeframe)
+    # OTPERET_V1: контора торгует не по инструменту — ей нужен стол
+    # цеха, а не чей-то этаж. Кабинет своей пары больше не имеет, и
+    # пустое доезжало до крана: «[FEED] Неизвестный таймфрейм ''».
+    # Пары нет — берём ту, по которой реально работали в этот проход.
+    _sym_i, _tf_i = symbol, timeframe
+    if not (_sym_i and _tf_i):
+        for _p_i in _pary.values():
+            if _p_i.get("готов"):
+                _sym_i, _tf_i = _p_i["symbol"], _p_i["timeframe"]
+                break
+    rex = _call(ceh, slot, fn, symbol=_sym_i, timeframe=_tf_i)
     summary["woke"].append(aid)
     summary["results"][aid] = rex
     esig = rex.get("signal", {}) or {}
@@ -469,3 +479,5 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # RABOTA_PO_PARE_V1 - marker
 
 # UBRAT_CHETVERTOGO_V1 - marker
+
+# OTPERET_V1 - marker

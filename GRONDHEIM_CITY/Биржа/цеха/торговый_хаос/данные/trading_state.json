@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-15T17:46:03.127927",
+  "updated": "2026-08-16T06:46:45.402542",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -47,12 +47,12 @@
     }
   ],
   "feed": {
-    "mode": "real",
+    "mode": "tester",
     "symbol": "EURUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "",
+    "reason": "Нет первого отката к новой волне",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -63,7 +63,7 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "нет четкой первой волны и подтвержденного отката к ней",
+    "reason": "нет четкого отката к новой волне и разворотного бара, цена в пасти Аллигатора",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -74,7 +74,7 @@
   },
   "cons": {
     "verdict": "REJECTED",
-    "reason": "нет импульса и коррекции",
+    "reason": "нет первого отката к новой волне",
     "direction": null,
     "entry": null,
     "stop": null,

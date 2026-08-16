@@ -1380,13 +1380,20 @@ def page_brat():
         dlg.open()
 
     # PATCH_BRAT_TIK_V1 — суточный тик из кабинета
-    def do_uborka():
-        """KNOPKA_UBORKI_V1: показать, что лишнее, и убрать в чулан.
+    async def do_uborka():
+        """UBORKA_V_FONE_V1: показать лишнее и убрать в чулан.
 
-        Правил здесь НЕТ: зовём функции самого uborshchik.py. Правила
-        живут в одном месте — иначе кнопка и уборщик однажды разойдутся,
-        и Шеф будет видеть одно, а получать другое.
+        Правил здесь НЕТ: зовём функции самого uborshchik.py, чтобы
+        кнопка и уборщик никогда не разошлись.
+
+        Считаем В ФОНЕ. Разведка обходит все файлы репо и для каждого
+        ищет упоминания во всех остальных — это секунды, а на Windows
+        и десятки секунд. В главном потоке она вешала весь город:
+        окно не открывалось, связь рвалась.
         """
+        import asyncio
+        loop = asyncio.get_event_loop()
+
         try:
             import sys as _sys
             _k = str(_REPO_ROOT_FOR_IMPORT)
@@ -1397,24 +1404,7 @@ def page_brat():
             ui.notify(f"⚠ уборщик не поднялся: {e}", color="negative")
             return
 
-        try:
-            teksty = dict(U._tekstovye())
-            gotovye, zhdut = U.sobrat_patchi(teksty)
-            gruppy = [
-                ("копии, оставленные патчами", U.sobrat_kopii()),
-                ("патчи, которые уже отработали", gotovye),
-                ("разовые инструменты", U.sobrat_poimenno(U.RAZOVYE)),
-                ("заменённое другим", U.sobrat_poimenno(U.OTSLUZHIVSHIE)),
-                ("батники, у которых есть кнопка", U.sobrat_batniki()),
-            ]
-            pod_voprosom = U.sobrat_pod_voprosom(teksty)
-        except Exception as e:
-            ui.notify(f"⚠ уборщик споткнулся: {e}", color="negative")
-            return
-
-        nahodki = [x for _, spisok in gruppy for x in spisok]
-        vsego_kb = sum(p.stat().st_size for p, _ in nahodki) / 1024
-
+        # окно открываем СРАЗУ — чтобы было видно, что работа пошла
         with ui.dialog() as dlg, ui.card().style(
             "background:#0d1117; border:1px solid rgba(255,255,255,0.12); "
             "border-radius:16px; min-width:560px; max-width:720px; padding:20px;"
@@ -1426,79 +1416,109 @@ def page_brat():
                     'font-size:0.72rem; margin:6px 0 12px;">'
                     'Ничего не удаляется. Всё переедет в _УБОРКА с '
                     'манифестом и запиской, как вернуть.</div>')
-
-            with ui.element("div").style("max-height:52vh; overflow-y:auto;"):
-                if not nahodki:
-                    ui.html('<div style="color:rgba(80,250,123,0.85); '
-                            'font-size:0.8rem;">Убирать нечего — чисто.</div>')
-                for imya, spisok in gruppy:
-                    if not spisok:
-                        continue
-                    ui.html(f'<div style="color:rgba(201,168,76,0.75); '
-                            f'font-size:0.68rem; letter-spacing:0.10em; '
-                            f'font-weight:700; margin:12px 0 4px;">'
-                            f'{imya.upper()} — {len(spisok)}</div>')
-                    for p, prichina in sorted(spisok, key=lambda x: str(x[0])):
-                        ui.html(
-                            f'<div style="padding:3px 0;">'
-                            f'<span style="color:rgba(255,255,255,0.88); '
-                            f'font-size:0.78rem;">{p.relative_to(U.KOREN)}'
-                            f'</span><br>'
-                            f'<span style="color:rgba(255,255,255,0.38); '
-                            f'font-size:0.70rem;">· {prichina}</span></div>')
-
-                if pod_voprosom:
-                    ui.html(f'<div style="color:rgba(255,180,120,0.8); '
-                            f'font-size:0.68rem; letter-spacing:0.10em; '
-                            f'font-weight:700; margin:14px 0 4px;">'
-                            f'ПОД ВОПРОСОМ — {len(pod_voprosom)} '
-                            f'(показываю, НЕ трогаю)</div>')
-                    ui.html('<div style="color:rgba(255,255,255,0.38); '
-                            'font-size:0.70rem; margin-bottom:4px;">'
-                            'Их никто не зовёт ни импортом, ни по имени. '
-                            'Это подозрение, а не приговор — решай сам.</div>')
-                    for p in sorted(pod_voprosom, key=str):
-                        ui.html(f'<div style="color:rgba(255,255,255,0.70); '
-                                f'font-size:0.76rem; padding:2px 0;">'
-                                f'{p.relative_to(U.KOREN)}</div>')
-
+            telo = ui.element("div").style("max-height:52vh; overflow-y:auto;")
+            with telo:
+                ui.html('<div style="color:rgba(255,255,255,0.55); '
+                        'font-size:0.8rem;">Смотрю, что лишнее… '
+                        'это занимает несколько секунд.</div>')
             itog = ui.html("")
-
-            def _ubrat():
-                if not nahodki:
-                    ui.notify("Убирать нечего", color="warning")
-                    return
-                try:
-                    res = U.perenesti(nahodki, True)
-                except Exception as e:
-                    ui.notify(f"⚠ уборка сорвалась: {e}", color="negative")
-                    return
-                kuda = res["папка"].relative_to(U.KOREN)
-                itog.content = (
-                    f'<div style="color:rgba(80,250,123,0.85); '
-                    f'font-size:0.75rem; margin-top:10px;">'
-                    f'Убрано {len(nahodki)} файлов в {kuda}.<br>'
-                    f'Рядом манифест.json и КАК_ВЕРНУТЬ.txt — вернуть можно '
-                    f'в любой момент.</div>')
-                ui.notify(f"🧹 убрано файлов: {len(nahodki)}",
-                          color="positive")
-
-            with ui.row().style("gap:8px; margin-top:14px; width:100%;"):
+            niz = ui.row().style("gap:8px; margin-top:14px; width:100%;")
+            with niz:
                 ui.button("закрыть", on_click=dlg.close).props("flat").style(
                     "color:rgba(255,255,255,0.4); font-size:0.75rem;")
                 ui.element("div").style("flex:1")
-                if nahodki:
-                    ui.html(f'<span style="color:rgba(255,255,255,0.45); '
-                            f'font-size:0.72rem; align-self:center;">'
-                            f'{len(nahodki)} файлов · {vsego_kb:.0f} КБ</span>')
-                    ui.button("убрать в чулан", on_click=_ubrat).props(
-                        "flat no-caps").style(
-                        "padding:8px 20px; border-radius:8px; font-weight:700; "
-                        "font-size:0.8rem; color:#fff; "
-                        "background:linear-gradient(135deg,rgba(201,168,76,0.30),"
-                        "rgba(201,168,76,0.18)); "
-                        "border:1px solid rgba(201,168,76,0.55);")
         dlg.open()
+
+        def _razvedka():
+            teksty = dict(U._tekstovye())
+            gotovye, _zhdut = U.sobrat_patchi(teksty)
+            return ([
+                ("копии, оставленные патчами", U.sobrat_kopii()),
+                ("патчи, которые уже отработали", gotovye),
+                ("разовые инструменты", U.sobrat_poimenno(U.RAZOVYE)),
+                ("заменённое другим", U.sobrat_poimenno(U.OTSLUZHIVSHIE)),
+                ("батники, у которых есть кнопка", U.sobrat_batniki()),
+            ], U.sobrat_pod_voprosom(teksty))
+
+        try:
+            gruppy, pod_voprosom = await loop.run_in_executor(None, _razvedka)
+        except Exception as e:
+            telo.clear()
+            with telo:
+                ui.html(f'<div style="color:rgba(255,120,120,0.9); '
+                        f'font-size:0.8rem;">Уборщик споткнулся: {e}</div>')
+            return
+
+        nahodki = [x for _, spisok in gruppy for x in spisok]
+        vsego_kb = sum(p.stat().st_size for p, _ in nahodki) / 1024
+
+        telo.clear()
+        with telo:
+            if not nahodki:
+                ui.html('<div style="color:rgba(80,250,123,0.85); '
+                        'font-size:0.8rem;">Убирать нечего — чисто.</div>')
+            for imya, spisok in gruppy:
+                if not spisok:
+                    continue
+                ui.html(f'<div style="color:rgba(201,168,76,0.75); '
+                        f'font-size:0.68rem; letter-spacing:0.10em; '
+                        f'font-weight:700; margin:12px 0 4px;">'
+                        f'{imya.upper()} — {len(spisok)}</div>')
+                for p, prichina in sorted(spisok, key=lambda x: str(x[0])):
+                    ui.html(
+                        f'<div style="padding:3px 0;">'
+                        f'<span style="color:rgba(255,255,255,0.88); '
+                        f'font-size:0.78rem;">{p.relative_to(U.KOREN)}'
+                        f'</span><br>'
+                        f'<span style="color:rgba(255,255,255,0.38); '
+                        f'font-size:0.70rem;">· {prichina}</span></div>')
+            if pod_voprosom:
+                ui.html(f'<div style="color:rgba(255,180,120,0.8); '
+                        f'font-size:0.68rem; letter-spacing:0.10em; '
+                        f'font-weight:700; margin:14px 0 4px;">'
+                        f'ПОД ВОПРОСОМ — {len(pod_voprosom)} '
+                        f'(показываю, НЕ трогаю)</div>')
+                ui.html('<div style="color:rgba(255,255,255,0.38); '
+                        'font-size:0.70rem; margin-bottom:4px;">'
+                        'Их никто не зовёт ни импортом, ни по имени. '
+                        'Это подозрение, а не приговор — решай сам.</div>')
+                for p in sorted(pod_voprosom, key=str):
+                    ui.html(f'<div style="color:rgba(255,255,255,0.70); '
+                            f'font-size:0.76rem; padding:2px 0;">'
+                            f'{p.relative_to(U.KOREN)}</div>')
+
+        async def _ubrat():
+            if not nahodki:
+                ui.notify("Убирать нечего", color="warning")
+                return
+            ui.notify("🧹 убираю…", color="info")
+            try:
+                res = await loop.run_in_executor(
+                    None, lambda: U.perenesti(nahodki, True))
+            except Exception as e:
+                ui.notify(f"⚠ уборка сорвалась: {e}", color="negative")
+                return
+            kuda = res["папка"].relative_to(U.KOREN)
+            itog.content = (
+                f'<div style="color:rgba(80,250,123,0.85); '
+                f'font-size:0.75rem; margin-top:10px;">'
+                f'Убрано {len(nahodki)} файлов в {kuda}.<br>'
+                f'Рядом манифест.json и КАК_ВЕРНУТЬ.txt — вернуть можно '
+                f'в любой момент.</div>')
+            ui.notify(f"🧹 убрано файлов: {len(nahodki)}", color="positive")
+
+        if nahodki:
+            with niz:
+                ui.html(f'<span style="color:rgba(255,255,255,0.45); '
+                        f'font-size:0.72rem; align-self:center;">'
+                        f'{len(nahodki)} файлов · {vsego_kb:.0f} КБ</span>')
+                ui.button("убрать в чулан", on_click=_ubrat).props(
+                    "flat no-caps").style(
+                    "padding:8px 20px; border-radius:8px; font-weight:700; "
+                    "font-size:0.8rem; color:#fff; "
+                    "background:linear-gradient(135deg,rgba(201,168,76,0.30),"
+                    "rgba(201,168,76,0.18)); "
+                    "border:1px solid rgba(201,168,76,0.55);")
 
     def do_perevozka():
         """STRANICA_PEREVOZKI_V1: окно со списком выброшено.
@@ -1810,7 +1830,7 @@ def page_brat():
                                   ).props("flat").classes("brat-gate")
                         # KNOPKA_UBORKI_V1: рядом с Тиком — как просил Шеф.
                         ui.button("Уборка",
-                                  on_click=lambda: do_uborka()
+                                  on_click=do_uborka
                                   ).props("flat").classes("brat-gate")
                         ui.button("Прописка",
                                   on_click=do_propiska  # PATCH_PROPISKA_BRAT
@@ -1954,3 +1974,5 @@ if __name__ in {"__main__", "__mp_main__"}:
 # STRANICA_PEREVOZKI_V1 - marker
 
 # KNOPKA_UBORKI_V1 - marker
+
+# UBORKA_V_FONE_V1 - marker
