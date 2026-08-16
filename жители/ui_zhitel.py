@@ -44,6 +44,67 @@ except Exception:
 
 from dvizhok import Dvizhok  # DVIZHOK_V_KABINET_V1: личный движок жителя
 
+# BELYY_SHRIFT_V1: читаемость на тёмном — см.
+# postavit_belyy_shrift.py. Красим только то, что
+# рисует Quasar своей светлой темой внутри наших
+# тёмных карточек.
+_BELYY_SHRIFT = r"""
+/* BELYY_SHRIFT_V1 — читаемость на тёмном.
+   Карточки диалогов рисуем мы (тёмные), а подписи внутри — Quasar по
+   своей СВЕТЛОЙ теме. Отсюда тёмно-серые буквы на чёрном: в окне
+   перевозки так пропадали имена жителей у галочек.
+   Красим только то, что отдано Quasar'у. Кнопки и наши собственные
+   раскрашенные надписи не трогаем — у них цвет задан руками. */
+.q-dialog .q-card,
+.q-dialog .q-card .q-item__label,
+.q-dialog .q-card label,
+.q-checkbox__label,
+.q-radio__label,
+.q-toggle__label,
+.q-field__native,
+.q-field__input,
+.q-field__label,
+.q-field__prefix,
+.q-field__suffix,
+.q-item__label,
+.q-tab__label,
+.q-select__dropdown-icon,
+.q-menu .q-item,
+.q-menu .q-item__label {
+  color: rgba(255,255,255,0.92) !important;
+}
+
+/* Подсказка в пустом поле — белая, но приглушённая: она не должна
+   спорить с тем, что человек уже вписал. */
+.q-field__native::placeholder,
+.q-field__input::placeholder,
+.q-placeholder::placeholder {
+  color: rgba(255,255,255,0.45) !important;
+}
+
+/* Выпадающий список Quasar рисует НЕ внутри нашей карточки, а
+   отдельным слоем поверх страницы — своей темой. Без этого он
+   оставался светлым пятном с белым текстом на белом. */
+.q-menu {
+  background: #0d1117 !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+"""
+
+
+# CHTENIE_KNIGI_V1: общая рука чтения города
+try:
+    import sys as _sys_ch
+    from pathlib import Path as _Path_ch
+    _gorod_ch = str(_Path_ch(__file__).resolve().parent.parent / "ГОРОД")
+    if _gorod_ch not in _sys_ch.path:
+        _sys_ch.path.insert(0, _gorod_ch)
+    import chtenie as _chtenie
+except Exception as _e_ch:  # пусть кабинет живёт и без неё
+    _chtenie = None
+    print(f"[ЧТЕНИЕ] рука чтения не подключилась: {_e_ch}")
+
+
 OPENROUTER_KEY   = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
 PROXY_URL        = os.getenv("PROXY_URL", "") or None
@@ -865,6 +926,7 @@ def page_zhitel(zid: str = ""):
         pass
 
     ui.add_head_html(f"<style>{ZHITEL_CSS}</style>")
+    ui.add_head_html("<style>" + _BELYY_SHRIFT + "</style>")   # BELYY_SHRIFT_V1
 
     # ФОН по маске → ТЕКУЩЕМУ месту (не прописке!) → ковчегу
     bg = _bg_for_mask(dom, mask=None, propiska=tekushaya_lokacia)
@@ -1036,15 +1098,68 @@ def page_zhitel(zid: str = ""):
                     ]},
                 ]
             else:
-                tekst = _prochitat_fail(fp)
+                # CHTENIE_KNIGI_V1: читаем ЦЕЛИКОМ. Раньше брали первые
+                # 50 000 знаков и молчали об остальном — житель даже не
+                # знал, что была ещё книга.
+                tekst = _chtenie.prochitat(fp)
                 if not tekst.strip():
                     ui.notify(f"⚠ {fp.name}: пусто или не текст — пропускаю", color="warning")
                     continue
+                _chasti = _chtenie.narezat(tekst)
+                _skazano = _chtenie.skazat_o_razmere(fp.name, tekst,
+                                                     len(_chasti))
+                state["chat"].append({"role": "system", "content":
+                                      f"📖 {_skazano}"})
+                update_chat()
+                if len(_chasti) > 1:
+                    ui.notify(f"📖 {fp.name}: {len(_chasti)} частей",
+                              color="info")
                 messages = [
                     {"role": "system", "content": dusha},
-                    {"role": "user", "content": _prompt_chtenia(fp.name, tekst, linza, lok_imya, professia)},  # ZHITEL_CHTENIE_MASKA_V1
+                    {"role": "user", "content": _prompt_chtenia(fp.name, _chasti[0], linza, lok_imya, professia)},  # ZHITEL_CHTENIE_MASKA_V1
                 ]
             vyzhimka = await call_zhitel_llm(messages, state.get("model"))
+            # CHTENIE_KNIGI_V1: остальные части — по очереди, помня
+            # прочитанное. В конце один общий вывод: в память должен
+            # лечь ОДИН осадок на книгу, а не двадцать обрывков.
+            if fp.suffix.lower() not in KARTINKA_EXT and len(_chasti) > 1:
+                _kuski_vyvodov = [vyzhimka or ""]
+                for _n, _ch in enumerate(_chasti[1:], 2):
+                    state["chat"].append({"role": "system", "content":
+                                          f"… часть {_n} из {len(_chasti)}"})
+                    update_chat()
+                    _msg = [
+                        {"role": "system", "content": dusha},
+                        {"role": "user", "content": (
+                            f"Ты читаешь «{fp.name}» по частям. "
+                            f"Это часть {_n} из {len(_chasti)}.\n\n"
+                            f"Что ты вынес(ла) из прочитанного раньше:\n"
+                            + "\n".join(f"— {x.strip()[:600]}"
+                                        for x in _kuski_vyvodov if x.strip())
+                            + f"\n\nПродолжение текста:\n{_ch}\n\n"
+                            f"Вынеси суть ЭТОЙ части своими словами. Не "
+                            f"пересказывай то, что уже сказал(а) раньше.")},
+                    ]
+                    _v = await call_zhitel_llm(_msg, state.get("model"))
+                    if _v and not _v.startswith("⚠"):
+                        _kuski_vyvodov.append(_v)
+                if len(_kuski_vyvodov) > 1:
+                    _svod = [
+                        {"role": "system", "content": dusha},
+                        {"role": "user", "content": (
+                            f"Ты дочитал(а) «{fp.name}» целиком — "
+                            f"{len(_chasti)} частей. Вот что ты выносил(а) "
+                            f"по ходу:\n\n"
+                            + "\n\n".join(f"Часть {i}: {x.strip()}"
+                                           for i, x in
+                                           enumerate(_kuski_vyvodov, 1))
+                            + "\n\nТеперь скажи одним куском, что ты вынес(ла) "
+                            "из книги В ЦЕЛОМ — своими словами, живым "
+                            "голосом. Это и останется у тебя в памяти.")},
+                    ]
+                    _itog = await call_zhitel_llm(_svod, state.get("model"))
+                    if _itog and not _itog.startswith("⚠"):
+                        vyzhimka = _itog
             if not vyzhimka or vyzhimka.startswith("⚠"):
                 ui.notify(f"⚠ {fp.name}: {(vyzhimka or 'пустой ответ')[:90]}", color="negative")
                 continue
@@ -1531,3 +1646,5 @@ if __name__ in {"__main__", "__mp_main__"}:
 # ZHITEL_CHTENIE_V1 — маркер идемпотентности
 
 # ZHITEL_CHTENIE_MASKA_V1 — маркер идемпотентности
+
+# CHTENIE_KNIGI_V1 - marker

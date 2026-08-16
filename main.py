@@ -105,6 +105,14 @@ from ui_rabota import page_rabota
 def _rabota():
     page_rabota()
 
+# ── ПЕРЕВОЗКА — дорога между берегом и островами (STRANICA_PEREVOZKI_V1) ──
+# Берег один (этот репо), островов сколько угодно. Страница сама
+# понимает, где её открыли: на берегу отправляет, на острове принимает.
+from ui_perevozka import page_perevozka
+@ui.page("/perevozka")
+def _perevozka():
+    page_perevozka()
+
 # ── ЦЕХА — картриджи Биржи (STRANICA_CEHOV_V1) ──
 # Заводятся и вынимаются здесь, а не двойным щелчком по батнику.
 from ui_ceha import page_ceha

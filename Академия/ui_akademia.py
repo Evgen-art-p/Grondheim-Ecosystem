@@ -32,6 +32,67 @@ from datetime import datetime, timezone
 
 from nicegui import ui, app
 
+# BELYY_SHRIFT_V1: читаемость на тёмном — см.
+# postavit_belyy_shrift.py. Красим только то, что
+# рисует Quasar своей светлой темой внутри наших
+# тёмных карточек.
+_BELYY_SHRIFT = r"""
+/* BELYY_SHRIFT_V1 — читаемость на тёмном.
+   Карточки диалогов рисуем мы (тёмные), а подписи внутри — Quasar по
+   своей СВЕТЛОЙ теме. Отсюда тёмно-серые буквы на чёрном: в окне
+   перевозки так пропадали имена жителей у галочек.
+   Красим только то, что отдано Quasar'у. Кнопки и наши собственные
+   раскрашенные надписи не трогаем — у них цвет задан руками. */
+.q-dialog .q-card,
+.q-dialog .q-card .q-item__label,
+.q-dialog .q-card label,
+.q-checkbox__label,
+.q-radio__label,
+.q-toggle__label,
+.q-field__native,
+.q-field__input,
+.q-field__label,
+.q-field__prefix,
+.q-field__suffix,
+.q-item__label,
+.q-tab__label,
+.q-select__dropdown-icon,
+.q-menu .q-item,
+.q-menu .q-item__label {
+  color: rgba(255,255,255,0.92) !important;
+}
+
+/* Подсказка в пустом поле — белая, но приглушённая: она не должна
+   спорить с тем, что человек уже вписал. */
+.q-field__native::placeholder,
+.q-field__input::placeholder,
+.q-placeholder::placeholder {
+  color: rgba(255,255,255,0.45) !important;
+}
+
+/* Выпадающий список Quasar рисует НЕ внутри нашей карточки, а
+   отдельным слоем поверх страницы — своей темой. Без этого он
+   оставался светлым пятном с белым текстом на белом. */
+.q-menu {
+  background: #0d1117 !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+"""
+
+
+# CHTENIE_KNIGI_V1: общая рука чтения города
+try:
+    import sys as _sys_ch
+    from pathlib import Path as _Path_ch
+    _gorod_ch = str(_Path_ch(__file__).resolve().parent.parent / "ГОРОД")
+    if _gorod_ch not in _sys_ch.path:
+        _sys_ch.path.insert(0, _gorod_ch)
+    import chtenie as _chtenie
+except Exception as _e_ch:  # пусть кабинет живёт и без неё
+    _chtenie = None
+    print(f"[ЧТЕНИЕ] рука чтения не подключилась: {_e_ch}")
+
+
 # AKADEMIA_MODEL_SEL_V1: тот же каталог, что в кабинете Брата (ui_brat.py) —
 # один список моделей на весь город, не плодим второй источник правды.
 # bibliotekar.py уже принимает model=... в sprosit() — только UI не давал выбрать.
@@ -697,6 +758,7 @@ def page_akademia() -> None:
     bubbles    = {"elements": {}}
 
     ui.add_head_html(f"<style>{AKAD_CSS}</style>")
+    ui.add_head_html("<style>" + _BELYY_SHRIFT + "</style>")   # BELYY_SHRIFT_V1
     _bg = _bg_url()
     ui.html(f'<div id="bg"{f" style=\"background-image:url(\'{_bg}\');\"" if _bg else ""}></div>')
 
@@ -1475,16 +1537,24 @@ def page_akademia() -> None:
 
         for fp, vid in novye:
             if vid == "текст":
-                try:
-                    tekst = fp.read_bytes().decode("utf-8", errors="replace")
-                except Exception:
-                    tekst = ""
+                # CHTENIE_KNIGI_V1: читаем честно и ЦЕЛИКОМ. Раньше
+                # ученику доставались первые 20 000 знаков — вдвое
+                # меньше, чем жителю дома, и молча.
+                tekst = _chtenie.prochitat(fp)
                 if not tekst.strip():
                     ui.notify(f"⚠ {fp.name}: пусто — пропускаю", type="warning")
                     continue
-                vopros = (f"Материал: {fp.name}\n{tekst[:20000]}\n\n"
+                _chasti = _chtenie.narezat(tekst)
+                state["чат"].append({"role": "system", "content":
+                                     "📖 " + _chtenie.skazat_o_razmere(
+                                         fp.name, tekst, len(_chasti))})
+                update_chat()
+                _hvost = ("" if len(_chasti) == 1 else
+                          f" Это часть 1 из {len(_chasti)}, продолжение "
+                          f"будет дальше.")
+                vopros = (f"Материал: {fp.name}\n{_chasti[0]}\n\n"
                          f"Прочитай и вынеси концентрат — 5-8 строк, суть плюс твой "
-                         f"личный отклик через свою натуру.")
+                         f"личный отклик через свою натуру.{_hvost}")
                 messages = [{"role": "system", "content": dusha + rol},
                            {"role": "user", "content": vopros}]
             else:
@@ -1516,6 +1586,37 @@ def page_akademia() -> None:
                                {"type": "image_url", "image_url": {"url": url}},
                            ]}]
             vyzhimka = await _zvat_llm_akademii(messages, state.get("model"))
+            # CHTENIE_KNIGI_V1: остальные части — по очереди, с памятью
+            # о прочитанном, и общий свод в конце.
+            if vid == "текст" and len(_chasti) > 1 and vyzhimka \
+                    and not vyzhimka.startswith("⚠"):
+                _vyvody = [vyzhimka]
+                for _n, _ch in enumerate(_chasti[1:], 2):
+                    state["чат"].append({"role": "system", "content":
+                                         f"… часть {_n} из {len(_chasti)}"})
+                    update_chat()
+                    _m = [{"role": "system", "content": dusha + rol},
+                          {"role": "user", "content": (
+                              f"Продолжаешь «{fp.name}», часть {_n} из "
+                              f"{len(_chasti)}.\n\nЧто вынес(ла) раньше:\n"
+                              + "\n".join(f"— {x.strip()[:600]}"
+                                          for x in _vyvody)
+                              + f"\n\nДальше:\n{_ch}\n\nКонцентрат ЭТОЙ "
+                              f"части — 5-8 строк, без повтора прежнего.")}]
+                    _v = await _zvat_llm_akademii(_m, state.get("model"))
+                    if _v and not _v.startswith("⚠"):
+                        _vyvody.append(_v)
+                _m2 = [{"role": "system", "content": dusha + rol},
+                       {"role": "user", "content": (
+                           f"Ты дочитал(а) «{fp.name}» целиком. По ходу "
+                           f"выносил(а):\n\n"
+                           + "\n\n".join(f"Часть {i}: {x.strip()}"
+                                          for i, x in enumerate(_vyvody, 1))
+                           + "\n\nСкажи одним куском, что вынес(ла) из "
+                           "материала В ЦЕЛОМ. Это и останется в памяти.")}]
+                _itog = await _zvat_llm_akademii(_m2, state.get("model"))
+                if _itog and not _itog.startswith("⚠"):
+                    vyzhimka = _itog
             if not vyzhimka or vyzhimka.startswith("⚠"):
                 ui.notify(f"⚠ {fp.name}: {(vyzhimka or 'пустой ответ')[:90]}", type="negative")
                 continue
@@ -1813,3 +1914,5 @@ if __name__ in {"__main__", "__mp_main__"}:
     ui.run(title="Академия · Грондхейм", port=8105, reload=False)
 
 # AKADEMIA_KABINET_V1 — маркер идемпотентности
+
+# CHTENIE_KNIGI_V1 - marker

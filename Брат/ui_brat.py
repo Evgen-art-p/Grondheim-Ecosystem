@@ -20,6 +20,54 @@ from datetime import datetime
 
 from nicegui import ui, events
 
+# BELYY_SHRIFT_V1: читаемость на тёмном — см.
+# postavit_belyy_shrift.py. Красим только то, что
+# рисует Quasar своей светлой темой внутри наших
+# тёмных карточек.
+_BELYY_SHRIFT = r"""
+/* BELYY_SHRIFT_V1 — читаемость на тёмном.
+   Карточки диалогов рисуем мы (тёмные), а подписи внутри — Quasar по
+   своей СВЕТЛОЙ теме. Отсюда тёмно-серые буквы на чёрном: в окне
+   перевозки так пропадали имена жителей у галочек.
+   Красим только то, что отдано Quasar'у. Кнопки и наши собственные
+   раскрашенные надписи не трогаем — у них цвет задан руками. */
+.q-dialog .q-card,
+.q-dialog .q-card .q-item__label,
+.q-dialog .q-card label,
+.q-checkbox__label,
+.q-radio__label,
+.q-toggle__label,
+.q-field__native,
+.q-field__input,
+.q-field__label,
+.q-field__prefix,
+.q-field__suffix,
+.q-item__label,
+.q-tab__label,
+.q-select__dropdown-icon,
+.q-menu .q-item,
+.q-menu .q-item__label {
+  color: rgba(255,255,255,0.92) !important;
+}
+
+/* Подсказка в пустом поле — белая, но приглушённая: она не должна
+   спорить с тем, что человек уже вписал. */
+.q-field__native::placeholder,
+.q-field__input::placeholder,
+.q-placeholder::placeholder {
+  color: rgba(255,255,255,0.45) !important;
+}
+
+/* Выпадающий список Quasar рисует НЕ внутри нашей карточки, а
+   отдельным слоем поверх страницы — своей темой. Без этого он
+   оставался светлым пятном с белым текстом на белом. */
+.q-menu {
+  background: #0d1117 !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+"""
+
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -1025,6 +1073,7 @@ GAUGES = [
 
 def page_brat():
     ui.add_head_html(f"<style>{BRAT_CSS}</style>")
+    ui.add_head_html("<style>" + _BELYY_SHRIFT + "</style>")   # BELYY_SHRIFT_V1
 
     try:
         if STATIC_DIR.exists():
@@ -1331,93 +1380,14 @@ def page_brat():
         dlg.open()
 
     # PATCH_BRAT_TIK_V1 — суточный тик из кабинета
-    async def do_perevozka():
-        """PEREVOZKA_KNOPKI_V1: собрать жителя в дорогу на остров.
+    def do_perevozka():
+        """STRANICA_PEREVOZKI_V1: окно со списком выброшено.
 
-        Руками ничего не пакуем: зовём perevozka.py, тот же, что работает
-        из консоли. Две правды о том, что едет, нам не нужны.
+        Оно было витриной: все жители разом и галочки, будто
+        ехать может каждый и всегда в одно место. Дорога —
+        событие редкое и личное, у неё своя страница.
         """
-        try:
-            import sys as _sys
-            _k = str(_REPO_ROOT_FOR_IMPORT)
-            if _k not in _sys.path:
-                _sys.path.insert(0, _k)
-            _g = str(_REPO_ROOT_FOR_IMPORT / "ГОРОД")
-            if _g not in _sys.path:
-                _sys.path.insert(0, _g)
-            import perevozka as P
-            try:
-                import rabota as R
-            except Exception:
-                R = None
-        except Exception as e:
-            ui.notify(f"⚠ перевозка не поднялась: {e}", color="negative")
-            return
-
-        lyudi = P.zhiteli()
-        if not lyudi:
-            ui.notify("Жителей не нашёл", color="warning")
-            return
-
-        otmecheny: dict = {}
-
-        with ui.dialog() as dlg, ui.card().style(
-            "background:#0d1117; border:1px solid rgba(255,255,255,0.12); "
-            "border-radius:16px; min-width:420px; max-width:520px; padding:20px;"
-        ):
-            ui.html('<div style="color:rgba(255,255,255,0.9); font-weight:700; '
-                    'font-size:0.9rem; margin-bottom:6px; letter-spacing:0.08em;">'
-                    '🧳 ПЕРЕВОЗКА НА ОСТРОВ</div>')
-            ui.html('<div style="color:rgba(255,255,255,0.45); '
-                    'font-size:0.72rem; margin-bottom:12px;">'
-                    'Кого отметишь — тот снимется с места и ляжет архивом '
-                    'в папку _ОТПРАВКА. Личное уедет с ним.</div>')
-
-            with ui.element("div").style("max-height:46vh; overflow-y:auto;"):
-                for ch in lyudi:
-                    gde = ch["работа"] or "— без места —"
-                    otmecheny[ch["имя"]] = ui.checkbox(
-                        f'{ch["имя"]}   ·   {gde}').props("dark dense").style(
-                        "font-size:0.78rem;")
-
-            itog = ui.html("")
-
-            def _upakovat():
-                vybor = [ch for ch in lyudi
-                         if otmecheny[ch["имя"]].value]
-                if not vybor:
-                    ui.notify("Никого не отметил", color="warning")
-                    return
-                gotovo = []
-                for ch in vybor:
-                    try:
-                        a = P.upakovat(ch, R)
-                        if a:
-                            gotovo.append(a.name)
-                    except Exception as e:
-                        ui.notify(f"⚠ {ch['имя']}: {e}", color="negative")
-                if gotovo:
-                    itog.content = (
-                        '<div style="color:rgba(80,250,123,0.85); '
-                        'font-size:0.75rem; margin-top:10px;">Собрано: '
-                        + "<br>".join(gotovo) +
-                        '<br><br>Лежит в папке _ОТПРАВКА. Перенеси файл на '
-                        'остров и брось его там на странице перевозки.</div>')
-                    ui.notify(f"🧳 собрано архивов: {len(gotovo)}",
-                              color="positive")
-
-            with ui.row().style("gap:8px; margin-top:14px; width:100%;"):
-                ui.button("закрыть", on_click=dlg.close).props("flat").style(
-                    "color:rgba(255,255,255,0.4); font-size:0.75rem;")
-                ui.element("div").style("flex:1")
-                ui.button("упаковать", on_click=_upakovat).props(
-                    "flat no-caps").style(
-                    "padding:8px 20px; border-radius:8px; font-weight:700; "
-                    "font-size:0.8rem; color:#fff; "
-                    "background:linear-gradient(135deg,rgba(201,168,76,0.30),"
-                    "rgba(201,168,76,0.18)); "
-                    "border:1px solid rgba(201,168,76,0.55);")
-        dlg.open()
+        ui.navigate.to("/perevozka")
 
     async def do_tik():
         """Город выдыхает. Та же рука, что `python tik.py`.
@@ -1737,7 +1707,7 @@ def page_brat():
                                   ).props("flat").classes("brat-gate")
                         # PEREVOZKA_KNOPKI_V1: собрать жителя в дорогу
                         ui.button("Перевозка",
-                                  on_click=do_perevozka
+                                  on_click=lambda: do_perevozka()
                                   ).props("flat").classes("brat-gate")
                 with ui.element("div").classes("stage-content").style(
                     "padding-top:0 !important; padding-bottom:105px;"):
@@ -1856,3 +1826,5 @@ if __name__ in {"__main__", "__mp_main__"}:
 # SVOYO_OKNO_V1 - marker
 
 # ROL_V_RABOTU_V1 - marker
+
+# STRANICA_PEREVOZKI_V1 - marker
