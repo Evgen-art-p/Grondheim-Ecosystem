@@ -174,7 +174,9 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
                              "name": _P(put).name}],
                     tools_schema=_rt.shema(timeframe),
                     executors=_rt.ruki(symbol, ceh, slot, self_key,
-                                       dnevnik_fn=_read_recent_diary),
+                                       dnevnik_fn=_read_recent_diary,
+                                       rabochiy_etazh=timeframe,
+                                       imya_zhitelya=_kto_ya()),
                     history=kw.get("history"),
                     temperature=kw.get("temperature"),
                     agent_id=kw.get("agent_id", slot),
@@ -1053,3 +1055,27 @@ def _my_temp():
 # VYBOR_SVOY_NE_KNIZHNYY_V1 - marker
 
 # RUKI_TREYDERA_V1 - marker
+
+# KRAYNIYE_TOCHKI_V1 - marker
+
+
+def _kto_ya() -> str:
+    """DOSKA_V1: имя того, кто сидит на этом месте. На доске должно
+    стоять имя человека, а не номер слота."""
+    try:
+        import sys as _s
+        from pathlib import Path as _P
+        _g = _P(__file__).resolve()
+        for _ in range(9):
+            _g = _g.parent
+            if (_g / "ГОРОД" / "rabota.py").exists():
+                break
+        if str(_g / "ГОРОД") not in _s.path:
+            _s.path.insert(0, str(_g / "ГОРОД"))
+        import rabota as _r
+        return _r.kto_na_slote(_CEH, _SLOT) or _SLOT
+    except Exception:
+        return _SLOT
+
+
+# DOSKA_V1 - marker

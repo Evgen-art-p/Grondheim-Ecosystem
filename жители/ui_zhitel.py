@@ -129,15 +129,115 @@ async def call_zhitel_llm(messages, model=None):
     use_model = model or OPENROUTER_MODEL
     import httpx
     headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
-    payload = {"model": use_model, "messages": messages}
+    messages = list(messages)
+
+    # RUKI_DOMA_V1: рук у жителя дома не было НИ ОДНОЙ — только выход
+    # к Маяку строкой. Вышло несуразно: трейдер на работе может
+    # посмотреть рисунок из книги, ученик в Академии тоже, а дома тот
+    # же человек — нет. Хотя дома он как раз и думает.
+    # Даём только учебник: рабочие руки (стол, растяжка) дома были бы
+    # враньём — человек не за инструментом. А учёба с ним везде.
+    ruki_shema, ruki = _ruki_doma()
+    for _krug in range(5):
+        payload = {"model": use_model, "messages": messages}
+        if ruki_shema and _krug < 4:
+            payload["tools"] = ruki_shema
+            payload["tool_choice"] = "auto"
+        try:
+            async with httpx.AsyncClient(timeout=120, proxy=PROXY_URL) as client:
+                r = await client.post("https://openrouter.ai/api/v1/chat/completions",
+                                      headers=headers, json=payload)
+                r.raise_for_status()
+                msg = r.json()["choices"][0]["message"]
+        except Exception as e:
+            return f"⚠ Ошибка вызова {model or use_model}: {e}"
+
+        if not msg.get("tool_calls"):
+            return msg.get("content") or ""
+
+        messages.append({"role": "assistant",
+                         "content": msg.get("content") or "",
+                         "tool_calls": msg["tool_calls"]})
+        for tc in msg["tool_calls"]:
+            imya = tc["function"]["name"]
+            try:
+                args = json.loads(tc["function"].get("arguments", "{}"))
+            except Exception:
+                args = {}
+            ruka = ruki.get(imya)
+            otvet = str(ruka(args)) if ruka else f"такой руки нет: {imya}"
+            print(f"[ЖИТЕЛЬ] 🖐 {imya}({args})")
+            messages.append({"role": "tool", "tool_call_id": tc["id"],
+                             "content": otvet})
+            if otvet.startswith("[КАДР: "):
+                try:
+                    import base64 as _b64
+                    _p = Path(otvet[7:otvet.index("]")])
+                    if _p.exists():
+                        _b = _b64.b64encode(_p.read_bytes()).decode("ascii")
+                        _mime = ("image/png" if _p.suffix.lower() == ".png"
+                                 else "image/jpeg")
+                        messages.append({"role": "user", "content": [
+                            {"type": "image_url", "image_url": {
+                                "url": f"data:{_mime};base64,{_b}"}},
+                            {"type": "text",
+                             "text": "Вот рисунок, который ты попросил(а)."}]})
+                        print(f"[ЖИТЕЛЬ] 🖼 показан {_p.name}")
+                except Exception as _e:
+                    print(f"[ЖИТЕЛЬ] картинка не дошла: {_e}")
+    return "⚠ разговор с руками не сошёлся"
+
+
+def _ruki_doma():
+    """(схема, руки) — учебник Академии. Второго не заводим: тот же
+    Биржа/uchebnik.py, что сканирует дисциплины. Новая книга — увидят
+    все трое: житель, ученик, трейдер."""
     try:
-        async with httpx.AsyncClient(timeout=120, proxy=PROXY_URL) as client:
-            r = await client.post("https://openrouter.ai/api/v1/chat/completions",
-                                  headers=headers, json=payload)
-            r.raise_for_status()
-            return r.json()["choices"][0]["message"]["content"]
+        _repo = Path(__file__).resolve().parent.parent
+        if str(_repo / "Биржа") not in sys.path:
+            sys.path.insert(0, str(_repo / "Биржа"))
+        import uchebnik as _u
     except Exception as e:
-        return f"⚠ Ошибка вызова {model or use_model}: {e}"
+        print(f"[ЖИТЕЛЬ] учебник не подключился: {e}")
+        return None, {}
+
+    shema = [
+        {"type": "function", "function": {
+            "name": "uchebnik",
+            "description": (
+                "ПОКАЗАТЬ рисунок из книг, по которым ты учился(ась) в "
+                "Академии. Скажи тему словами: «приседающий бар», «фрактал», "
+                "«волны AO». Ты УВИДИШЬ сам рисунок и подпись автора. Проси, "
+                "когда хочешь свериться с книгой, а не вспоминать по памяти."),
+            "parameters": {"type": "object", "properties": {
+                "о_чём": {"type": "string", "description": "тема словами"},
+                "дисциплина": {"type": "string",
+                               "description": "необязательно: сузить поиск"}},
+                "required": ["о_чём"]}}},
+        {"type": "function", "function": {
+            "name": "chemu_uchili",
+            "description": "Какие дисциплины и сколько рисунков есть.",
+            "parameters": {"type": "object", "properties": {},
+                           "required": []}}},
+    ]
+
+    def _pokazat(args):
+        o = str(args.get("о_чём", "")).strip()
+        tema = str(args.get("дисциплина", "")).strip()
+        try:
+            nashlos = _u.nayti(o, skolko=1, tema=tema)
+        except Exception as e:
+            return f"учебник не открылся: {e}"
+        if not nashlos:
+            return f"по «{o}» рисунка не нашёл. Что есть:\n{_u.temy()}"
+        p, t, glava, podpis = nashlos[0]
+        hvost = f" · {glava}" if glava else ""
+        podp = f"\nподпись автора: {podpis}" if podpis else ""
+        return f"[КАДР: {p}] учебник · {t}{hvost} · {p.name}{podp}"
+
+    return shema, {"uchebnik": _pokazat,
+                   "chemu_uchili": lambda a: "=== ДИСЦИПЛИНЫ ===\n"
+                                             + _u.temy()}
 
 
 def _otsenit_tonus_silu(text: str) -> tuple:
@@ -1648,3 +1748,5 @@ if __name__ in {"__main__", "__mp_main__"}:
 # ZHITEL_CHTENIE_MASKA_V1 — маркер идемпотентности
 
 # CHTENIE_KNIGI_V1 - marker
+
+# RUKI_DOMA_V1 - marker

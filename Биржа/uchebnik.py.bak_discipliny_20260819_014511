@@ -1,0 +1,94 @@
+# -*- coding: utf-8 -*-
+# UCHEBNIK_V_RUKE_V1
+"""
+УЧЕБНИК — картинки из книги, по которой учили.
+
+СЛОВА ШЕФА
+    «Есть же в Академии архив с картинками, накидать по темам — и
+    пусть по запросу получит в работе. Она там с глазами.»
+
+ЗАКОН ЭТОГО ФАЙЛА
+    Ищем ПО АВТОРСКИМ ПОДПИСЯМ из описи и по названиям глав. Своих
+    тем не выдумываем и картинок не толкуем: показали — дальше её
+    дело. Не нашлось — так и говорим, а не подсовываем похожее.
+
+ЗАЧЕМ
+    Учили рисунками, а в память ложился её ПЕРЕСКАЗ рисунка. Завтра
+    она помнит свои слова, а не то, что видела. Теперь может
+    посмотреть снова — стоя перед живым графиком.
+"""
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+_KOREN = Path(__file__).resolve().parent.parent
+_KARTINKI = (_KOREN / "GRONDHEIM_CITY" / "Академия" / "дисциплины"
+             / "финансы" / "торговый_хаос" / "уроки" / "картинки")
+_OPIS = _KARTINKI / "ОПИСЬ.md"
+
+
+def _razobrat_opis() -> list:
+    """[(файл, глава, подпись)] — из авторской описи."""
+    if not _OPIS.exists():
+        return []
+    out, glava = [], ""
+    for s in _OPIS.read_text(encoding="utf-8", errors="replace").splitlines():
+        s = s.strip()
+        if s.startswith("## "):
+            glava = s[3:].strip()
+            continue
+        m = re.match(r"^-\s+`([^`]+)`\s*(?:\([^)]*\))?\s*—?\s*(.*)$", s)
+        if m:
+            out.append((m.group(1).strip(), glava, m.group(2).strip()))
+    return out
+
+
+def _nayti_fayl(imya: str):
+    for p in _KARTINKI.rglob(imya):
+        return p
+    return None
+
+
+def temy() -> str:
+    """Какие главы вообще есть — чтобы было видно, о чём спрашивать."""
+    opis = _razobrat_opis()
+    if not opis:
+        return "описи учебника нет"
+    po_glavam = {}
+    for _f, g, _p in opis:
+        po_glavam[g] = po_glavam.get(g, 0) + 1
+    return "\n".join(f"  · {g} — {n} рисунк(ов)"
+                      for g, n in po_glavam.items() if g)
+
+
+def nayti(o_chyom: str, skolko: int = 1) -> list:
+    """[(путь, глава, подпись)] по словам запроса.
+
+    Считаем совпадения слов запроса в подписи и в названии главы.
+    Ничего не толкуем — просто ищем текстом.
+    """
+    zapros = (o_chyom or "").strip().lower()
+    if not zapros:
+        return []
+    slova = [w for w in re.split(r"[^\wа-яё]+", zapros) if len(w) > 3]
+    if not slova:
+        slova = [zapros]
+    ocenki = []
+    for fayl, glava, podpis in _razobrat_opis():
+        seno = (podpis + " " + glava + " " + fayl).lower()
+        ochki = sum(1 for w in slova if w in seno)
+        # слово целиком в подписи весит больше, чем в имени файла
+        ochki += sum(1 for w in slova if w in podpis.lower())
+        if ochki:
+            ocenki.append((ochki, fayl, glava, podpis))
+    ocenki.sort(key=lambda x: -x[0])
+    out = []
+    for _o, fayl, glava, podpis in ocenki[:skolko]:
+        p = _nayti_fayl(fayl)
+        if p:
+            out.append((p, glava, podpis))
+    return out
+
+
+# UCHEBNIK_V_RUKE_V1 - marker

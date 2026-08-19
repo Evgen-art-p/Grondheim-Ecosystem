@@ -29,6 +29,39 @@ from typing import Optional   # PYLANCE_GIGIENA_V1
 from pathlib import Path
 from datetime import datetime, timezone
 
+# PAMYAT_RABOTA_ZHIZN_V1: какой контекст считается РАБОТОЙ, а какой
+# ЖИЗНЬЮ. Нужно затем, что за столом житель просит опыт — и должен
+# получить практику, а не разговоры о холсте. У Нины 18.08 на запрос
+# «Аллигатор открыт, но AO падает» поднялось 172 следа, и все до
+# одного были беседами и учёбой: сделок у неё ноль.
+# UCHYOBA_NA_STOLE_V1: делим НАТРОЕ, а не надвое. Вчера учёба попала
+# в «не работу», и за столом трейдер перестал поднимать даже то, что
+# разбирал с Ректором. А практики у него ноль — ни одна сделка ещё не
+# закрылась. Значит учёба сейчас ЕДИНСТВЕННАЯ его опора, и отрезать
+# её было худшим, что можно сделать.
+#   «Без знаний опыта не получишь» — слово Шефа 18.08.
+PRAKTIKA_KONTEKSTY = ("работа", "факт")
+UCHEBNYE_KONTEKSTY = ("учёба", "учеба")
+ZHIZNENNYE_KONTEKSTY = ("общение", "дом")
+
+# За столом поднимается практика И учёба. Разговоры про холст остаются
+# дома — им за столом делать нечего.
+RABOCHIE_KONTEKSTY = PRAKTIKA_KONTEKSTY + UCHEBNYE_KONTEKSTY
+
+# Старые записи контекста не имеют — разбираем по слою, как велит
+# Закон Слоёв ниже. sensory остаётся неизвестным: туда падали сразу
+# три контекста, и восстанавливать их гаданием мы не будем.
+SLOY_KONTEKST = {"archive": "учёба", "resonance": "общение"}
+
+
+def kontekst_zapisi(z: dict) -> str:
+    """Откуда след. Нет пометки — берём по слою; sensory неизвестен."""
+    k = str(z.get("контекст") or "").strip()
+    if k:
+        return k
+    return SLOY_KONTEKST.get(str(z.get("слой") or ""), "")
+
+
 # контекст входа → в какой слой осядет (Закон Слоёв)
 KONTEKST_SLOI = {
     "факт":     "sensory",    # сухой факт дня — свежее
@@ -184,6 +217,10 @@ class Dvizhok:
             "заряд":       round(self.charge, 3),
             "открыто":     sloi,
             "осело_в":     osel_v,
+            # PAMYAT_RABOTA_ZHIZN_V1: контекст доходит до записи.
+            # Раньше он решал слой и терялся — и отделить работу от
+            # жизни задним числом было нечем.
+            "контекст":    kontekst,
             # PAMYAT_ISKRA_V1: тонус и сила искры раньше вычислялись и
             # тут же терялись (использовались только для сдвига заряда).
             # Теперь идут дальше — в запись памяти (_zapisat_sobytie) —
@@ -791,7 +828,8 @@ class Dvizhok:
         "обидн": "минус", "неприятн": "минус", "кольнуло": "минус",
     }
 
-    def vspomnit(self, zapros: str, limit: int = 6) -> str:
+    def vspomnit(self, zapros: str, limit: int = 6,
+                 o_chyom: str = "") -> str:
         """PATCH_ZHITEL_VSPOMINAET: житель САМ решил вспомнить (MEMORY_REQUEST).
         Текстовый поиск по своим слоям: sensory + resonance + archive.
         БЕЗ шлюза по заряду — воля жителя выше стресс-шлюза (закон -2:
@@ -832,8 +870,27 @@ class Dvizhok:
             except Exception:
                 pass
         # оценка: сколько слов запроса встретилось в факте записи
+        # PAMYAT_RABOTA_ZHIZN_V1: о чём спрашиваем — о работе или о
+        # жизни. За столом нужна практика, а не разговоры; дома —
+        # наоборот. Пусто — ищем везде, как раньше.
+        nuzhno = (o_chyom or "").strip().lower()
         naydeno = []
         for z in zapisi:
+            if nuzhno:
+                k = kontekst_zapisi(z)
+                if nuzhno.startswith("работ"):
+                    # UCHYOBA_NA_STOLE_V1: работа = практика + учёба
+                    if k not in RABOCHIE_KONTEKSTY:
+                        continue
+                elif nuzhno.startswith("практик"):
+                    if k not in PRAKTIKA_KONTEKSTY:
+                        continue
+                elif nuzhno.startswith("учёб") or nuzhno.startswith("учеб"):
+                    if k not in UCHEBNYE_KONTEKSTY:
+                        continue
+                elif nuzhno.startswith("жизн"):
+                    if k not in ZHIZNENNYE_KONTEKSTY:
+                        continue
             fakt = str(z.get("факт", "")).lower()
             score = sum(1 for w in slova if w in fakt)
             if iskomyj_tonus and z.get("тонус") == iskomyj_tonus:
@@ -846,7 +903,16 @@ class Dvizhok:
         stroki = []
         for _, _, z in naydeno[:limit]:
             ts = str(z.get("ts", ""))[:10]
-            stroki.append(f"— [{ts}] {z.get('факт', '')}")
+            # UCHYOBA_NA_STOLE_V1: откуда след — чтобы трейдер не
+            # путал прожитое с прочитанным. «Я это ПРОБОВАЛ» и «я об
+            # этом ЧИТАЛ» — разного веса, и решать ему.
+            k = kontekst_zapisi(z)
+            otkuda = ""
+            if k in UCHEBNYE_KONTEKSTY:
+                otkuda = " · учёба"
+            elif k in PRAKTIKA_KONTEKSTY:
+                otkuda = " · практика"
+            stroki.append(f"— [{ts}{otkuda}] {z.get('факт', '')}")
         return "\n".join(stroki)
 
     # ═══════════════════════════════════════════════════════
@@ -1057,3 +1123,7 @@ class Dvizhok:
         self.p = svezhiy
         self.passport_path.write_text(
             json.dumps(svezhiy, ensure_ascii=False, indent=2), encoding="utf-8")
+
+# PAMYAT_RABOTA_ZHIZN_V1 - marker
+
+# UCHYOBA_NA_STOLE_V1 - marker

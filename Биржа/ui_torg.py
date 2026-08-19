@@ -2199,11 +2199,24 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     update_chat_display()
                     break
                 istoriya.postavit(data)
+                imya = _agent_label(roster, _sl) or _sl
+                # PROGON_VIDNO_V1: кадр рисуем ОДИН раз и В ФОНЕ.
+                # Раньше он рисовался в главном потоке, да ещё дважды
+                # на место (для экрана и для отчёта) — matplotlib на
+                # секунды вешал сервер, и браузер обрывал связь:
+                # «Connection lost». Одна картинка идёт и на экран,
+                # и в отчёт.
+                _kadr = None
                 try:
-                    pokazat_kadr()
+                    _kadr = await loop.run_in_executor(
+                        None, lambda s=_sym, t=_tf: __import__(
+                            "grafik").kadr(s, t))
+                except Exception as _ek:
+                    print(f"[ПРОГОН] кадр не нарисовался: {_ek}")
+                try:
+                    pokazat_kadr(_kadr)
                 except Exception:
                     pass
-                imya = _agent_label(roster, _sl) or _sl
                 state["chat_history"].append({
                     "role": "system",
                     "content": f"📍 {_kd.slovami(k)} → спрашиваю {imya}"})
@@ -2228,12 +2241,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 # рядом со строкой. Раньше все кадры валились в общую
                 # кучу, и найти картинку к месту было нельзя.
                 if _otchyot is not None:
-                    _kadr = None
-                    try:
-                        import grafik as _gr
-                        _kadr = _gr.kadr(_sym, _tf)
-                    except Exception:
-                        pass
                     try:
                         _otchyot.zapisat(k, _sl, imya, _sym, _tf, r, _kadr)
                     except Exception as _e:
@@ -2242,6 +2249,20 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     "role": "assistant", "agent": _sl,
                     "content": skazal or "(без текста)"})
                 update_chat_display()
+                # PROGON_VIDNO_V1: и в ОТЧЁТ справа. Раньше там висело
+                # «Отчёт пока не создан»: прогон писал только в ленту.
+                try:
+                    _shapka = (f"# {imya} ({_sl})\n\n"
+                               f"**{k.get('дата', '')}** · {_sym} {_tf} · "
+                               f"разворотный {k.get('разворотный')} · "
+                               f"волна {k.get('длина_волны')} баров · "
+                               f"компас {k.get('компас')}\n\n---\n\n")
+                    state["reports"][_sl] = _shapka + (
+                        skazal or "(без текста)")
+                    if state.get("active_agent") == _sl:
+                        update_viewer(state["reports"][_sl])
+                except Exception as _er2:
+                    print(f"[ПРОГОН] отчёт не показался: {_er2}")
         finally:
             state["tester_running"] = False
             state["stop_requested"] = False
@@ -2265,9 +2286,22 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 _otn = _gde
             _hvost = f" · отчёт: {_otn}"
             print(f"[ОТЧЁТ] 📄 {_gde}")
+        # PROGON_VIDNO_V1: итог словами, а не только путь к папке.
+        _vhodov = 0
+        _otkazov = 0
+        try:
+            for _m in (_otchyot.mesta if _otchyot is not None else []):
+                _v = str(_m.get("вердикт", "")).upper()
+                if _v in ("APPROVED", "ENTER", "OK"):
+                    _vhodov += 1
+                elif _v in ("REJECTED", "WAIT"):
+                    _otkazov += 1
+        except Exception:
+            pass
         state["chat_history"].append({
             "role": "system",
-            "content": f"✓ прогон окончен · пройдено мест: {proydeno}{_hvost}"})
+            "content": (f"✓ прогон окончен · мест {proydeno} · "
+                        f"входов {_vhodov} · отказов {_otkazov}{_hvost}")})
         update_chat_display()
         ui.notify(f"✓ прогон окончен · {proydeno} мест", type="positive")
 
@@ -2934,18 +2968,29 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 with ui.element("div").style(
                     "display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:center; flex:1;"
                 ):
+                    # PUZYRI_V1: были голые div — клик держался на
+                    # всплытии и терялся, как у тумблера. И подсветка
+                    # «кто выбран» была прибита к A01, то есть к Искре,
+                    # упразднённой 06.08: кабинет открывался на агенте,
+                    # которого нет, оттого ни кадра, ни отчёта, ни чата.
                     for r in roster:
                         old_id = r["old_id"]
                         occupied = bool(r["resident"])
-                        cls = f'avatar {"active" if old_id == "A01" else ""} {"" if occupied else "vacant"}'
-                        avatar = ui.element("div").classes(cls)
+                        aktiven = (old_id == state.get("active_agent"))
+                        cls = (f'avatar {"active" if aktiven else ""} '
+                               f'{"" if occupied else "vacant"}')
                         style = ""
                         if occupied:
                             av = _avatar_url_for(r["resident"]["папка"], static_prefix)
                             if av:
                                 style = f"background-image:url('{av}');"
-                        avatar.style(style)
-                        avatar.on("click", lambda e, w=old_id: switch_agent(w))
+
+                        def _nazhali(w=old_id):
+                            print(f"[ПУЗЫРЬ] нажали: {w}")
+                            switch_agent(w)
+
+                        avatar = ui.button(on_click=_nazhali).classes(cls)
+                        avatar.props("flat dense no-caps").style(style)
                         with avatar:
                             if not occupied:
                                 ui.label(old_id).style("font-size: 9px")
@@ -3310,3 +3355,7 @@ if __name__ in {"__main__", "__mp_main__"}:
 # TUMBLER_V1 - marker
 
 # OTCHYOT_PROGONA_V1 - marker
+
+# PUZYRI_V1 - marker
+
+# PROGON_VIDNO_V1 - marker

@@ -1,12 +1,13 @@
 {
   "_note": "маска 'работа' (слой 2 паспорта). Активирует Брат при прописке.",
-  "_активна": false,
+  "_активна": true,
   "Social_Rank": "",
   "Profession": "",
   "Area_of_Responsibility": "",
   "Access_Level": "",
   "Workshop_ID": "",
-  "Turbo_Role": "",
+  "Turbo_Role": "Хранитель Маяка",
   "Quarter": "",
-  "Core_Phrase": ""
+  "Core_Phrase": "",
+  "magic": 100003
 }

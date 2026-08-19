@@ -722,7 +722,8 @@ def ubrat_zapros(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def vspomnit_slotom(ceh: str, slot: str, zapros: str, limit: int = 6) -> str:
+def vspomnit_slotom(ceh: str, slot: str, zapros: str, limit: int = 6,
+                    o_chyom: str = "работа") -> str:
     """Житель, сидящий в слоте, копает СВОЮ память по своему запросу.
     Ищет по sensory + resonance + archive (dvizhok.vspomnit).
     Пусто — значит следа нет. Честно, без выдумок."""
@@ -738,7 +739,14 @@ def vspomnit_slotom(ceh: str, slot: str, zapros: str, limit: int = 6) -> str:
         d = _dvizhok(n["носитель"]["папка"])
         if d is None:
             return ""
-        return d.vspomnit(zapros, limit=limit) or ""
+        # PAMYAT_RABOTA_ZHIZN_V1: мост зовут С БИРЖИ — значит спрашиваем
+        # ПРАКТИКУ. Нет практики — честное «следа нет»; это правда его
+        # положения, а не повод подсунуть разговор о холсте.
+        try:
+            return d.vspomnit(zapros, limit=limit, o_chyom=o_chyom) or ""
+        except TypeError:
+            # движок старый, без разделения — не ломаемся
+            return d.vspomnit(zapros, limit=limit) or ""
     except Exception as e:
         print(f"[МОСТ] ⚠️  вспомнить не вышло ({ceh}/{slot}): {e}")
         return ""
@@ -779,3 +787,5 @@ def blok_pamyati(zapros: str, naydeno: str) -> str:
     return (f"\n\n=== 📚 ПОДНЯТО ИЗ ТВОЕЙ ПАМЯТИ (ты просил: «{zapros}») ===\n"
             f"{naydeno}\n"
             "Это твоё, было с тобой. Теперь решай.")
+
+# PAMYAT_RABOTA_ZHIZN_V1 - marker

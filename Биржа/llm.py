@@ -202,7 +202,11 @@ def chat_with_tools(
     user: str,
     knowledge: str = "",
     tools_schema: Optional[list] = None,
-    max_tool_rounds: int = 3,
+    # KRAYNIYE_TOCHKI_V1: было 3 — на матрёшку Шефа (зигзаг целиком →
+    # волна C внутри него → её третья волна) этого не хватает: три-
+    # четыре растяжки подряд, каждая с картинкой. На старом потолке
+    # трейдер упирался на середине и отвечал недосмотрев.
+    max_tool_rounds: int = 12,
     temperature: Optional[float] = None,
     on_tool_call: Optional[Callable] = None,
     agent_id: str = "unknown",
@@ -629,7 +633,7 @@ def chat_with_images_and_tools(
     knowledge: str = "",
     tools_schema: Optional[list] = None,
     executors: Optional[dict] = None,
-    max_tool_rounds: int = 4,
+    max_tool_rounds: int = 12,      # KRAYNIYE_TOCHKI_V1
     temperature: Optional[float] = None,
     history: Optional[list] = None,
     on_tool_call: Optional[Callable] = None,
@@ -737,6 +741,25 @@ def chat_with_images_and_tools(
                     pass
             messages.append({"role": "tool", "tool_call_id": tc["id"],
                              "content": otvet})
+            # RASTYAZHKA_V1: рука вернула метку кадра — досылаем саму
+            # КАРТИНКУ отдельным сообщением. В ответ руки изображение
+            # не положить, а трейдеру нужно увидеть, а не прочитать.
+            if isinstance(otvet, str) and otvet.startswith("[КАДР: "):
+                try:
+                    import base64 as _b64
+                    from pathlib import Path as _P
+                    _put = _P(otvet[7:otvet.index("]")])
+                    if _put.exists():
+                        _b = _b64.b64encode(_put.read_bytes()).decode("ascii")
+                        messages.append({"role": "user", "content": [
+                            {"type": "image_url", "image_url": {
+                                "url": f"data:image/png;base64,{_b}"}},
+                            {"type": "text",
+                             "text": "Вот картинка, которую ты попросил(а). "
+                                     "Смотри."}]})
+                        print(f"[РУКА] 🖼 дослал кадр: {_put.name}")
+                except Exception as _ek:
+                    print(f"[РУКА] кадр не дослался: {_ek}")
 
     return "Разговор с руками не сошёлся — рук попросили больше, чем можно."
 
@@ -744,3 +767,7 @@ def chat_with_images_and_tools(
 # RUKI_TREYDERA_V1 - marker
 
 # RUKA_MAYAKA_V1 - marker
+
+# RASTYAZHKA_V1 - marker
+
+# KRAYNIYE_TOCHKI_V1 - marker

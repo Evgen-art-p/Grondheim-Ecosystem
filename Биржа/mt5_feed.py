@@ -43,7 +43,10 @@ OUT_DIR      = _HERE / "state" / "feed_out"   # сюда пишутся свод
 _TF_MAP = {
     "M1": 1, "M5": 5, "M10": 10, "M15": 15, "M30": 30,
     "H1": 16385, "H2": 16386, "H4": 16388, "H8": 16392, "H12": 16396,
-    "D1": 16408, "W1": 16409, "MN1": 16410,
+    # SVEZHEST_V1: W1 и MN1 были 16409 и 16410 — таких кодов у MT5
+    # нет. Недельный и месячный этажи город не получал НИКОГДА,
+    # а по ним считается компас: он был слеп по определению.
+    "D1": 16408, "W1": 32769, "MN1": 49153,
 }
 
 # Конфиг по умолчанию — создаётся при первом запуске, если файла нет.
@@ -128,7 +131,25 @@ def _fetch(mt5, symbol: str, tf_name: str, count: int) -> tuple[list, Optional[f
             info = mt5.symbol_info(symbol)
         point = float(info.point) if info and info.point else None
 
+        # SVEZHEST_V1: MT5 отдаёт пусто, пока история этажа не
+        # «прокачана» в терминале — особенно на старших. Лечится тем
+        # же приёмом, что и везде: выбрать символ в обзор рынка и
+        # повторить. Первый заход часто пустой, второй приносит.
         rates = mt5.copy_rates_from_pos(symbol, tf_code, 0, count)
+        if rates is None or len(rates) == 0:
+            import time as _t
+            try:
+                mt5.symbol_select(symbol, True)
+            except Exception:
+                pass
+            for _popytka in (1, 2):
+                _t.sleep(0.35)
+                rates = mt5.copy_rates_from_pos(symbol, tf_code, 0, count)
+                if rates is not None and len(rates):
+                    print(f"[FEED] {symbol} {tf_name}: пришли со "
+                          f"{_popytka + 1}-й попытки "
+                          f"(история подкачалась)")
+                    break
     finally:
         mt5.shutdown()
 
@@ -349,3 +370,5 @@ if __name__ == "__main__":
     hist = int(cfg.get("history_bars", 2000))
     for it in cfg.get("watchlist", []):
         _handle_instrument(it, hist)
+
+# SVEZHEST_V1 - marker

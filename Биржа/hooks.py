@@ -2288,6 +2288,15 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
         itog["причина"] = "williams_core вернул пусто"
         return itog
 
+    # SVEZHEST_V1: отмечаем, на каком баре город стоит сейчас, —
+    # по этой отметке Исполнитель отличает свежий вердикт от вчерашнего.
+    try:
+        _t_bar = load_trading_state()
+        _t_bar.setdefault("рынок", {})["бар"] = str(md.get("bar_time") or "")
+        save_trading_state(_t_bar)
+    except Exception as _eb:
+        print(f"[РЫНОК] отметку бара не поставил: {_eb}")
+
     state = {"chain_data": {"market_data": md}}
     cd = state["chain_data"]
     # Подушка безопасности Вильямса — экстремум второго бара назад.
@@ -2335,3 +2344,5 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # RABOTA_PO_PARE_V1 - marker
 
 # UBRAT_CHETVERTOGO_V1 - marker
+
+# SVEZHEST_V1 - marker

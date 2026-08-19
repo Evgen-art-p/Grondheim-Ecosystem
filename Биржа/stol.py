@@ -148,17 +148,32 @@ def nakryt(symbol: str, timeframe: str,
     # своим инструментом на своём масштабе. Раньше компас наследовал
     # этаж Искры — то есть был эхом сигнала, а не проверкой.
     compass = None
+    starshiy_tf = None
+    starshiy_prishyol = False
     try:
-        from global_anchor import global_trend
+        from global_anchor import global_trend, senior_timeframe
+        starshiy_tf = senior_timeframe(timeframe)
         st = global_trend(symbol, timeframe,
                           as_of_date=(md.get("bar_time")))
+        starshiy_prishyol = bool((st or {}).get("ok"))
         b = (st or {}).get("bias")
         compass = b if b in ("BULL", "BEAR") else None
     except Exception:
         compass = None
-    if compass is None:
-        gb = md.get("global_bias")
-        compass = gb if gb in ("BULL", "BEAR") else None
+    # KOMPAS_CHESTNYY_V1: раньше здесь стояла ПОДМЕНА — старший этаж
+    # не пришёл, и компас брался из md["global_bias"], который считан
+    # по РАБОЧЕМУ этажу. А на столе он оставался подписан «старший
+    # Аллигатор»: трейдер думал, что видит направление сверху, а видел
+    # свой же этаж. Тихое враньё — не падает, не жалуется, выглядит
+    # правдой, и на него опирается решение.
+    # Теперь: не пришёл — значит нет. Направление рабочего этажа
+    # отдаётся отдельной строкой, под своим именем.
+    if compass is None and not starshiy_prishyol:
+        print(f"[СТОЛ] ⚠️  компаса нет: старший этаж "
+              f"{starshiy_tf or '?'} не пришёл")
+    svoy_etazh_napravlenie = md.get("global_bias")
+    if svoy_etazh_napravlenie not in ("BULL", "BEAR"):
+        svoy_etazh_napravlenie = None
 
     napravlenie = nb.get("direction")
 
@@ -204,6 +219,11 @@ def nakryt(symbol: str, timeframe: str,
     ao = md.get("ao", {}) or {}
     stol["приборы"] = {
         "старший_аллигатор": compass,          # куда смотрит большая вода
+        # KOMPAS_CHESTNYY_V1: чем именно пуст компас и что говорит
+        # рабочий этаж — под своим именем, а не под чужим
+        "старший_этаж": starshiy_tf,
+        "старший_пришёл": starshiy_prishyol,
+        "направление_рабочего": svoy_etazh_napravlenie,
         "этаж": timeframe,
         "аллигатор": {
             "челюсть": al.get("jaw"), "зубы": al.get("teeth"),
@@ -223,9 +243,47 @@ def nakryt(symbol: str, timeframe: str,
                       "доля_от_пика": rb.get("tension_ratio")},
         "цена": md.get("price"),
         "бар": md.get("bar_time"),
+        # ── PRIBORY_NA_STOL_V1 ───────────────────────────────
+        # Всё это ядро считало и раньше — но на стол не выкладывало,
+        # и трейдер их не видел. Особенно разворотный бар: его
+        # зовут на место ИМЕННО из-за него, а на столе его не было.
+        "разворотный_бар": {
+            "есть": bool((md.get("necron_bar") or {}).get("direction")),
+            "сторона": (md.get("necron_bar") or {}).get("direction"),
+            "цена": (md.get("necron_bar") or {}).get("price"),
+        },
+        # ЗОНА по Вильямсу (iZone из эксперта Шефа): AO и AC вместе.
+        # Зелёная — оба растут, красная — оба падают, серая — спорят.
+        "зона": _zona(md),
+        "ac": {
+            "значение": (md.get("ac") or {}).get("value"),
+            "прошлое": (md.get("ac") or {}).get("prev_value"),
+            "растёт": (md.get("ac") or {}).get("direction"),
+        },
+        "дивергенция_ao": md.get("divergence_ao"),
+        "приседающий_бар": bool((md.get("squat") or {}).get("last_squat")),
     }
 
     return stol
+
+
+def _zona(md: dict) -> str:
+    """ЗЕЛЁНАЯ / КРАСНАЯ / СЕРАЯ — и ни слова о том, что с этим делать.
+
+    PRIBORY_NA_STOL_V1, по iZone.mq4 из Profitunity_MT4:
+        AO растёт И AC растёт  → зелёная
+        AO падает И AC падает  → красная
+        иначе                  → серая
+    """
+    ao_d = ((md or {}).get("ao") or {}).get("direction")
+    ac_d = ((md or {}).get("ac") or {}).get("direction")
+    if not ao_d or not ac_d:
+        return "—"
+    if ao_d == "UP" and ac_d == "UP":
+        return "ЗЕЛЁНАЯ"
+    if ao_d == "DOWN" and ac_d == "DOWN":
+        return "КРАСНАЯ"
+    return "СЕРАЯ"
 
 
 def slovami(stol: dict) -> str:
@@ -241,7 +299,13 @@ def slovami(stol: dict) -> str:
     nt = p.get("натяжение", {}) or {}
     c = p.get("цена", {}) or {}
     L = [
-        f"старший Аллигатор: {p.get('старший_аллигатор') or '—'}   "
+        (f"старший Аллигатор: {p.get('старший_аллигатор')}"
+         if p.get('старший_аллигатор')
+         else f"старший Аллигатор: НЕТ ДАННЫХ "
+              f"({p.get('старший_этаж') or 'старший этаж'} не пришёл)")
+        + (f"   направление рабочего: {p.get('направление_рабочего')}"
+           if p.get('направление_рабочего') else "")
+        + f"   "
         f"этаж: {p.get('этаж') or '—'}",
         f"Аллигатор: челюсть {al.get('челюсть')}  зубы {al.get('зубы')}  "
         f"губы {al.get('губы')}   спит: {al.get('спит')}   "
@@ -253,6 +317,17 @@ def slovami(stol: dict) -> str:
         f"объём (окно): {p.get('объём_окно') or '—'}",
         f"натяжение от губ: {nt.get('сейчас')} п. (пик {nt.get('пик')}, "
         f"доля {nt.get('доля_от_пика')})",
+        # PRIBORY_NA_STOL_V1: то, ради чего трейдера зовут, — первой
+        # строкой, а не в конце и не молчком.
+        f"РАЗВОРОТНЫЙ БАР: "
+        f"{(p.get('разворотный_бар') or {}).get('сторона') or 'нет'}"
+        + (f" @ {(p.get('разворотный_бар') or {}).get('цена')}"
+           if (p.get('разворотный_бар') or {}).get('есть') else ""),
+        f"зона (AO+AC): {p.get('зона') or '—'}   "
+        f"AC: {(p.get('ac') or {}).get('значение')} "
+        f"({(p.get('ac') or {}).get('растёт') or '—'})",
+        f"дивергенция AO: {p.get('дивергенция_ao')}   "
+        f"приседающий бар: {p.get('приседающий_бар')}",
         f"цена: O={c.get('open')} H={c.get('high')} L={c.get('low')} "
         f"C={c.get('close')}   бар: {p.get('бар')}",
     ]
@@ -265,3 +340,7 @@ if __name__ == "__main__":
     tf = sys.argv[2] if len(sys.argv) > 2 else "H1"
     print(f"Стол {s} {tf}:\n")
     print(slovami(nakryt(s, tf)))
+
+# PRIBORY_NA_STOL_V1 - marker
+
+# KOMPAS_CHESTNYY_V1 - marker

@@ -101,9 +101,15 @@ def _read_traders() -> dict:
     from hooks import load_trading_state
     t = load_trading_state()
     return {
-        "brut": t.get("brut", {}),
-        "avan": t.get("avan", {}),
-        "cons": t.get("cons", {}),
+        # SVEZHEST_V1: только СЕГОДНЯШНИЕ вердикты. Молчавший трейдер
+        # оставляет в столе прошлую запись, и она шла в дело как
+        # свежая: в логе 18.08 Совет A07/A08 не звал, а Исполнитель
+        # доложил их вердикты. Там был REJECTED — безобидно; но если
+        # бы лежал APPROVED с ценой, он поставил бы ордер по вчерашнему
+        # слову. Лучше пропустить вход, чем открыть по протухшему.
+        "brut": _svezhiy(t, "brut"),
+        "avan": _svezhiy(t, "avan"),
+        "cons": _svezhiy(t, "cons"),
     }
 
 
@@ -747,3 +753,32 @@ def _chat_s_mayakom(**kw):
 
 
 # RUKA_MAYAKA_V1 - marker
+
+
+def _tekushchiy_bar(t: dict) -> str:
+    """Бар, на котором город стоит сейчас (его пишет рука рынка)."""
+    return str((t.get("рынок") or {}).get("бар") or t.get("бар") or "")
+
+
+def _svezhiy(t: dict, key: str) -> dict:
+    """SVEZHEST_V1: вердикт этого бара — или пусто.
+
+    Нет отметки бара (запись старая, до патча) — тоже пусто: чужого
+    вчерашнего слова нам не надо.
+    """
+    v = dict(t.get(key, {}) or {})
+    if not v:
+        return {}
+    bar_seychas = _tekushchiy_bar(t)
+    bar_verdikta = str(v.get("бар") or v.get("bar_time") or "")
+    if not bar_seychas:
+        return v            # город не сказал, какой бар — не судим строго
+    if bar_verdikta and bar_verdikta == bar_seychas:
+        return v
+    print(f"[ИСПОЛНИТЕЛЬ] ⏳ {key}: вердикт "
+          f"{'от ' + bar_verdikta if bar_verdikta else 'без отметки бара'} "
+          f"— не считаю (сейчас {bar_seychas})")
+    return {}
+
+
+# SVEZHEST_V1 - marker

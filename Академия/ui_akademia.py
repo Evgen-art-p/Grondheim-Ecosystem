@@ -483,15 +483,121 @@ async def _zvat_llm_akademii(messages, model: str = "") -> str:
     # из некоторых регионов -- та же настройка, что и в остальном городе.
     _proxy = os.getenv("PROXY_URL", "") or None
     headers = {"Authorization": f"Bearer {_key}", "Content-Type": "application/json"}
-    payload = {"model": model or DEFAULT_MODEL, "messages": messages}
+    messages = list(messages)
+
+    # UCHEBNIK_UCHENIKU_V1: руки ученика. Картинки Академии были
+    # доступны трейдерам на Бирже и НЕДОСТУПНЫ ученику в самой
+    # Академии — там, где по ним и учат. Показывал Ректор, когда сочтёт
+    # нужным; сам ученик заглянуть в учебник не мог.
+    # Важно для учёбы: в память ложится не картинка, а его СОБСТВЕННЫЙ
+    # текст о ней (наблюдение Шефа 05.08). Пока вернуться к рисунку
+    # было нельзя, это был приговор: посмотрел раз, пересказал — и
+    # живёшь с пересказом.
+    ruki_shema, ruki = _ruki_uchenika()
+    for _krug in range(5):
+        payload = {"model": model or DEFAULT_MODEL, "messages": messages}
+        if ruki_shema and _krug < 4:
+            payload["tools"] = ruki_shema
+            payload["tool_choice"] = "auto"
+        try:
+            async with httpx.AsyncClient(timeout=120, proxy=_proxy) as client:
+                r = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers, json=payload)
+                r.raise_for_status()
+                msg = r.json()["choices"][0]["message"]
+        except Exception as e:
+            return f"⚠ не отозвался: {e}"
+
+        if not msg.get("tool_calls"):
+            return msg.get("content") or ""
+
+        messages.append({"role": "assistant",
+                         "content": msg.get("content") or "",
+                         "tool_calls": msg["tool_calls"]})
+        for tc in msg["tool_calls"]:
+            imya = tc["function"]["name"]
+            try:
+                args = json.loads(tc["function"].get("arguments", "{}"))
+            except Exception:
+                args = {}
+            ruka = ruki.get(imya)
+            otvet = ruka(args) if ruka else f"такой руки нет: {imya}"
+            print(f"[УЧЕНИК] 🖐 {imya}({args})")
+            messages.append({"role": "tool", "tool_call_id": tc["id"],
+                             "content": str(otvet)})
+            # метка кадра — досылаем саму КАРТИНКУ, иначе ученик
+            # получит путь к файлу вместо рисунка
+            if isinstance(otvet, str) and otvet.startswith("[КАДР: "):
+                try:
+                    import base64 as _b64
+                    _p = Path(otvet[7:otvet.index("]")])
+                    if _p.exists():
+                        _b = _b64.b64encode(_p.read_bytes()).decode("ascii")
+                        _mime = ("image/png" if _p.suffix.lower() == ".png"
+                                 else "image/jpeg")
+                        messages.append({"role": "user", "content": [
+                            {"type": "image_url", "image_url": {
+                                "url": f"data:{_mime};base64,{_b}"}},
+                            {"type": "text",
+                             "text": "Вот рисунок из учебника, который ты "
+                                     "попросил(а). Смотри внимательно."}]})
+                        print(f"[УЧЕНИК] 🖼 показан {_p.name}")
+                except Exception as _e:
+                    print(f"[УЧЕНИК] картинка не дошла: {_e}")
+    return "⚠ разговор с руками не сошёлся"
+
+
+def _ruki_uchenika():
+    """(схема, руки) — учебник Академии. Не заводим второй: зовём тот
+    же Биржа/uchebnik.py, что сканирует дисциплины. Положишь новую
+    книгу — увидят и ученик, и трейдер, разом."""
     try:
-        async with httpx.AsyncClient(timeout=120, proxy=_proxy) as client:
-            r = await client.post("https://openrouter.ai/api/v1/chat/completions",
-                                  headers=headers, json=payload)
-            r.raise_for_status()
-            return r.json()["choices"][0]["message"]["content"]
+        _repo = Path(__file__).resolve().parent.parent
+        if str(_repo / "Биржа") not in sys.path:
+            sys.path.insert(0, str(_repo / "Биржа"))
+        import uchebnik as _u
     except Exception as e:
-        return f"⚠ не отозвался: {e}"
+        print(f"[УЧЕНИК] учебник не подключился: {e}")
+        return None, {}
+
+    shema = [
+        {"type": "function", "function": {
+            "name": "uchebnik",
+            "description": (
+                "ПОКАЗАТЬ рисунок из учебника, по которому тебя учат. "
+                "Скажи тему словами: «приседающий бар», «фрактал», «волны "
+                "AO». Ты УВИДИШЬ сам рисунок и авторскую подпись. Проси, "
+                "когда хочешь свериться с книгой, а не вспоминать."),
+            "parameters": {"type": "object", "properties": {
+                "о_чём": {"type": "string", "description": "тема словами"},
+                "дисциплина": {"type": "string",
+                               "description": "необязательно: сузить поиск"}},
+                "required": ["о_чём"]}}},
+        {"type": "function", "function": {
+            "name": "chemu_uchili",
+            "description": "Какие дисциплины и сколько рисунков есть.",
+            "parameters": {"type": "object", "properties": {},
+                           "required": []}}},
+    ]
+
+    def _pokazat(args):
+        o = str(args.get("о_чём", "")).strip()
+        tema = str(args.get("дисциплина", "")).strip()
+        try:
+            nashlos = _u.nayti(o, skolko=1, tema=tema)
+        except Exception as e:
+            return f"учебник не открылся: {e}"
+        if not nashlos:
+            return (f"по «{o}» рисунка не нашёл. Что есть:\n{_u.temy()}")
+        p, t, glava, podpis = nashlos[0]
+        hvost = f" · {glava}" if glava else ""
+        podp = f"\nподпись автора: {podpis}" if podpis else ""
+        return f"[КАДР: {p}] учебник · {t}{hvost} · {p.name}{podp}"
+
+    return shema, {"uchebnik": _pokazat,
+                   "chemu_uchili": lambda a: "=== ДИСЦИПЛИНЫ ===\n"
+                                             + _u.temy()}
 
 
 def _dvizhok_dlya(dom: Path):
@@ -1916,3 +2022,5 @@ if __name__ in {"__main__", "__mp_main__"}:
 # AKADEMIA_KABINET_V1 — маркер идемпотентности
 
 # CHTENIE_KNIGI_V1 - marker
+
+# UCHEBNIK_UCHENIKU_V1 - marker

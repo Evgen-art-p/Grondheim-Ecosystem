@@ -316,11 +316,17 @@ def zavesti(post_id: str, polya: dict | None = None) -> tuple:
     d = _chitat(put)
     if d is None:
         d = blank(post_id, polya)
+        # MAGIC_PRI_MESTE_V2: кресло получает номер счёта СРАЗУ, при
+        # заведении. Потом его никто не выдаёт вручную и не забывает.
+        if not d.get("magic"):
+            d["magic"] = magic_dlya_slota(d.get("слот") or "")
         msg = "должность заведена"
     else:
         for k, v in (polya or {}).items():
             if k in POLYA_BLANKA and v not in (None, "", []) and not d.get(k):
                 d[k] = v
+        if not d.get("magic"):      # MAGIC_PRI_MESTE_V2: старым местам тоже
+            d["magic"] = magic_dlya_slota(d.get("слот") or "")
         msg = "должность обновлена"
     return (True, msg) if _pisat(put, d) else (False, "не записался")
 
@@ -360,6 +366,8 @@ def prinyat(post_id: str, imya: str, kem: str = "Шеф",
     if not _pisat(put, d):
         return False, "документ не записался"
     _otmetka(imya, d)
+    # MAGIC_PRI_MESTE_V2: сел в кресло — работаешь под ЕГО номером.
+    _maska_po_postu(imya, d)
     return True, f"{imya} принят на «{d.get('название', post_id)}»"
 
 
@@ -378,6 +386,10 @@ def uvolit(post_id: str, kem: str = "Шеф", pochemu: str = "") -> tuple:
     if not _pisat(put, d):
         return False, "документ не записался"
     _otmetka(imya, None)
+    # MAGIC_PRI_MESTE_V2: ушёл — номер остался при кресле, а не уехал
+    # с человеком. Иначе уволенный продолжает числиться на месте, где
+    # уже сидит другой.
+    _maska_po_postu(imya, None)
     return True, f"{imya} уволен, место свободно"
 
 
@@ -431,3 +443,64 @@ def est_post_na_slote(ceh: str, slot: str) -> bool:
 # LOKACIYA_DAYOT_MESTA_V1 - marker
 
 # INSTRUMENT_NAZNACHIT_ILI_SAM_V1 - marker
+
+
+# ── MAGIC_PRI_MESTE_V2: маска работы = проекция ПОСТА ────────
+# Правда о найме живёт в посте. Маска жителя её отражает — и должна
+# меняться ровно тогда, когда меняется пост.
+#
+# Раньше prinyat/uvolit маску НЕ ТРОГАЛИ: Нину сажали руками — маска
+# заполнилась, Синди и Веру через Страницу Работы — осталась пустой,
+# без магика. А уволенный Илья продолжал числиться на A07, где уже
+# сидела Синди: судья мог отдать вывод из сделки не тому человеку.
+#
+# Магик при этом принадлежит КРЕСЛУ, а не жильцу: пересел — номер
+# остался за местом и достался новому.
+def _maska_po_postu(imya: str, post: dict | None) -> bool:
+    """post=None — гасим маску (уволен). Иначе — заполняем из поста."""
+    dom = dom_zhitelya(imya)
+    if dom is None:
+        return False
+    mf = dom / "маски" / "работа" / "mask.json"
+    mk = _chitat(mf) or {}
+    if post is None:
+        mk["Workshop_ID"] = ""
+        mk["Turbo_Role"] = ""
+        mk["magic"] = None
+        mk["_активна"] = False
+    else:
+        mk["Workshop_ID"] = post.get("цех") or post.get("квартал") or ""
+        mk["Turbo_Role"] = post.get("слот") or post.get("название") or ""
+        mk["magic"] = post.get("magic")
+        # реестр берёт ТОЛЬКО активные маски: неактивная = человека по
+        # магику не найдут, и вывод судьи повиснет
+        mk["_активна"] = True
+    try:
+        mf.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    return _pisat(mf, mk)
+
+
+def magic_dlya_slota(slot: str) -> int:
+    """Номер счёта для КРЕСЛА. Схема из старого тестера, она уже жила
+    в городе: A06→100001, A07→100002, A08→100003. Новый слот получает
+    следующий свободный, чтобы номера не сталкивались."""
+    izvestnye = {"A06": 100001, "A07": 100002, "A08": 100003}
+    s = (slot or "").strip().upper()
+    if s in izvestnye:
+        return izvestnye[s]
+    zanyato = set()
+    if POSTY.exists():
+        for d in POSTY.iterdir():
+            p = _chitat(d / "пост.json") or {}
+            m = p.get("magic")
+            if isinstance(m, int):
+                zanyato.add(m)
+    n = 100001
+    while n in zanyato:
+        n += 1
+    return n
+
+
+# MAGIC_PRI_MESTE_V2 - marker

@@ -1,0 +1,157 @@
+# -*- coding: utf-8 -*-
+# DOSKA_V1
+"""
+ДОСКА ИНСТРУМЕНТА — общая память о структуре.
+
+ЗАЧЕМ
+    Разворотник нельзя отсеять по числам: замер 16.08 показал, что все
+    признаки на рабочем этаже дают одинаковые 11-13%. Отсев — это
+    взгляд на растянутой волне C, а не формула. Значит конец коррекции
+    (ТОЧКУ НОЛЬ) объявляет тот, кто посмотрел.
+
+    А от точки ноль пляшут остальные: пошла первая волна, ждём откат к
+    ней. Без общей доски объявленное одним не видно другим, и
+    откатчицы честно отвечают «нет первой волны» — им никто не сказал,
+    откуда она начала расти.
+
+ЗАКОН ЭТОГО ФАЙЛА
+    Доска ЗАПИСЫВАЕТ и ПОКАЗЫВАЕТ. Она не судит, прав ли объявивший, и
+    сама ничего не объявляет. Пусто — значит никто не смотрел или
+    никто не увидел; это честное состояние, а не поломка.
+
+    Помним КТО объявил и ПОЧЕМУ — его словами. По итогу сделки будет
+    видно, чей взгляд оказался верным.
+"""
+from __future__ import annotations
+
+import sys as _sys
+from datetime import datetime
+from pathlib import Path
+
+_BIRZHA = Path(__file__).resolve().parent
+if str(_BIRZHA) not in _sys.path:
+    _sys.path.insert(0, str(_BIRZHA))
+
+PUSTO = {"точка_ноль": None, "первая_волна": None, "откат": None}
+
+
+def _vsya() -> dict:
+    from hooks import load_trading_state
+    return (load_trading_state().get("доска") or {})
+
+
+def _sohranit(d: dict):
+    from hooks import load_trading_state, save_trading_state
+    t = load_trading_state()
+    t["доска"] = d
+    save_trading_state(t)
+
+
+def chitat(symbol: str) -> dict:
+    """Что на доске по этому инструменту."""
+    s = (symbol or "").strip().upper()
+    d = dict(PUSTO)
+    d.update((_vsya().get(s) or {}))
+    return d
+
+
+def obyavit_tochku_nol(symbol: str, kto: str, cena, kogda: str,
+                       pochemu: str = "") -> tuple:
+    """Объявить конец коррекции. Ставит НОВУЮ точку и стирает то, что
+    от прежней выросло: раз корень другой — и волна, и откат другие."""
+    s = (symbol or "").strip().upper()
+    if not s:
+        return False, "не сказано, по какому инструменту"
+    try:
+        cena = float(cena)
+    except Exception:
+        return False, f"цена не число: {cena}"
+    vsya = _vsya()
+    vsya[s] = {
+        "точка_ноль": {"кто": kto, "цена": cena, "бар": kogda,
+                       "почему": (pochemu or "").strip()[:500],
+                       "объявлено": datetime.now().isoformat(
+                           timespec="seconds")},
+        "первая_волна": None,
+        "откат": None,
+    }
+    _sohranit(vsya)
+    return True, f"{kto}: точка ноль {s} @ {cena} ({kogda})"
+
+
+def obyavit_pervuyu_volnu(symbol: str, kto: str, do_ceny,
+                          pochemu: str = "") -> tuple:
+    """От точки ноль пошла первая волна и дошла досюда."""
+    s = (symbol or "").strip().upper()
+    d = chitat(s)
+    if not d.get("точка_ноль"):
+        return False, ("точки ноль нет — от чего волна? Сперва кто-то "
+                       "должен объявить конец коррекции")
+    try:
+        do_ceny = float(do_ceny)
+    except Exception:
+        return False, f"цена не число: {do_ceny}"
+    vsya = _vsya()
+    vsya.setdefault(s, dict(PUSTO))["первая_волна"] = {
+        "кто": kto, "докуда": do_ceny,
+        "почему": (pochemu or "").strip()[:500],
+        "объявлено": datetime.now().isoformat(timespec="seconds")}
+    _sohranit(vsya)
+    return True, f"{kto}: первая волна {s} до {do_ceny}"
+
+
+def obyavit_otkat(symbol: str, kto: str, pochemu: str = "") -> tuple:
+    """К первой волне начался откат — то, чего ждут откатчицы."""
+    s = (symbol or "").strip().upper()
+    d = chitat(s)
+    if not d.get("первая_волна"):
+        return False, "первой волны нет — откатывать нечему"
+    vsya = _vsya()
+    vsya.setdefault(s, dict(PUSTO))["откат"] = {
+        "кто": kto, "почему": (pochemu or "").strip()[:500],
+        "объявлено": datetime.now().isoformat(timespec="seconds")}
+    _sohranit(vsya)
+    return True, f"{kto}: пошёл откат к первой волне {s}"
+
+
+def steret(symbol: str, kto: str = "") -> tuple:
+    """Структура сломалась — доска чистая. Тоже решение, и тоже чьё-то."""
+    s = (symbol or "").strip().upper()
+    vsya = _vsya()
+    if s in vsya:
+        vsya.pop(s)
+        _sohranit(vsya)
+    return True, f"{kto or 'кто-то'}: доска {s} стёрта"
+
+
+def slovami(symbol: str) -> str:
+    """Доска человеку и трейдеру. Только записанное, без выводов."""
+    d = chitat(symbol)
+    tn = d.get("точка_ноль")
+    if not tn:
+        return ("=== ДОСКА · " + (symbol or "?") + " ===\n"
+                "Пусто: точку ноль (конец коррекции) никто не объявлял.\n"
+                "Пока её нет, отсчитывать первую волну не от чего.")
+    L = ["=== ДОСКА · " + symbol.upper() + " ===",
+         f"ТОЧКА НОЛЬ: {tn['цена']} на баре {tn['бар']} — "
+         f"объявил(а) {tn['кто']}"]
+    if tn.get("почему"):
+        L.append(f"   почему: {tn['почему']}")
+    pv = d.get("первая_волна")
+    if pv:
+        L.append(f"ПЕРВАЯ ВОЛНА: дошла до {pv['докуда']} — {pv['кто']}")
+        if pv.get("почему"):
+            L.append(f"   почему: {pv['почему']}")
+    else:
+        L.append("ПЕРВАЯ ВОЛНА: ещё не объявлена")
+    ot = d.get("откат")
+    if ot:
+        L.append(f"ОТКАТ: идёт — {ot['кто']}")
+        if ot.get("почему"):
+            L.append(f"   почему: {ot['почему']}")
+    else:
+        L.append("ОТКАТ: не объявлен")
+    return "\n".join(L)
+
+
+# DOSKA_V1 - marker

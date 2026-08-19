@@ -155,6 +155,57 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
                 ax.plot(k, cena + dy * razmah * 0.012, marker=znak,
                         color="#7a4fbf", markersize=8, zorder=5)
 
+    # RB_NA_KADRE_V1: РАЗВОРОТНЫЕ БАРЫ — как в терминале Шефа.
+    # Фракталы мы рисуем и объясняем это тем, что иначе трейдер будет
+    # считать бары глазами. С разворотником вышло ровно так: он важнее
+    # (по нему входят), а на кадре его не было вовсе — трейдер смотрел
+    # на голые свечи и гадал, о каком баре речь.
+    # Правило то же, что в ядре (detect_necron_bar) и в твоём
+    # iDivergenceBar.mq4: сдвиг линий 8/5/3, новый экстремум, закрытие
+    # в противоположной половине и весь бар ЦЕЛИКОМ вне пасти. Считаем
+    # прямо по рядам линий — одним проходом по окну кадра.
+    try:
+        from williams_core import _shifted_series
+        _jaw = _shifted_series(alligator.get("jaw_series"), 8)
+        _teeth = _shifted_series(alligator.get("teeth_series"), 5)
+        _lips = _shifted_series(alligator.get("lips_series"), 3)
+        _razmah_rb = max(x["high"] for x in b) - min(x["low"] for x in b)
+        _sdvig_rb = len(bars) - n
+        _posledniy = None
+        for _k in range(1, n):
+            _i = _sdvig_rb + _k
+            if _i < 1 or _i >= len(_jaw):
+                continue
+            _j, _t, _l = _jaw[_i], _teeth[_i], _lips[_i]
+            if _j is None or _t is None or _l is None:
+                continue
+            _up, _dn = max(_l, _t, _j), min(_l, _t, _j)
+            _bar, _pred = bars[_i], bars[_i - 1]
+            _mid = (_bar["high"] + _bar["low"]) / 2
+            _storona = None
+            if (_bar["high"] > _pred["high"] and _bar["close"] < _mid
+                    and _bar["low"] > _up):
+                _storona = "BEAR"
+            elif (_bar["low"] < _pred["low"] and _bar["close"] > _mid
+                    and _bar["high"] < _dn):
+                _storona = "BULL"
+            if not _storona:
+                continue
+            _bych = _storona == "BULL"
+            _cena = _bar["low"] if _bych else _bar["high"]
+            _dy = -1 if _bych else 1
+            ax.plot(_k, _cena + _dy * _razmah_rb * 0.02,
+                    marker="^" if _bych else "v",
+                    color="#e0a020", markersize=11, zorder=6)
+            _posledniy = (_k, _cena, _dy)
+        if _posledniy:
+            _k, _cena, _dy = _posledniy
+            ax.plot(_k, _cena + _dy * _razmah_rb * 0.02, marker="o",
+                    markerfacecolor="none", markeredgecolor="#e0a020",
+                    markersize=20, markeredgewidth=1.6, zorder=6)
+    except Exception as _e_rb:
+        print(f"[КАДР] разворотники не нарисовались: {_e_rb}")
+
     ax.set_facecolor(C_FON)
     ax.grid(True, color="#00000012", linewidth=0.8)
     # правее последней свечи оставляем место под вынос линий
@@ -245,3 +296,5 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
                      fraktaly=fr)
 
 # KADR_I_VAKANSIYA_V1 - marker
+
+# RB_NA_KADRE_V1 - marker

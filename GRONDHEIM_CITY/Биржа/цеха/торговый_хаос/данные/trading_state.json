@@ -1,58 +1,19 @@
 {
   "version": 1,
-  "updated": "2026-08-16T06:46:45.402542",
+  "updated": "2026-08-18T03:55:09.601164",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
     "history_dna": ""
   },
-  "positions": [
-    {
-      "trader": "BRUT",
-      "magic": 100001,
-      "direction": "LONG",
-      "entry": 0.70843,
-      "stop": 0.70788,
-      "tp": null,
-      "lot": 0.1,
-      "status": "OPEN",
-      "mode": "PAPER",
-      "opened_at": "2026.08.14 00:00",
-      "pnl": null,
-      "iskra_zero_point": null,
-      "стол_входа": {
-        "iskra": {
-          "t1_status": "NOT_FOUND",
-          "zero_point_price": null,
-          "trend_direction": "BULL"
-        },
-        "morj": {
-          "morj_status": "AWAKE",
-          "wave_1_validated": false,
-          "tension_peak": true
-        },
-        "panic": {
-          "panic_phase": "GREED"
-        },
-        "hans": {
-          "fractal_valid": false,
-          "fractal_side": null,
-          "fractal_price": null
-        }
-      },
-      "stop_initial": 0.70788,
-      "signal_start": 0.70788,
-      "entry_fractal_price": 0.70843,
-      "entry_fractal_idx": 296
-    }
-  ],
+  "positions": [],
   "feed": {
     "mode": "tester",
     "symbol": "EURUSD"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Нет первого отката к новой волне",
+    "reason": "Нет четкой первой волны и отката к ней. Аллигатор начинает спать, AO падает, что говорит об ослаблении движения. Приседающий бар не является сигналом для первого входа.",
     "direction": null,
     "entry": null,
     "stop": null,
