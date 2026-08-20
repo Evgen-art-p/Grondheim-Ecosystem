@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-20T14:37:56.409276",
+  "updated": "2026-08-20T15:14:38.946000",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -14,7 +14,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "",
+    "reason": "Не сформирована первая волна и откат к ней",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -22,7 +22,7 @@
     "action": "WAIT",
     "new_stop": null,
     "add_lot": null,
-    "бар": "2026.04.30 20:00"
+    "бар": "2026.07.15 20:00"
   },
   "avan": {
     "verdict": "REJECTED",
@@ -76,7 +76,7 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.04.30 20:00"
+    "бар": "2026.07.15 20:00"
   },
   "точки": {
     "EURUSD H4": {
@@ -89,6 +89,17 @@
       "barov_s_tochki": 0,
       "kray_posle": 1.17416,
       "struktura_pozadi": 110
+    },
+    "GBPUSD H4": {
+      "alive": true,
+      "trend_direction": "BEAR",
+      "zero_point_price": 1.35582,
+      "rodilas_na_bare": "2026.07.15 20:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 0,
+      "kray_posle": 1.35582,
+      "struktura_pozadi": 121
     }
   }
 }

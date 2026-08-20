@@ -741,28 +741,15 @@ def compute_rubber_band(
             distance_max = d
 
     eps = 1e-6
-    # REZINKA_CHESTNAYA_V1: доля считается, только пока цена по СВОЮ
-    # сторону губ. Ушла на другую (distance_now < 0) — доли нет: пик
-    # копится в одну сторону, и «сейчас/пик» давало числа вроде −4.215,
-    # которые выглядят как доля, но не значат ничего. Расстояние в
-    # пунктах со знаком остаётся — это честный факт.
-    if distance_now < 0:
-        tension_ratio = None
-    elif distance_max > eps:
-        tension_ratio = distance_now / distance_max
-    else:
-        tension_ratio = 0.0
-    is_peak = (distance_now > 0
-               and distance_now >= distance_max * (1 - 0.02))  # на пике (±2%)
+    tension_ratio = (distance_now / distance_max) if distance_max > eps else 0.0
+    is_peak = distance_now >= distance_max * (1 - 0.02)   # на пике (±2%)
     bars_in_band = i - anchor
 
     return {
         "direction":     direction,
         "distance_now":  round(distance_now, 1),
         "distance_max":  round(distance_max, 1),
-        "tension_ratio": (round(tension_ratio, 3)
-                          if tension_ratio is not None else None),
-        "za_gubami":     bool(distance_now < 0),   # REZINKA_CHESTNAYA_V1
+        "tension_ratio": round(tension_ratio, 3),
         "is_peak":       bool(is_peak),
         "bars_in_band":  bars_in_band,
     }
@@ -1334,5 +1321,3 @@ if __name__ == "__main__":
 # AO_DIVERGENCE_GLUBZHE_V1 - marker
 
 # ISKATEL_SVOY_ETAZH_V1 - marker
-
-# REZINKA_CHESTNAYA_V1 - marker
