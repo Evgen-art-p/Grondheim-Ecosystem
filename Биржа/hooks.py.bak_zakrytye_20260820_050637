@@ -2357,34 +2357,6 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
         return {"alive": False, "reason": f"сбой: {e}", "changed": False}
 
 
-# ═══════════════════════════════════════════════════════════
-# TOLKO_ZAKRYTYE_V1 — решаем по ЗАКРЫТЫМ барам, не по идущей свече
-# ═══════════════════════════════════════════════════════════
-# MetaTrader отдаёт с нулевой позиции формирующуюся свечу. Пока она
-# живёт (у H4 — четыре часа), её закрытие ходит туда-сюда, а вместе с
-# ним появляется и пропадает разворотный бар. Шеф поймал это глазом
-# 20.08: три запуска подряд по одному бару дали C=1.16739, 1.16754,
-# 1.1675 — и «РАЗВОРОТНЫЙ БАР: BEAR», которого к закрытию могло не
-# остаться.
-#
-# В прогоне по истории это запрещено с самого начала: курсор отдаёт
-# только закрытые бары, иначе город видел бы будущее. Здесь тот же
-# закон для реала.
-
-def _tolko_zakrytye(bars: list) -> list:
-    """В РЕАЛЕ отбросить последний, ещё идущий бар. В ТЕСТЕРЕ не
-    трогать: там за честность отвечает курсор истории."""
-    try:
-        from feed_source import get_feed_mode
-        if (get_feed_mode() or {}).get("mode") != "real":
-            return bars
-    except Exception:
-        return bars
-    if bars and len(bars) > 1:
-        return bars[:-1]
-    return bars
-
-
 def rynok_novyy_bar(symbol: str, timeframe: str,
                     window=None, point=None) -> dict:
     """Рассудить новый бар: что взято, что закрыто.
@@ -2407,16 +2379,11 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
         try:
             from feed_source import bars as _src_bars
             bars, _p = _src_bars(symbol, timeframe, 300)
-            bars = _tolko_zakrytye(bars)   # TOLKO_ZAKRYTYE_V1
         except Exception as e:
             itog["причина"] = f"кран молчит: {e}"
             return itog
     if point is not None:
         _p = point
-    if window:
-        # TOLKO_ZAKRYTYE_V1: окно пришло снаружи (кабинет/прогон) — в
-        # реале в нём тоже сидит идущая свеча, режем и её.
-        bars = _tolko_zakrytye(bars)
     if not bars:
         itog["причина"] = "нет баров"
         return itog
@@ -2491,5 +2458,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # SVEZHEST_V1 - marker
 
 # TOCHKA_ROZHDAETSYA_V1 - marker
-
-# TOLKO_ZAKRYTYE_V1 - marker

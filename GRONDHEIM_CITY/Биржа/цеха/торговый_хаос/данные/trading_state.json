@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-18T03:55:09.601164",
+  "updated": "2026-08-20T05:40:00.769589",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -9,11 +9,12 @@
   "positions": [],
   "feed": {
     "mode": "tester",
-    "symbol": "EURUSD"
+    "symbol": "EURUSD",
+    "момент": "2025.07.24 04:00"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Нет четкой первой волны и отката к ней. Аллигатор начинает спать, AO падает, что говорит об ослаблении движения. Приседающий бар не является сигналом для первого входа.",
+    "reason": "",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -72,5 +73,21 @@
     "absorption_ratio": 0.6,
     "scale_timeframe": "H4",
     "history_dna": ""
+  },
+  "рынок": {
+    "бар": "2025.05.05 20:00"
+  },
+  "точки": {
+    "EURUSD H4": {
+      "alive": true,
+      "trend_direction": "BULL",
+      "zero_point_price": 1.12966,
+      "rodilas_na_bare": "2025.05.05 20:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 0,
+      "kray_posle": 1.12966,
+      "struktura_pozadi": 140
+    }
   }
 }

@@ -307,7 +307,7 @@ def _sanitize_manage(signal: dict) -> dict:
     return signal
 
 
-def _save_verdict_to_table(signal: dict, bar_time=None):
+def _save_verdict_to_table(signal: dict):
     """
     ТАБЛО: кладёт вердикт Брута в шину для Исполнителя.
     Перетирается каждый бар — это «сейчас», команда на исполнение.
@@ -315,10 +315,6 @@ def _save_verdict_to_table(signal: dict, bar_time=None):
     from hooks import load_trading_state, save_trading_state
     t = load_trading_state()
     t.setdefault("brut", {})
-    # VERDIKT_S_BAROM_V1: вердикт несёт бар, на котором сказан.
-    # Без этого Исполнитель по закону SVEZHEST_V1 не берёт его
-    # в дело вовсе — «вердикт без отметки бара, не считаю».
-    t["brut"]["бар"] = str(bar_time or "")
     t["brut"]["verdict"]   = signal.get("brut_verdict", "REJECTED")
     t["brut"]["reason"]    = signal.get("brut_reason", "")
     t["brut"]["direction"] = signal.get("brut_direction")
@@ -1022,7 +1018,7 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
     market = {"symbol": symbol, "timeframe": timeframe,
               "bar_time": md.get("bar_time"), "point": point}
 
-    _save_verdict_to_table(signal, md.get("bar_time"))                       # ТАБЛО — для Исполнителя
+    _save_verdict_to_table(signal)                       # ТАБЛО — для Исполнителя
     _append_diary(signal, diary_entry, market, table)    # ДНЕВНИК — память
     stats = _update_stats(signal)
 
@@ -1106,5 +1102,3 @@ def _kto_ya() -> str:
 
 
 # DOSKA_V1 - marker
-
-# VERDIKT_S_BAROM_V1 - marker

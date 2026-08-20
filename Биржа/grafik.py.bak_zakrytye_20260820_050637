@@ -285,14 +285,6 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
                                detect_fractals)
 
     bs, point = source_bars(symbol, timeframe, count=max(400, barov + 60))
-    # TOLKO_ZAKRYTYE_V1: кадр рисуем по тем же барам, по которым считан
-    # стол. Иначе Шеф и трейдер смотрят разные картинки, а на столе
-    # стоит третья правда. Живая свеча — в терминале.
-    try:
-        from hooks import _tolko_zakrytye
-        bs = _tolko_zakrytye(bs)
-    except Exception:
-        pass
     if not bs:
         return None
     highs = [x["high"] for x in bs]
@@ -306,5 +298,3 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
 # KADR_I_VAKANSIYA_V1 - marker
 
 # RB_NA_KADRE_V1 - marker
-
-# TOLKO_ZAKRYTYE_V1 - marker

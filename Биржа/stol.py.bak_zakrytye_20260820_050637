@@ -161,13 +161,6 @@ def nakryt(symbol: str, timeframe: str,
             from williams_core import build_market_data
             if bars is None:
                 bars, point = source_bars(symbol, timeframe, count=400)
-                # TOLKO_ZAKRYTYE_V1: приборы считаем по закрытым барам —
-                # идущая свеча пляшет и вместе с ней пляшет разворотник.
-                try:
-                    from hooks import _tolko_zakrytye
-                    bars = _tolko_zakrytye(bars)
-                except Exception:
-                    pass
             if not bars or len(bars) < 42:
                 return stol
             md = build_market_data(bars, symbol=symbol,
@@ -398,5 +391,3 @@ if __name__ == "__main__":
 # KOMPAS_CHESTNYY_V1 - marker
 
 # TOCHKA_ROZHDAETSYA_V1 - marker
-
-# TOLKO_ZAKRYTYE_V1 - marker

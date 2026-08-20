@@ -57,43 +57,6 @@ def senior_timeframe(working_tf: str) -> Optional[str]:
     return name
 
 
-# GLUBINA_KOMPASA_V2 ─────────────────────────────────────────
-# Память о том, что уже спрашивали. В процессе, не на диске: поднял
-# город заново — спросит заново.
-_LESENKA = (2000, 500, 200)
-_GLUBINA_POMNIM: dict = {}     # (символ, этаж) -> ступень, которая дала бары
-_PUSTO_POMNIM: dict = {}       # (символ, этаж) -> когда получили пусто
-_PUSTO_ZHIVYOT = 60.0          # секунд молчать, не переспрашивая
-
-
-def _sprosit_starshiy(symbol: str, senior: str):
-    """Бары старшего этажа. Ступень, которая сработала, запоминаем;
-    пустой ответ помним минуту и не переспрашиваем."""
-    import time
-    from feed_source import bars as source_bars
-
-    klyuch = (symbol, senior)
-    kogda = _PUSTO_POMNIM.get(klyuch)
-    if kogda and (time.time() - kogda) < _PUSTO_ZHIVYOT:
-        return [], None
-
-    poryadok = list(_LESENKA)
-    znaem = _GLUBINA_POMNIM.get(klyuch)
-    if znaem in poryadok:
-        poryadok.remove(znaem)
-        poryadok.insert(0, znaem)
-
-    for glubina in poryadok:
-        sbars, point = source_bars(symbol, senior, count=glubina)
-        if sbars:
-            _GLUBINA_POMNIM[klyuch] = glubina
-            _PUSTO_POMNIM.pop(klyuch, None)
-            return sbars, point
-
-    _PUSTO_POMNIM[klyuch] = time.time()
-    return [], None
-
-
 def global_trend(symbol: str, working_tf: str,
                  as_of_date: Optional[str] = None) -> dict:
     """
@@ -125,12 +88,11 @@ def global_trend(symbol: str, working_tf: str,
     # 300 баров — больше компасу не нужно никогда.
     # Лесенка посильных глубин: 2000 — умолчание mt5_feed.pull_bars,
     # 200 — то, что терминал отдаёт заведомо. Первый непустой ответ.
-    # GLUBINA_KOMPASA_V2: лесенку помним, в пустое не долбимся.
-    # V1 перебирала три ступени КАЖДЫЙ раз, а компас считается на
-    # каждом баре. Пустой старший этаж стоил трёх обращений вместо
-    # одного (в реале — с двумя повторами и снами внутри насоса), и
-    # прогон по истории из быстрого стал ползучим.
-    sbars, point = _sprosit_starshiy(symbol, senior)
+    sbars, point = [], None
+    for _glubina in (2000, 500, 200):
+        sbars, point = source_bars(symbol, senior, count=_glubina)
+        if sbars:
+            break
     # ОТСЕЧКА БУДУЩЕГО: оставляем только старшие бары ДО даты прогона.
     # Старший бар входит, если его дата <= дате текущего рабочего бара.
     if as_of_date and sbars:
@@ -209,5 +171,3 @@ def apply_global_bias(market_data: dict, symbol: str, working_tf: str) -> dict:
 # GLOBAL_ANCHOR_TYPING_V1 — маркер идемпотентности
 
 # GLUBINA_KOMPASA_V1 - marker
-
-# GLUBINA_KOMPASA_V2 - marker

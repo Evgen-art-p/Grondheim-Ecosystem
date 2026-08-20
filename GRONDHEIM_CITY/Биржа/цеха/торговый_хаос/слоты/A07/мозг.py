@@ -275,11 +275,15 @@ def _sanitize_manage(signal: dict) -> dict:
     return signal
 
 
-def _save_verdict_to_table(signal: dict):
+def _save_verdict_to_table(signal: dict, bar_time=None):
     """ТАБЛО: вердикт Авантюриста в шину для Исполнителя."""
     from hooks import load_trading_state, save_trading_state
     t = load_trading_state()
     t.setdefault("avan", {})
+    # VERDIKT_S_BAROM_V1: вердикт несёт бар, на котором сказан.
+    # Без этого Исполнитель по закону SVEZHEST_V1 не берёт его
+    # в дело вовсе — «вердикт без отметки бара, не считаю».
+    t["avan"]["бар"] = str(bar_time or "")
     t["avan"]["verdict"]   = signal.get("avan_verdict", "REJECTED")
     t["avan"]["reason"]    = signal.get("avan_reason", "")
     t["avan"]["direction"] = signal.get("avan_direction")
@@ -971,7 +975,7 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
     market = {"symbol": symbol, "timeframe": timeframe,
               "bar_time": md.get("bar_time"), "point": point}
 
-    _save_verdict_to_table(signal)
+    _save_verdict_to_table(signal, md.get("bar_time"))
     _append_diary(signal, diary_entry, market, table)
     stats = _update_stats(signal)
 
@@ -1040,3 +1044,5 @@ def _kto_ya() -> str:
 
 
 # DOSKA_V1 - marker
+
+# VERDIKT_S_BAROM_V1 - marker
