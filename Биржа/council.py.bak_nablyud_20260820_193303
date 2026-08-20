@@ -1,0 +1,547 @@
+# Биржа/council.py
+# ─────────────────────────────────────────────────────────────
+# ЧИСТАЯ БУДИЛКА СОВЕТА — одно место, где оживает девятка.
+# ENGINE_ONE_DOOR_V1 · перенесён из -2 (studio/modules/trading/council.py)
+#   на новую топологию слотов (Закон Картриджа: _slot_brain).
+#
+# ЗАКОН (наказ Шефа): одно место пробуждения Совета на ОБА мира.
+# Раньше Совет будился в ДВУХ местах руками — в кнопке РЫНОК (с UI)
+# и в тестере (своя лестница). Это и был маскарад. Теперь — одна
+# лестница, без UI. Реал и тест зовут ЕЁ, отличаясь только источником
+# бара (его подал движок снаружи) и тем, куда слать вести (on_event).
+#
+# Порядок ОДИН-В-ОДИН с кнопкой РЫНОК (ui_torg):
+#   Искра → Морж → Паникёр → Ганс → Архивариус
+#        → [Брут · Авантюрист · Консерватор] → Исполнитель
+#
+# Движок НЕ дублирует агентов — зовёт ЖИВЫЕ run_* через _slot_brain.
+# Слеп к активу/ТФ.
+#
+# ── ОТЛИЧИЕ ОТ -2 (топология) ──
+# В -2 агенты жили плоско (studio.modules.trading.morj_live) и звались
+# через importlib.import_module. В новом городе они живут в слотах цехов
+# (Закон Картриджа), и зовутся через _slot_brain(ceh_id, slot).мозг.
+# Раскладка «кто в каком цехе/слоте» — единственное, что тут ново.
+# Порядок, ворота по спуску, мягкость к сбоям — как в -2, один-в-один.
+# ─────────────────────────────────────────────────────────────
+
+import json
+import importlib.util
+from pathlib import Path
+from typing import Optional, Callable
+
+_HERE = Path(__file__).resolve().parent            # Биржа/
+_REPO = _HERE.parent                                # корень репо
+_BRAIN_CACHE: dict = {}
+
+
+def _slot_brain(ceh_id: str, slot: str):
+    """
+    Закон Картриджа для кода — тот же механизм, что в ui_torg.py и
+    tester_express.py (_slot_brain, байт-в-байт). Мозг слота живёт в
+    GRONDHEIM_CITY/Биржа/цеха/{ceh_id}/слоты/{slot}/мозг.py — не
+    захардкожен списком имён. Нет файла — честная вакансия (None),
+    не ошибка. Кэш на процесс.
+    """
+    key = (ceh_id, slot)
+    if key in _BRAIN_CACHE:
+        return _BRAIN_CACHE[key]
+    brain_path = (_REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха" / ceh_id
+                 / "слоты" / slot / "мозг.py")
+    if not brain_path.exists():
+        _BRAIN_CACHE[key] = None
+        return None
+    spec = importlib.util.spec_from_file_location(
+        f"_brain_{ceh_id}_{slot}", brain_path)
+    if spec is None or spec.loader is None:
+        _BRAIN_CACHE[key] = None
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    _BRAIN_CACHE[key] = mod
+    return mod
+
+
+# ── РАСКЛАДКА СОВЕТА: кто в каком цехе/слоте ──
+# Единственное место правды о том, где живёт каждый агент. Порядок в
+# кортежах = порядок пробуждения (после Искры). ceh_id/slot идут в
+# _slot_brain, run — имя функции в мозге слота.
+
+# Искра — голова, будится первой отдельно (ворота по её спуску).
+_ISKRA = ("торговый_хаос", "A01", "run_iskra")
+
+# сенсоры после Искры — порядок как в кнопке РЫНОК
+_SENSORS = [
+    ("A02", "торговый_хаос", "A02", "run_morj"),
+    ("A03", "торговый_хаос", "A03", "run_panikyor"),
+    ("A04", "торговый_хаос", "A04", "run_hans"),
+]
+
+# Архивариус — память, без рынка (сам читает шину). Живёт в конторе.
+_ARKHIV = ("A05", "контора", "архивариус", "run_arkhiv")
+
+# ═══════════════════════════════════════════════════════════
+# ZAKON_KARTRIDZHA_V1 — СОВЕТ БОЛЬШЕ НЕ ДЕРЖИТ СПИСКА
+# ═══════════════════════════════════════════════════════════
+# Здесь лежал вбитый список трёх трейдеров. Это было единственное
+# место в городе, где Закон Картриджа нарушался: слот несёт с собой
+# всё, но Совет звал троих ПОИМЁННО — и новый картридж, сколько его
+# ни клади в папку, никто не звал.
+#
+# Теперь Совет СКАНИРУЕТ цех, как всё прочее в городе сканирует папки.
+# Вставил картридж — он в Совете. Вынул — его нет. Хоть три, хоть
+# десять.
+#
+# Как Совет понимает, как звать мозг:
+#   1. запись слота в манифесте цеха: «движок» (какую функцию звать)
+#      и «ключ» (приставка полей решения);
+#   2. записи нет — зовём функцию `run`, ключ выводим из имени слота.
+_CEH_TORGOVYY = "торговый_хаос"
+
+
+def _dver_mozga(brain, skazano: str = "") -> str:
+    """Как звать этот мозг. Сказано в манифесте — зовём так."""
+    if skazano and getattr(brain, skazano, None):
+        return skazano
+    if getattr(brain, "run", None):
+        return "run"                       # общая дверь картриджа
+    est = [n for n in dir(brain)
+           if n.startswith("run_") and callable(getattr(brain, n, None))]
+    return est[0] if len(est) == 1 else ""
+
+
+def _treydery(ceh_id: str = _CEH_TORGOVYY) -> list:
+    """Кто сегодня за столом. Списка не держим — смотрим цех."""
+    korn = _REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха" / ceh_id
+    sloty_dir = korn / "слоты"
+    if not sloty_dir.is_dir():
+        return []
+
+    skazano = {}
+    try:
+        m = json.loads((korn / "manifest.json").read_text(encoding="utf-8"))
+        for s in m.get("слоты", []) or []:
+            if s.get("слот"):
+                skazano[s["слот"]] = s
+    except Exception:
+        pass
+
+    imena = list(skazano) + [d.name for d in sorted(sloty_dir.iterdir())
+                             if d.is_dir() and d.name not in skazano]
+    out = []
+    for slot in imena:
+        if not (sloty_dir / slot / "мозг.py").exists():
+            continue                       # папка без мозга — не картридж
+        zapis = skazano.get(slot, {})
+        brain = _slot_brain(ceh_id, slot)
+        if brain is None:
+            continue
+        dver = _dver_mozga(brain, zapis.get("движок", ""))
+        if not dver:
+            print(f"[СОВЕТ] не понял, как звать {ceh_id}/{slot} — пропускаю. "
+                  f"Впиши «движок» в манифест цеха.")
+            continue
+        klyuch = (zapis.get("ключ") or slot).strip().lower()
+        out.append((slot, ceh_id, slot, dver, klyuch))
+    return out
+
+
+def _stol_klyuchi(ceh_id: str = _CEH_TORGOVYY) -> dict:
+    """слот -> ключ на столе. Тоже из сканера, не из головы."""
+    return {slot: pre for _aid, _c, slot, _fn, pre in _treydery(ceh_id)}
+
+# Исполнитель — рука-код, замыкает петлю. Живёт в конторе.
+_EXECUTOR = ("A09", "контора", "исполнитель", "run_executor")
+
+
+# ═══════════════════════════════════════════════════════════
+# NET_PRIZRAKOV_V1 — МЁРТВЫЙ АГЕНТ НЕ ТОРГУЕТ
+# ═══════════════════════════════════════════════════════════
+# Лог Шефа 14.07: Илья упал (OpenRouter вернул пустое тело) — а
+# Исполнитель открыл SHORT @1202.44 по его СТАРОМУ вердикту, при том
+# что цена на баре была 1367-1387, а компас показывал BULL.
+#
+# Трейдер пишет вердикт в стол САМ, в конце run_*. Упал раньше — не
+# написал — в столе остался прошлый. Живой, с ценами другой эпохи.
+#
+# ПРАВИЛО: сбой → вердикт ОБНУЛЯЕТСЯ. Молчание — это REJECTED, а не
+# согласие. Иначе судья потом впишет Илье «МОЯ ОШИБКА» за решение,
+# которого он не принимал — и это отравит его опыт КЛЕВЕТОЙ.
+# ═══════════════════════════════════════════════════════════
+
+# ZAKON_KARTRIDZHA_V1: было вбито {"A06": "brut", ...}. Теперь ключи
+# приходят от того же сканера, что и сами трейдеры, — один источник.
+
+
+def _steret_verdikt(slot: str, prichina: str = ""):
+    """Стирает вердикт упавшего трейдера со стола. Он молчал — значит
+    REJECTED. Старый вердикт с прошлого бара торговать НЕ ИМЕЕТ ПРАВА."""
+    key = _stol_klyuchi().get(slot)
+    if not key:
+        return
+    try:
+        from hooks import load_trading_state, save_trading_state
+        t = load_trading_state()
+        staryi = (t.get(key, {}) or {}).get("verdict")
+        t.setdefault(key, {})
+        t[key] = {
+            "verdict":   "REJECTED",
+            "reason":    f"агент не ответил ({prichina[:60]})",
+            "direction": None,
+            "entry":     None,
+            "stop":      None,
+            "lot":       None,
+            "action":    None,
+            "new_stop":  None,
+            "add_lot":   None,
+        }
+        save_trading_state(t)
+        if staryi and staryi != "REJECTED":
+            print(f"[ПРИЗРАК] 🚫 {slot} упал — стёр его старый вердикт "
+                  f"«{staryi}». Мёртвый агент НЕ ТОРГУЕТ.")
+        else:
+            print(f"[ПРИЗРАК] 🚫 {slot} упал — стол очищен (REJECTED)")
+    except Exception as e:
+        print(f"[ПРИЗРАК] ⚠️  не смог стереть вердикт {slot}: {e}")
+
+
+def _call(ceh_id: str, slot: str, fn_name: str, **kw) -> dict:
+    """Зовёт живой run_* агента через слот. Любой сбой — мягко, не
+    роняем Совет (честная вакансия/ошибка отдаётся как {ok:False})."""
+    # NET_PRIZRAKOV_V1: ЛЮБОЙ сбой агента → его вердикт на столе
+    # ОБНУЛЯЕТСЯ. Без этого Исполнитель откроет позицию по СТАРОМУ
+    # вердикту с прошлого бара — что и случилось 14.07: Илья упал
+    # (OpenRouter вернул пустое тело), а SHORT открылся @1202.44 при
+    # цене 1367-1387 и компасе BULL. Мёртвый агент НЕ ТОРГУЕТ.
+    #
+    # Ловим на ВЫХОДЕ: главный случай — не исключение, а мозг,
+    # который САМ вернул {"ok": False} из `fn(**kw)`.
+    _res = None
+    try:
+        brain = _slot_brain(ceh_id, slot)
+        if brain is None:
+            _res = {"ok": False, "error": f"{ceh_id}/{slot}: мозг ещё не в слоте"}
+        else:
+            fn = getattr(brain, fn_name, None)
+            if fn is None:
+                _res = {"ok": False, "error": f"{ceh_id}/{slot}: нет {fn_name}"}
+            else:
+                _res = fn(**kw) or {}
+    except Exception as e:
+        _res = {"ok": False, "error": f"{fn_name}: {e}"}
+
+    if not (_res or {}).get("ok"):
+        _steret_verdikt(slot, str((_res or {}).get("error", "сбой")))
+
+    return _res
+
+
+# ═══════════════════════════════════════════════════════════
+# COUNCIL_GATE_TROYNOY_V1 — дешёвая проверка триггеров Б/В (без LLM)
+# ═══════════════════════════════════════════════════════════
+
+_HANS_TO_BULL_BEAR = {"LONG": "BULL", "SHORT": "BEAR"}  # TRIGGERS_SINHRON_V1
+
+
+def _deshyovaya_proverka_tochki(symbol: str, timeframe: str,
+                                window=None, point=None) -> dict:
+    """
+    Код, без LLM. Строит md (переданным окном ИЛИ тянет бары сама —
+    живой режим), спрашивает proverit_tochku() (TOCHKA_ZHIVA_V1) и,
+    если точка жива, ищет ДВА дешёвых триггера на ЭТОМ баре:
+      фрактал Ганса вне пасти (_hans_breakout, уже есть в hooks.py)
+      Большой палец Авантюриста (md["thumb_trade"], TWR_BOLSHOY_PALEC_V1)
+
+    Возвращает {"trigger": bool, "kind": "fractal"|"thumb"|None,
+                "napravlenie": str|None, "tochka": {...}}.
+    Пустой/недоступный md — честное "нет триггера", не ошибка.
+    """
+    from hooks import proverit_tochku, _hans_breakout
+    from williams_core import build_market_data
+
+    bars = window
+    _point = point
+    if bars is None:
+        from mt5_feed import pull_bars
+        bars, _point = pull_bars(symbol, timeframe, 300)
+
+    if not bars or _point is None:
+        return {"trigger": False, "kind": None, "napravlenie": None,
+                "tochka": {"alive": False, "reason": "нет баров"}}
+
+    md = build_market_data(bars, symbol=symbol, timeframe=timeframe,
+                           point=_point)
+    if not md:
+        return {"trigger": False, "kind": None, "napravlenie": None,
+                "tochka": {"alive": False, "reason": "пустой md"}}
+
+    tochka = proverit_tochku(md)
+    if not tochka.get("alive"):
+        return {"trigger": False, "kind": None, "napravlenie": None,
+                "tochka": tochka}
+
+    # TRIGGERS_SINHRON_V1: направление точки — синхронность станций c→1→2.
+    # Пробой фрактала/палец в ДРУГУЮ сторону — не наша волна, молчим.
+    _napr_tochki = tochka.get("direction")
+
+    # Триггер Б — фрактал Ганса пробит вне пасти на ЭТОМ баре,
+    # В ТУ ЖЕ сторону, что и живая точка
+    hans_dir = _hans_breakout(md, bars)
+    if hans_dir is not None and _HANS_TO_BULL_BEAR.get(hans_dir) == _napr_tochki:
+        return {"trigger": True, "kind": "fractal",
+                "napravlenie": hans_dir, "tochka": tochka}
+
+    # Триггер В — Большой палец Авантюриста, В ТУ ЖЕ сторону
+    thumb = md.get("thumb_trade", {}) or {}
+    if thumb.get("triggered") and thumb.get("direction") == _napr_tochki:
+        return {"trigger": True, "kind": "thumb",
+                "napravlenie": thumb.get("direction"), "tochka": tochka}
+
+    return {"trigger": False, "kind": None, "napravlenie": None,
+            "tochka": tochka}
+
+# COUNCIL_GATE_TROYNOY_V1 - marker
+
+
+def _para_slota(ceh_id: str, slot: str) -> dict:
+    """Чем и на каком этаже работает ЭТО место. RABOTA_PO_PARE_V1.
+
+    Один трейдер — один инструмент, свой. Кабинетного «общего» тут
+    нет: он и был тем четвёртым, которого никто не выбирал, а
+    работали по нему все трое.
+
+    Запасная пара нужна ровно одному случаю — прогону тестера, где
+    инструмент задан файлом истории. В живой работе она пустая.
+    """
+    try:
+        import vybor
+        r = vybor.rabota_dlya(ceh_id, slot)
+        if r.get("готов"):
+            return {"symbol": r["инструмент"], "timeframe": r["этаж"],
+                    "готов": True, "почему": ""}
+        # UBRAT_CHETVERTOGO_V1: запасной пары БОЛЬШЕ НЕТ. Она была
+        # задумана «для тестера», но кабинет всегда передавал свою —
+        # и запасная срабатывала всегда, подменяя собой всю
+        # постройку. Три трейдера получали четвёртый инструмент.
+        # Не выбрал — молчит. Молчание честнее подставного рынка.
+        return {"symbol": "", "timeframe": "", "готов": False,
+                "почему": vybor.pochemu_molchit(ceh_id, slot)}
+    except Exception as e:
+        return {"symbol": "", "timeframe": "", "готов": False,
+                "почему": f"пара не прочиталась ({e})"}
+
+
+# ═══════════════════════════════════════════════════════════
+# KLYUCH_PROBUZHDENIYA_V1 — зовём по ключу, не бар за баром
+# ═══════════════════════════════════════════════════════════
+# КАНОН_ВХОДА §4.4: у каждого свой факт-ключ, событие, на которое он
+# просыпается. Ключа не было, потому что корень — точка ноль — не
+# зажигался ни разу с 06.08 (Искра уехала в архив вместе с рукой).
+#
+# Это НЕ ворота. Ворота (сняты 06.08) судили, годится ли вход, и
+# выкашивали 87% честных точек. Ключ не судит ничего: он отвечает
+# только на «есть ли на что смотреть». Что делать — решает трейдер,
+# глядя на график.
+#
+# Любой сбой внутри — БУДИМ. Пропустить взгляд из-за нашей ошибки
+# хуже, чем лишний раз заплатить за вызов.
+
+_ZHIVYE_STATUSY = ("WATCHING", "PENDING", "OPEN")
+
+
+def _klyuch_probuzhdeniya(symbol: str, timeframe: str) -> dict:
+    """Есть ли повод звать того, кто работает этой парой."""
+    try:
+        import hooks
+        t = hooks.load_trading_state()
+
+        # Будим на РОЖДЕНИИ точки, а не каждый бар, пока она жива.
+        # Слово Шефа (20.08): «Нине важно решить сначала, истинный ли
+        # он; если да — математика пусть ведёт. Откат не случится ни на
+        # втором, ни на третьем, ни даже на десятом баре».
+        tch = hooks._blok_tochki(t, hooks._para_tochki(symbol, timeframe))
+        bar_goroda = str(((t.get("рынок") or {}).get("бар")) or "")
+        rodilas = str(tch.get("rodilas_na_bare") or "")
+        if tch.get("alive") and bar_goroda and rodilas == bar_goroda                 and not tch.get("barov_s_tochki"):
+            return {"будим": True,
+                    "почему": f"точка родилась: {tch.get('trend_direction')} @ "
+                              f"{tch.get('zero_point_price')}"}
+
+        # позицию ведём всегда, чем бы ни кончилась точка
+        sym = (symbol or "").strip().upper()
+        for p in (t.get("positions") or []):
+            if p.get("status") not in _ZHIVYE_STATUSY:
+                continue
+            psym = (p.get("symbol") or "").strip().upper()
+            # инструмента в записи нет (старая позиция) — считаем своей
+            if not psym or psym == sym:
+                return {"будим": True,
+                        "почему": f"своя {p.get('status')} — позицию ведём"}
+
+        return {"будим": False, "почему": "точки нет и позиции нет"}
+    except Exception as e:
+        return {"будим": True, "почему": f"ключ не сработал ({e}) — зову"}
+
+
+def wake_council(symbol: str = "", timeframe: str = "",
+                 on_event: Optional[Callable] = None,
+                 window=None, point=None,
+                 ceh_id: str = _CEH_TORGOVYY) -> dict:
+    """
+    ОЧЕРЁДНОСТЬ РАБОТЫ на текущем баре. Имя осталось прежним, чтобы
+    кабинет и тестер звали как звали, но собрания больше нет.
+
+    SOVET_BEZ_SENSOROV_V1 (решение Шефа 06.08). Было: Искра будила
+    себя от рынка, её СПУСК был воротами — не нашёл точку, все
+    расходятся. Сенсоры уехали в архив, значит спуска нет никогда, и
+    ворота не открылись бы ни разу: трейдеры не проснулись бы вообще.
+
+    Стало: ворот нет и сенсоров нет. Каждый трейдер накрывает себе
+    стол сам (Биржа/stol.py) и сам решает — смотреть ему тут или
+    расходиться. Право промолчать переехало туда, где ему место: к
+    тому, кого этому учили, а не в замок на чужом сигнале.
+
+    symbol/timeframe — паспорт, течёт в каждого. on_event(dict) —
+    вести наружу (лента кабинета/тестера), может быть None.
+
+    Возвращает ту же сводку, что и раньше: кто что сказал плюс полные
+    результаты каждого (в results, чтобы UI обновил свои панели).
+    Позиции открывает Исполнитель (рука-код), закрывает _settle на
+    следующем баре — здесь их не трогают.
+    """
+    def _emit(ev):
+        if on_event:
+            try:
+                on_event(ev)
+            except Exception:
+                pass
+
+    # SVOY_STOL_CEHA_V1: сказать столу, чей цех сегодня работает —
+    # чтобы стол и позиции легли к нему, а не в общую тетрадь.
+    try:
+        import hooks as _h
+        if hasattr(_h, "postavit_ceh"):
+            _h.postavit_ceh(ceh_id)
+    except Exception:
+        pass
+
+    # ── РЫНОК СУДИТ ПЕРВЫМ (RUKA_RYNKA_V1) ──────────────────
+    # Физика раньше мнений: что рынок взял и что закрыл, решается до
+    # того, как за столом кто-то откроет рот. Без этого шага заявка
+    # висела вечно, а позиция не закрывалась никогда — обе руки в
+    # hooks.py были целы, но их не звал никто с 06.08.
+    _sudil = set()   # RABOTA_PO_PARE_V1: какие рынки уже рассудили
+    # RABOTA_PO_PARE_V1: у каждого свой рынок, значит и судить надо
+    # каждый рынок отдельно — своим баром. Пары повторяются редко, но
+    # если двое работают одним инструментом на одном этаже, второй
+    # раз не судим.
+    _za_stolom = _treydery(ceh_id)
+    _pary = {}
+    for _aid, _c, _slot, _fn, _pre in _za_stolom:
+        _p = _para_slota(ceh_id, _slot)   # UBRAT_CHETVERTOGO_V1
+        _pary[_slot] = _p
+        if not _p["готов"]:
+            print(f"[СОВЕТ] 🤐 {_slot} молчит: {_p['почему']}")
+            _emit({"type": "молчит", "slot": _slot, "почему": _p["почему"]})
+            continue
+        _klyuch = (_p["symbol"], _p["timeframe"])
+        if _klyuch in _sudil:
+            continue
+        _sudil.add(_klyuch)
+        try:
+            import hooks as _hr
+            _rynok = _hr.rynok_novyy_bar(
+                _p["symbol"], _p["timeframe"],
+                window=window if _klyuch == (symbol, timeframe) else None,
+                point=point if _klyuch == (symbol, timeframe) else None)
+            # окно передаём только если кабинет прислал бары ИМЕННО
+            # этой пары; иначе рука сама возьмёт из крана — свои.
+            if _rynok.get("активировано") or _rynok.get("закрыто"):
+                _emit({"type": "рынок", "рынок": _p["symbol"],
+                       "этаж": _p["timeframe"], **_rynok})
+        except Exception as _er:
+            print(f"[РЫНОК] ⚠️  {_p['symbol']} {_p['timeframe']} "
+                  f"не рассужен: {_er}")
+
+    summary = {"woke": [], "verdicts": {}, "orders": None,
+               "idle": False, "results": {}}
+
+    # ── сенсоров больше нет ───────────────────────────────────
+    # Искра, Морж, Паникёр и Ганс стали математикой и уехали из цеха.
+    # Их работу делает Биржа/stol.py — каждый трейдер зовёт его сам,
+    # внутри своего мозга. Будить тут некого.
+
+    # ── Архивариус (память, без рынка — сам читает шину) ──
+    aid, ceh, slot, fn = _ARKHIV
+    ra = _call(ceh, slot, fn)
+    summary["woke"].append(aid)
+    summary["results"][aid] = ra
+    _emit({"type": "agent", "id": aid, "ok": ra.get("ok"),
+           "result": ra, "narrative": ra.get("narrative", "")})
+
+    # ── трейдеры: сколько картриджей в цехе, столько и зовём ──
+    if not _za_stolom:
+        print("[СОВЕТ] в цехе нет ни одного картриджа с мозгом")
+    for aid, ceh, slot, fn, pre in _za_stolom:
+        # RABOTA_PO_PARE_V1: каждому — ЕГО инструмент и ЕГО этаж.
+        _p = _pary.get(slot) or _para_slota(ceh_id, slot)
+        if not _p["готов"]:
+            summary["verdicts"][aid] = None
+            summary["results"][aid] = {"ok": False, "error": _p["почему"],
+                                       "молчит": True}
+            continue
+        # KLYUCH_PROBUZHDENIYA_V1: зовём по ключу, не бар за баром.
+        _k = _klyuch_probuzhdeniya(_p["symbol"], _p["timeframe"])
+        if not _k["будим"]:
+            print(f"[КЛЮЧ] 🔒 {slot} спит: {_k['почему']}")
+            summary["verdicts"][aid] = None
+            summary["results"][aid] = {"ok": False, "спит": True,
+                                       "error": _k["почему"]}
+            _emit({"type": "спит", "slot": slot, "почему": _k["почему"]})
+            continue
+        print(f"[КЛЮЧ] 🔑 {slot}: {_k['почему']}")
+        print(f"[СОВЕТ] 👤 {slot}: {_p['symbol']} {_p['timeframe']}")
+        r = _call(ceh, slot, fn,
+                  symbol=_p["symbol"], timeframe=_p["timeframe"])
+        summary["woke"].append(aid)
+        summary["results"][aid] = r
+        sig = r.get("signal", {}) or {}
+        summary["verdicts"][aid] = sig.get(f"{pre}_verdict")
+        _emit({"type": "agent", "id": aid, "ok": r.get("ok"),
+               "result": r, "verdict": sig.get(f"{pre}_verdict"),
+               "narrative": r.get("narrative", "")})
+
+    # ── Исполнитель (рука-код открывает по табло) ──
+    aid, ceh, slot, fn = _EXECUTOR
+    # OTPERET_V1: контора торгует не по инструменту — ей нужен стол
+    # цеха, а не чей-то этаж. Кабинет своей пары больше не имеет, и
+    # пустое доезжало до крана: «[FEED] Неизвестный таймфрейм ''».
+    # Пары нет — берём ту, по которой реально работали в этот проход.
+    _sym_i, _tf_i = symbol, timeframe
+    if not (_sym_i and _tf_i):
+        for _p_i in _pary.values():
+            if _p_i.get("готов"):
+                _sym_i, _tf_i = _p_i["symbol"], _p_i["timeframe"]
+                break
+    rex = _call(ceh, slot, fn, symbol=_sym_i, timeframe=_tf_i)
+    summary["woke"].append(aid)
+    summary["results"][aid] = rex
+    esig = rex.get("signal", {}) or {}
+    summary["orders"] = (esig.get("final_dna", {}) or {}).get("orders_sent")
+    _emit({"type": "agent", "id": aid, "ok": rex.get("ok"),
+           "result": rex, "orders": summary["orders"],
+           "narrative": rex.get("narrative", "")})
+
+    return summary
+
+# ZAKON_KARTRIDZHA_V1 - marker
+
+# SVOY_STOL_CEHA_V1 - marker
+
+# RABOTA_PO_PARE_V1 - marker
+
+# UBRAT_CHETVERTOGO_V1 - marker
+
+# OTPERET_V1 - marker
+
+# KLYUCH_PROBUZHDENIYA_V1 - marker

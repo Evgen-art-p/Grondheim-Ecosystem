@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-20T15:14:38.946000",
+  "updated": "2026-08-21T01:55:32.297434",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -10,11 +10,11 @@
   "feed": {
     "mode": "tester",
     "symbol": "EURUSD",
-    "момент": "2025.07.24 04:00"
+    "момент": "2024.11.26 00:00"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Не сформирована первая волна и откат к ней",
+    "reason": "Аллигатор спит, нет четкого тренда и первой волны для отката.",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -22,7 +22,7 @@
     "action": "WAIT",
     "new_stop": null,
     "add_lot": null,
-    "бар": "2026.07.15 20:00"
+    "бар": "2026.04.30 20:00"
   },
   "avan": {
     "verdict": "REJECTED",
@@ -76,20 +76,9 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.07.15 20:00"
+    "бар": "2026.05.01 08:00"
   },
   "точки": {
-    "EURUSD H4": {
-      "alive": true,
-      "trend_direction": "BEAR",
-      "zero_point_price": 1.17416,
-      "rodilas_na_bare": "2026.04.30 20:00",
-      "t1_status": "DETECTED",
-      "neutral_bars_count": 0,
-      "barov_s_tochki": 0,
-      "kray_posle": 1.17416,
-      "struktura_pozadi": 110
-    },
     "GBPUSD H4": {
       "alive": true,
       "trend_direction": "BEAR",
@@ -97,9 +86,46 @@
       "rodilas_na_bare": "2026.07.15 20:00",
       "t1_status": "DETECTED",
       "neutral_bars_count": 0,
-      "barov_s_tochki": 0,
-      "kray_posle": 1.35582,
-      "struktura_pozadi": 121
+      "barov_s_tochki": 3,
+      "kray_posle": 1.35188,
+      "struktura_pozadi": 121,
+      "konec_volny_1": null,
+      "reshali_na_bare": "2026.07.16 08:00",
+      "otvet_bara": {
+        "alive": true,
+        "reason": "жива",
+        "changed": false,
+        "direction": "BEAR"
+      }
+    },
+    "EURUSD H4": {
+      "alive": false,
+      "trend_direction": "BEAR",
+      "zero_point_price": 1.17416,
+      "rodilas_na_bare": "2026.04.30 20:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 2,
+      "kray_posle": 1.1723,
+      "struktura_pozadi": 110,
+      "konec_volny_1": null,
+      "reshali_na_bare": "2026.05.01 08:00",
+      "otvet_bara": {
+        "alive": false,
+        "reason": "структурный слом (close): цена закрылась за 1.17416",
+        "changed": true,
+        "direction": "BEAR"
+      }
     }
+  },
+  "наблюдения": {
+    "GBPUSD H4": {
+      "A06": {
+        "за_чем": "Цена находится выше всех линий Аллигатора, что указывает на восходящий тренд. AO растет, подтверждая силу движения. При этом, есть медвежий разворотный бар и точка ноль, а также приседающий бар, что может говорить о возможном изменении направления. Однако, для моего входа (первый откат к новой волне) пока нет сформированной первой волны нового движения и отката к ней. НАБЛЮДАЮ: за формированием пе",
+        "с_бара": "2026.07.15 20:00",
+        "последний_бар": "2026.07.15 20:00"
+      }
+    },
+    "EURUSD H4": {}
   }
 }

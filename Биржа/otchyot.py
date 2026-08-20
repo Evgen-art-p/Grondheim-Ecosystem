@@ -62,8 +62,22 @@ class Otchyot:
             except Exception as e:
                 print(f"[ОТЧЁТ] кадр не лёг: {e}")
 
+        # VOLNA_NA_STOLE_V1: даты. Шаги наблюдения подписывались датой
+        # КАНДИДАТА — в прогоне 20.08 места 10, 11 и 12 вышли с одной
+        # датой 2025.11.21 12:00, хотя это три разных бара (видно по
+        # дневнику самой Нины: там стоит 2025.11.27 04:00).
+        # Берём бар, на котором трейдера спросили НА САМОМ ДЕЛЕ; дату
+        # места оставляем отдельно, она тоже нужна.
+        _nastoyashchiy_bar = ""
+        try:
+            from hooks import load_trading_state as _lts
+            _nastoyashchiy_bar = str(
+                ((_lts() or {}).get("рынок") or {}).get("бар") or "")
+        except Exception:
+            pass
         self.mesta.append({
-            "когда_на_рынке": k.get("дата", ""),
+            "когда_на_рынке": _nastoyashchiy_bar or k.get("дата", ""),
+            "место_найдено_на": k.get("дата", ""),
             "кто": imya, "слот": slot,
             "инструмент": symbol, "этаж": etazh,
             "разворотный": k.get("разворотный"),
@@ -168,3 +182,5 @@ class Otchyot:
 
 
 # OTCHYOT_PROGONA_V1 - marker
+
+# VOLNA_NA_STOLE_V1 - marker

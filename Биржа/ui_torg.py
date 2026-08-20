@@ -844,6 +844,20 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
     # ── чат ───────────────────────────────────────────────────
     def update_chat_display():
+        # PROGON_BEZ_OKNA_V1: вкладка могла умереть, пока прогон
+        # работает в фоне (связь моргнула, страница обновилась,
+        # компьютер уснул). NiceGUI на запись в мёртвого клиента
+        # бросает «Client has been deleted» и KeyError, и это роняло
+        # ВЕСЬ прогон. Лента в закрытой вкладке никому не видна —
+        # значит и падать из-за неё нельзя. Считаем дальше молча,
+        # отчёт всё равно пишется на диск.
+        try:
+            _risovat_chat()
+        except Exception as e:
+            print(f"[ПРОГОН] окно не принимает ленту ({e}) — "
+                  f"работаю молча, отчёт пишется на диск")
+
+    def _risovat_chat():
         if not chat_log_ref["element"]:
             return
         chat_log_ref["element"].clear()
@@ -2258,6 +2272,124 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     "role": "assistant", "agent": _sl,
                     "content": skazal or "(без текста)"})
                 update_chat_display()
+
+                # ── PROGON_VPERYOD_V1 ────────────────────────
+                # Слово Шефа: «в чём разница факта? что на истории он
+                # есть, что на реале — появилось, наблюдает, дошло,
+                # вошла». Прогон прыгал через месяцы не потому, что
+                # история такая, а потому что я его таким сделал.
+                # Теперь: трейдер взял на карандаш — шагаем ВПЕРЁД по
+                # одному настоящему бару и спрашиваем снова, пока он
+                # наблюдает. Граница — дата следующего места: дальше
+                # начинается своя точка, старую наблюдать не за чем.
+                _sled = None
+                try:
+                    _i_tek = mesta.index((data, _sl, _sym, _tf, k))
+                    if _i_tek + 1 < len(mesta):
+                        _sled = mesta[_i_tek + 1][0]
+                except Exception:
+                    _sled = None
+                while True:
+                    if state.get("stop_requested"):
+                        break
+                    try:
+                        import hooks as _h
+                        if not _h.nablyudenie(_sym, _tf, _sl):
+                            break
+                        # PROGON_POSLE_SLOMA_V1: точка ушла — наблюдать
+                        # больше не за чем, идём к следующему месту.
+                        # Правило ТОЛЬКО для прогона: там следующее
+                        # место известно заранее. В живом городе
+                        # наблюдение снимает сам трейдер, и никто иной.
+                        _tt = _h._blok_tochki(_h.load_trading_state(),
+                                              _h._para_tochki(_sym, _tf))
+                        if not _tt.get("alive"):
+                            _h.snyat_nablyudenie(_sym, _tf, _sl,
+                                                 "точка ушла")
+                            state["chat_history"].append({
+                                "role": "system",
+                                "content": "✕ точка ушла — иду к "
+                                           "следующему месту"})
+                            update_chat_display()
+                            break
+                    except Exception as _en:
+                        print(f"[ПРОГОН] наблюдение не прочлось: {_en}")
+                        break
+                    try:
+                        _bylo = istoriya.gde_stoim()
+                        _stalo = istoriya.shag(_tf, 1, _sym)
+                    except Exception as _esh:
+                        print(f"[ПРОГОН] шаг вперёд не вышел: {_esh}")
+                        break
+                    if not _stalo or _stalo == _bylo:
+                        print("[ПРОГОН] история кончилась — иду дальше")
+                        break
+                    if _sled and _stalo >= _sled:
+                        print("[ПРОГОН] дошёл до следующего места — "
+                              "наблюдение закрываю")
+                        try:
+                            _h.snyat_nablyudenie(_sym, _tf, _sl,
+                                                 "дошли до следующего места")
+                        except Exception:
+                            pass
+                        break
+                    # KONEC_VOLNY_1_V1: шагаем МОЛЧА. Рука рынка — код,
+                    # не модель: ведёт точку и ищет конец первой волны
+                    # бесплатно. Ключ закрыт — идём дальше даром.
+                    try:
+                        # SVYAZ_I_PAPKA_V1: молчаливый шаг — в рабочий
+                        # поток. Раньше он считал приборы прямо в
+                        # корутине и подмораживал окно на каждом баре.
+                        def _schitat(s=_sym, t=_tf, sl=_sl):
+                            import hooks as _hh2
+                            _hh2.rynok_novyy_bar(s, t)
+                            return __import__("council")._klyuch_probuzhdeniya(
+                                s, t, sl)
+                        _kk = await loop.run_in_executor(None, _schitat)
+                    except Exception as _ekl:
+                        print(f"[ПРОГОН] ключ не прочёлся: {_ekl}")
+                        _kk = {"будим": True, "почему": "ключ не прочёлся"}
+                    if not _kk.get("будим"):
+                        continue
+                    state["chat_history"].append({
+                        "role": "system",
+                        "content": f"👁 {_stalo} · {_kk.get('почему')} "
+                                   f"→ спрашиваю {imya}"})
+                    update_chat_display()
+                    _kadr = None
+                    try:
+                        _kadr = await loop.run_in_executor(
+                            None, lambda s=_sym, t=_tf: __import__(
+                                "grafik").kadr(s, t))
+                    except Exception as _ek:
+                        print(f"[ПРОГОН] кадр не нарисовался: {_ek}")
+                    try:
+                        # PROGON_BEZ_OKNA_V1: показать — дело окна,
+                        # а его может уже не быть. Кадр всё равно
+                        # сохранён и попадёт в отчёт.
+                        pokazat_kadr(_kadr)
+                    except Exception as _ep:
+                        print(f"[ПРОГОН] кадр не показан ({_ep}) — "
+                              f"он в отчёте")
+                    try:
+                        itog = await loop.run_in_executor(None, _zvat)
+                    except Exception as e:
+                        print(f"[ПРОГОН] Совет сорвался на {_stalo}: {e}")
+                        break
+                    r = (itog.get("results") or {}).get(_sl) or {}
+                    skazal = (r.get("narrative") or "").strip()
+                    if not skazal and r.get("error"):
+                        skazal = f"(промолчал: {r['error']})"
+                    if _otchyot is not None:
+                        try:
+                            _otchyot.zapisat(k, _sl, imya, _sym, _tf, r,
+                                             _kadr)
+                        except Exception as _e:
+                            print(f"[ОТЧЁТ] шаг не записался: {_e}")
+                    state["chat_history"].append({
+                        "role": "assistant", "agent": _sl,
+                        "content": skazal or "(без текста)"})
+                    update_chat_display()
                 # PROGON_VIDNO_V1: и в ОТЧЁТ справа. Раньше там висело
                 # «Отчёт пока не создан»: прогон писал только в ленту.
                 try:
@@ -2630,17 +2762,40 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
     _TEST_DATA_DIR = _HERE / "test_data"
 
+    # SVYAZ_I_PAPKA_V1: память полки живёт в модуле, а не в странице —
+    # переподключился браузер, страница новая, а разобранные файлы те же.
+    global _PASPORTA_KESH
+    try:
+        _PASPORTA_KESH
+    except NameError:
+        _PASPORTA_KESH = {}
+
     def _passport_from_csv(path):
+        # SVYAZ_I_PAPKA_V1: помним разобранные файлы по пути, размеру и
+        # времени правки. Пересборка страницы (а она случается на КАЖДОМ
+        # переподключении браузера) читала весь каталог заново — почти
+        # миллион баров в главном потоке. Сервер молчал, браузер рвал
+        # связь по минуте, страница строилась опять — и так по кругу.
         from williams_core import read_mt5_csv
         p = Path(path)
+        try:
+            st = p.stat()
+            klyuch = (str(p.resolve()), st.st_size, int(st.st_mtime))
+        except Exception:
+            klyuch = None
+        if klyuch is not None and klyuch in _PASPORTA_KESH:
+            return dict(_PASPORTA_KESH[klyuch])
         bars = read_mt5_csv(str(p))
         if not bars:
             return None
         symbol, tf = _parse_symbol_tf(p.name)
-        return {
+        _pasport = {
             "name": p.name, "path": str(p), "symbol": symbol, "timeframe": tf,
             "bars": len(bars), "date_from": bars[0].get("date", "?"), "date_to": bars[-1].get("date", "?"),
         }
+        if klyuch is not None:      # SVYAZ_I_PAPKA_V1
+            _PASPORTA_KESH[klyuch] = dict(_pasport)
+        return _pasport
 
     # POLKA_IZ_TERMINALA_V1 — какие этажи спрашиваем у терминала.
     # Не все подряд: минутка и двухчасовка редко нужны, а опрос платный
@@ -3370,3 +3525,13 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PROGON_VIDNO_V1 - marker
 
 # TOCHKA_NE_TASHCHITSYA_V1 - marker
+
+# PROGON_VPERYOD_V1 - marker
+
+# KONEC_VOLNY_1_V1 - marker
+
+# PROGON_POSLE_SLOMA_V1 - marker
+
+# PROGON_BEZ_OKNA_V1 - marker
+
+# SVYAZ_I_PAPKA_V1 - marker

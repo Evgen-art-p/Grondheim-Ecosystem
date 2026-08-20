@@ -258,7 +258,16 @@ def proverit_tochku(md: dict, para: str = "") -> dict:
     if twr.get("neutral") is True:
         _n = int(isk.get("neutral_bars_count", 0) or 0) + 1
         isk["neutral_bars_count"] = _n
-        if _n >= 3:
+        # TOCHKA_DO_SLOMA_V1: смерть по ритму СНЯТА.
+        # Слово Шефа: сколько поймано точек — столько и должно быть от
+        # них волн, от истинных. Значит исходов два: цена ушла за точку
+        # (не истинная) или ждём её волну сколько надо. Третьего нет.
+        # А это правило («3 бара нейтрали») — наше выдуманное число,
+        # его нет ни у Вильямса, ни у Котина, ни в каноне. Оно убивало
+        # 31 точку из 89 — треть, и все они могли оказаться истинными.
+        # Нейтраль остаётся ПОКАЗАНИЕМ: счётчик считается и лежит в
+        # столе, трейдер видит, что ритм замер, и решает сам.
+        if False:
             isk["alive"] = False
             isk["neutral_bars_count"] = 0
             save_trading_state(tstate)
@@ -267,7 +276,7 @@ def proverit_tochku(md: dict, para: str = "") -> dict:
                     "changed": True, "direction": napr}   # TOCHKA_NAPRAVLENIE_V1
         save_trading_state(tstate)
         return {"alive": True,
-                "reason": f"TWR нейтрален {_n}/3 — ещё жива, считаю",
+                "reason": f"TWR нейтрален {_n} бар(а) — жива, ритм замер",
                 "changed": False, "direction": napr}
     else:
         if isk.get("neutral_bars_count"):
@@ -2289,6 +2298,67 @@ def _blok_tochki(tstate: dict, para: str = "") -> dict:
     return tstate.setdefault("точки", {}).setdefault(para, {})
 
 
+# ═══════════════════════════════════════════════════════════
+# NABLYUDENIE_V1 — «беру на карандаш», второй ключ пробуждения
+# ═══════════════════════════════════════════════════════════
+# Слово Шефа: «увидел, похоже, проверил — наблюдай, если видишь, что
+# вот-вот твой сигнал». Трейдер, которому родившаяся точка не его
+# момент, больше не теряет увиденное: он говорит НАБЛЮДАЮ, и город
+# будит его дальше, пока он сам не скажет УХОЖУ или не войдёт.
+#
+# Снимает наблюдение ТОЛЬКО трейдер. Код не гасит его ни при сломе
+# точки, ни по числу баров: слом он увидит сам и скажет.
+
+def nablyudenie(symbol: str = "", timeframe: str = "",
+                slot: str = "") -> dict:
+    """Что трейдер взял на карандаш по этой паре. Пусто — не наблюдает."""
+    try:
+        t = load_trading_state()
+        para = _para_tochki(symbol, timeframe)
+        return ((t.get("наблюдения") or {}).get(para) or {}).get(slot) or {}
+    except Exception:
+        return {}
+
+
+def vzyat_na_karandash(symbol: str, timeframe: str, slot: str,
+                       za_chem: str = "", bar: str = "") -> None:
+    """Трейдер сказал НАБЛЮДАЮ. Запоминаем — за чем и с какого бара."""
+    try:
+        t = load_trading_state()
+        para = _para_tochki(symbol, timeframe)
+        polka = t.setdefault("наблюдения", {}).setdefault(para, {})
+        bylo = polka.get(slot) or {}
+        polka[slot] = {
+            "за_чем": (za_chem or "").strip()[:400],
+            "с_бара": bylo.get("с_бара") or bar,
+            "последний_бар": bar,
+        }
+        save_trading_state(t)
+        if not bylo:
+            print(f"[НАБЛЮДЕНИЕ] 👁 {slot} взял на карандаш {para}")
+    except Exception as e:
+        print(f"[НАБЛЮДЕНИЕ] записать не вышло ({e}) — работаем дальше")
+
+
+def snyat_nablyudenie(symbol: str = "", timeframe: str = "",
+                      slot: str = "", pochemu: str = "") -> bool:
+    """Трейдер сказал УХОЖУ (или вошёл). Наблюдение снимается."""
+    try:
+        t = load_trading_state()
+        para = _para_tochki(symbol, timeframe)
+        polka = (t.get("наблюдения") or {}).get(para) or {}
+        if slot not in polka:
+            return False
+        polka.pop(slot, None)
+        save_trading_state(t)
+        print(f"[НАБЛЮДЕНИЕ] ✕ {slot} снял наблюдение по {para}"
+              + (f": {pochemu}" if pochemu else ""))
+        return True
+    except Exception as e:
+        print(f"[НАБЛЮДЕНИЕ] снять не вышло ({e}) — работаем дальше")
+        return False
+
+
 def zabyt_tochku(symbol: str = "", timeframe: str = "") -> bool:
     """TOCHKA_NE_TASHCHITSYA_V1: стереть точку по паре.
 
@@ -2309,7 +2379,10 @@ def zabyt_tochku(symbol: str = "", timeframe: str = "") -> bool:
         if para in polka:
             polka.pop(para, None)
             t["точки"] = polka
-            save_trading_state(t)
+        # NABLYUDENIE_V1: прогон прыгнул — вчерашнее наблюдение к новому
+        # месту отношения не имеет. В живом городе эта рука не зовётся.
+        (t.get("наблюдения") or {}).pop(para, None)
+        save_trading_state(t)
         return bylo
     except Exception as e:
         print(f"[ТОЧКА] забыть не вышло ({e}) — работаем дальше")
@@ -2332,14 +2405,73 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
 
         t = load_trading_state()
         isk = _blok_tochki(t, para)
+
+        # ODIN_BAR_ODNO_RESHENIE_V1: один бар — одно решение.
+        # Рука рынка на одном баре зовётся дважды: молчаливым шагом
+        # прогона и потом внутри Совета. В прогоне 20.08 из-за этого
+        # пропал первый в истории конец волны 1: первый заход его
+        # отметил, второй зашёл заново, увидел отметку, провалился в
+        # блок рождения — и точка родилась поверх события, стерев его.
+        # Оба решения по отдельности верны, но принимать их дважды об
+        # одном баре нельзя.
+        if bar and str(isk.get("reshali_na_bare") or "") == str(bar):
+            return dict(isk.get("otvet_bara") or {"alive": bool(isk.get("alive"))})
+
+        def _zapomnit_otvet(otvet: dict) -> dict:
+            """Запомнить решение этого бара и отдать его как есть."""
+            try:
+                t2 = load_trading_state()
+                isk2 = _blok_tochki(t2, para)
+                isk2["reshali_na_bare"] = str(bar or "")
+                isk2["otvet_bara"] = dict(otvet)
+                save_trading_state(t2)
+            except Exception:
+                pass
+            return otvet
         zhiva = bool(isk.get("alive"))
         storona = isk.get("trend_direction")
 
         # ── разворотник на этом баре: рождение или ведение ──
         # Рождаем ТОЛЬКО в зоне конца волны (модуль 6.2, пункты 1-2):
         # бар без читаемой структуры — середина движения, не конец.
+        # KONEC_VOLNY_1_V1: разворотник в ОБРАТНУЮ сторону внутри живой
+        # точки — это не новое начало, а конец первой волны от неё,
+        # если структура позади укладывается ПОСЛЕ точки. По
+        # фрактальности волна 1 — сама пятиволновка, и конец её пятой
+        # ловится тем же прибором, что и сама точка.
+        # Сравниваем два числа, которые уже считаются: сколько баров
+        # живёт точка и сколько баров у структуры. Ни допусков, ни
+        # рамок по длине: волна задаёт этажи, а не этажи волну.
+        if (zhiva and napr in ("BULL", "BEAR") and storona != napr
+                and cena is not None and wf.get("struktura_chitaetsya")
+                and not isk.get("konec_volny_1")):
+            # KONEC_VOLNY_1_V2: снято моё лишнее условие «структура
+            # уложилась в прожитое точкой». Линейка меряет структуру
+            # четырьмя нулями AO назад — медиана 76 баров, она почти
+            # всегда достаёт за точку. С условием событие случалось раз
+            # в полтора года, без него — пять раз в год, ровно как Шеф
+            # и насчитал по длине волны.
+            _dlina = wf.get("dlina") or 0
+            _prozhito = int(isk.get("barov_s_tochki") or 0)
+            if True:
+                isk["konec_volny_1"] = {
+                    "цена": cena, "бар": bar, "сторона": napr,
+                    "структура": _dlina,
+                    "баров_от_точки": _prozhito,
+                }
+                save_trading_state(t)
+                print(f"[ВОЛНА 1] ⛰ {para}: кончилась @ {cena} · бар {bar} "
+                      f"· {_prozhito} бар(ов) от точки "
+                      f"(структура {_dlina})")
+                return _zapomnit_otvet({"alive": True, "konec_volny_1": True,
+                                        "direction": storona})
+
         if napr in ("BULL", "BEAR") and cena is not None                 and wf.get("struktura_chitaetsya"):
             if (not zhiva) or storona != napr:
+                # KONEC_VOLNY_1_V1: сюда обратный разворотник попадает
+                # только если конец волны 1 уже был отмечен или его
+                # структура НЕ уложилась после точки — тогда это правда
+                # новое начало, а не макушка первой волны.
                 isk["alive"] = True
                 isk["trend_direction"] = napr
                 isk["zero_point_price"] = cena
@@ -2349,11 +2481,17 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
                 isk["barov_s_tochki"] = 0
                 isk["kray_posle"] = cena
                 isk["struktura_pozadi"] = wf.get("dlina")
+                # KONEC_VOLNY_1_V2: новая точка — новая жизнь. Без этой
+                # строки отметка о конце волны 1 оставалась от ПРОШЛОЙ
+                # точки и навсегда запирала событие: за 1.8 года срабатывало
+                # ровно один раз, хотя обратных разворотников было девять.
+                isk["konec_volny_1"] = None
                 save_trading_state(t)
                 print(f"[ТОЧКА] ✦ {para}: родилась {napr} @ {cena} · "
                       f"бар {bar} · структура позади: "
                       f"{wf.get('dlina')} бар.")
-                return {"alive": True, "rodilas": True, "direction": napr}
+                return _zapomnit_otvet({"alive": True, "rodilas": True,
+                                        "direction": napr})
             # та же сторона и точка жива — ведёт proverit_tochku:
             # там подпитка GREEN/SQUAT и структурный слом.
 
@@ -2378,7 +2516,7 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
             save_trading_state(t)
         elif res.get("changed"):
             print(f"[ТОЧКА] ✕ {para}: погасла — {res.get('reason')}")
-        return res
+        return _zapomnit_otvet(res)
     except Exception as e:
         print(f"[ТОЧКА] ⚠️  не рассужена ({e}) — бар цел, работаем дальше")
         return {"alive": False, "reason": f"сбой: {e}", "changed": False}
@@ -2522,3 +2660,13 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # TOLKO_ZAKRYTYE_V1 - marker
 
 # TOCHKA_NE_TASHCHITSYA_V1 - marker
+
+# NABLYUDENIE_V1 - marker
+
+# KONEC_VOLNY_1_V1 - marker
+
+# KONEC_VOLNY_1_V2 - marker
+
+# TOCHKA_DO_SLOMA_V1 - marker
+
+# ODIN_BAR_ODNO_RESHENIE_V1 - marker

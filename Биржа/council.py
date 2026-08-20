@@ -349,7 +349,54 @@ def _para_slota(ceh_id: str, slot: str) -> dict:
 _ZHIVYE_STATUSY = ("WATCHING", "PENDING", "OPEN")
 
 
-def _klyuch_probuzhdeniya(symbol: str, timeframe: str) -> dict:
+def _uslyshat_nablyudenie(slot: str, symbol: str, timeframe: str,
+                          skazal: str, verdikt: str) -> None:
+    """NABLYUDENIE_V1: услышать слово трейдера про наблюдение.
+
+    НАБЛЮДАЮ: <за чем>  — берём на карандаш, будим дальше
+    УХОЖУ               — снимаем
+    вход (APPROVED)     — снимаем: дальше ведёт позиция
+
+    Слова нет — ничего не меняем. Молчание не отменяет прежнего
+    решения и не заводит нового.
+    """
+    try:
+        import hooks
+        tekst = (skazal or "")
+        verh = tekst.upper()
+        if (verdikt or "").upper() == "APPROVED":
+            hooks.snyat_nablyudenie(symbol, timeframe, slot, "вошёл")
+            return
+        if "УХОЖУ" in verh:
+            hooks.snyat_nablyudenie(symbol, timeframe, slot, "сказал УХОЖУ")
+            return
+        # SLYSHIM_ZHDU_V1: слышим обычную речь, а не только ритуал.
+        # В прогоне 21.08 трейдер сказал «жду» почти в каждом из
+        # пятнадцати ответов, а ритуальное НАБЛЮДАЮ — дважды. Требовать
+        # волшебное слово, когда человек говорит обычное, — это наша
+        # неудобная кнопка, а не его невнимательность.
+        _ZHDU = ("НАБЛЮДАЮ", "ЖДУ", "ЖДАТЬ", "ПОДОЖДУ", "ДОЖДУСЬ",
+                 "ПОКА РАНО", "ЖДЁМ", "ЖДЕМ")
+        if any(s in verh for s in _ZHDU):
+            za = ""
+            for stroka in tekst.splitlines():
+                _v = stroka.upper()
+                if any(s in _v for s in _ZHDU):
+                    za = stroka.split(":", 1)[1] if ":" in stroka else stroka
+                    break
+            bar = ""
+            try:
+                bar = str((hooks.load_trading_state().get("рынок") or {})
+                          .get("бар") or "")
+            except Exception:
+                pass
+            hooks.vzyat_na_karandash(symbol, timeframe, slot, za, bar)
+    except Exception as e:
+        print(f"[НАБЛЮДЕНИЕ] слово не разобрано ({e}) — работаем дальше")
+
+
+def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
+                          slot: str = "") -> dict:
     """Есть ли повод звать того, кто работает этой парой."""
     try:
         import hooks
@@ -361,6 +408,7 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str) -> dict:
         # втором, ни на третьем, ни даже на десятом баре».
         tch = hooks._blok_tochki(t, hooks._para_tochki(symbol, timeframe))
         bar_goroda = str(((t.get("рынок") or {}).get("бар")) or "")
+        _ = slot   # KONEC_VOLNY_1_V1: наблюдение больше не ключ
         rodilas = str(tch.get("rodilas_na_bare") or "")
         if tch.get("alive") and bar_goroda and rodilas == bar_goroda                 and not tch.get("barov_s_tochki"):
             return {"будим": True,
@@ -378,7 +426,20 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str) -> dict:
                 return {"будим": True,
                         "почему": f"своя {p.get('status')} — позицию ведём"}
 
-        return {"будим": False, "почему": "точки нет и позиции нет"}
+        # KONEC_VOLNY_1_V1: второе СОБЫТИЕ, ради которого всё. Волна 1
+        # от точки кончилась — значит есть от чего ждать откат. Слово
+        # Шефа: побарный мониторинг — ошибка большинства трейдеров;
+        # трейдер ждёт событие, а не пялится в каждую свечу.
+        kv = tch.get("konec_volny_1") or {}
+        if kv and str(kv.get("бар") or "") == bar_goroda and bar_goroda:
+            return {"будим": True,
+                    "почему": f"волна 1 кончилась @ {kv.get('цена')} "
+                              f"({kv.get('баров_от_точки')} бар. от точки)"}
+
+        # «Наблюдаю» само по себе дверь НЕ открывает: пока трейдер
+        # следит, город считает молча и бесплатно.
+        return {"будим": False, "почему": "точки нет, события нет, "
+                                          "позиции нет"}
     except Exception as e:
         return {"будим": True, "почему": f"ключ не сработал ({e}) — зову"}
 
@@ -491,7 +552,7 @@ def wake_council(symbol: str = "", timeframe: str = "",
                                        "молчит": True}
             continue
         # KLYUCH_PROBUZHDENIYA_V1: зовём по ключу, не бар за баром.
-        _k = _klyuch_probuzhdeniya(_p["symbol"], _p["timeframe"])
+        _k = _klyuch_probuzhdeniya(_p["symbol"], _p["timeframe"], slot)
         if not _k["будим"]:
             print(f"[КЛЮЧ] 🔒 {slot} спит: {_k['почему']}")
             summary["verdicts"][aid] = None
@@ -506,6 +567,10 @@ def wake_council(symbol: str = "", timeframe: str = "",
         summary["woke"].append(aid)
         summary["results"][aid] = r
         sig = r.get("signal", {}) or {}
+        # NABLYUDENIE_V1: ловим слово трейдера — НАБЛЮДАЮ / УХОЖУ.
+        _uslyshat_nablyudenie(slot, _p["symbol"], _p["timeframe"],
+                              r.get("narrative", ""),
+                              sig.get(f"{pre}_verdict"))
         summary["verdicts"][aid] = sig.get(f"{pre}_verdict")
         _emit({"type": "agent", "id": aid, "ok": r.get("ok"),
                "result": r, "verdict": sig.get(f"{pre}_verdict"),
@@ -545,3 +610,9 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # OTPERET_V1 - marker
 
 # KLYUCH_PROBUZHDENIYA_V1 - marker
+
+# NABLYUDENIE_V1 - marker
+
+# KONEC_VOLNY_1_V1 - marker
+
+# SLYSHIM_ZHDU_V1 - marker
