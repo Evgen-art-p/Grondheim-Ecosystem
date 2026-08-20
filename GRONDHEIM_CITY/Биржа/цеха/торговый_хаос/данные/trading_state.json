@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-20T14:12:03.392405",
+  "updated": "2026-08-20T14:37:56.409276",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -14,7 +14,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Нет первого отката к новой волне, Аллигатор спит, цена в пасти.",
+    "reason": "",
     "direction": null,
     "entry": null,
     "stop": null,

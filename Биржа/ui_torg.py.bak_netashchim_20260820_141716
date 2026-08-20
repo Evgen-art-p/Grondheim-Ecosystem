@@ -2199,15 +2199,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     update_chat_display()
                     break
                 istoriya.postavit(data)
-                # TOCHKA_NE_TASHCHITSYA_V1: прогон прыгнул в другой
-                # момент истории — точка с прошлого места сюда не
-                # едет. Иначе она формально жива, заново не рождается,
-                # и ключ молчит на честном разворотнике.
-                try:
-                    import hooks as _h
-                    _h.zabyt_tochku(_sym, _tf)
-                except Exception as _ez:
-                    print(f"[ПРОГОН] точку забыть не вышло: {_ez}")
                 imya = _agent_label(roster, _sl) or _sl
                 # PROGON_VIDNO_V1: кадр рисуем ОДИН раз и В ФОНЕ.
                 # Раньше он рисовался в главном потоке, да ещё дважды
@@ -3368,5 +3359,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PUZYRI_V1 - marker
 
 # PROGON_VIDNO_V1 - marker
-
-# TOCHKA_NE_TASHCHITSYA_V1 - marker

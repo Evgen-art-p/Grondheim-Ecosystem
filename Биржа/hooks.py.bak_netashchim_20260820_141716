@@ -2289,33 +2289,6 @@ def _blok_tochki(tstate: dict, para: str = "") -> dict:
     return tstate.setdefault("точки", {}).setdefault(para, {})
 
 
-def zabyt_tochku(symbol: str = "", timeframe: str = "") -> bool:
-    """TOCHKA_NE_TASHCHITSYA_V1: стереть точку по паре.
-
-    Нужна прогону по истории: он ПРЫГАЕТ от места к месту через недели
-    и месяцы, а точка живёт между вызовами (в реале так и надо — город
-    идёт баром за баром). Без чистки на новое место приезжает точка,
-    рождённая полгода назад: заново не родится, а проверка тут же
-    похоронит её структурным сломом — и трейдера не позовут там, где
-    стоит честный разворотник.
-
-    Ничего не судит и никого не будит. Просто чистая доска.
-    """
-    try:
-        t = load_trading_state()
-        para = _para_tochki(symbol, timeframe)
-        polka = t.get("точки") or {}
-        bylo = bool((polka.get(para) or {}).get("alive"))
-        if para in polka:
-            polka.pop(para, None)
-            t["точки"] = polka
-            save_trading_state(t)
-        return bylo
-    except Exception as e:
-        print(f"[ТОЧКА] забыть не вышло ({e}) — работаем дальше")
-        return False
-
-
 def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
     """Родить точку ноль или вести уже рождённую. Код, без LLM.
 
@@ -2520,5 +2493,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # TOCHKA_ROZHDAETSYA_V1 - marker
 
 # TOLKO_ZAKRYTYE_V1 - marker
-
-# TOCHKA_NE_TASHCHITSYA_V1 - marker
