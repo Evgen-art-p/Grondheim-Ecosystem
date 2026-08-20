@@ -87,40 +87,6 @@ def pustoy(self_key: str = "brut") -> dict:
     }
 
 
-def _tochka_nol(md: dict, symbol: str = "", timeframe: str = "") -> dict:
-    """TOCHKA_ROZHDAETSYA_V1: точка ноль на стол — КООРДИНАТА, не вывод.
-
-    Разворотный бар выше по столу — это «есть ли он на ЭТОЙ свече».
-    Точка — то же самое, но живущее между барами: вот начало, вот
-    когда оно было, вот куда цена от него ушла. От неё трейдер и
-    смотрит волну 1, как смотрит Шеф глазом.
-
-    Ни «вход здесь», ни «сигнал». Что это значит — решает трейдер.
-    """
-    try:
-        from hooks import load_trading_state, _blok_tochki, _para_tochki
-        isk = _blok_tochki(load_trading_state() or {},
-                           _para_tochki(symbol, timeframe))
-    except Exception:
-        return {}
-    if not isk.get("alive"):
-        return {"жива": False, "сторона": isk.get("trend_direction"),
-                "цена": isk.get("zero_point_price")}
-    return {
-        "жива": True,
-        "сторона": isk.get("trend_direction"),
-        "цена": isk.get("zero_point_price"),
-        "бар_рождения": isk.get("rodilas_na_bare"),
-        "баров_назад": isk.get("barov_s_tochki"),
-        "край_после_точки": isk.get("kray_posle"),
-        # НЕ длина новой волны — её никто знать не может, точка только
-        # родилась. Это отмерено НАЗАД: сколько баров заняла структура,
-        # которая только что кончилась (4 перехода нуля AO, канон 18.07).
-        "структура_позади_баров": isk.get("struktura_pozadi"),
-        "цена_сейчас": ((md or {}).get("price") or {}).get("close"),
-    }
-
-
 def _status_alligatora(al: dict) -> str:
     """Словарь Моржа, слово в слово как он его писал."""
     if al.get("sleeping"):
@@ -288,8 +254,6 @@ def nakryt(symbol: str, timeframe: str,
         },
         # ЗОНА по Вильямсу (iZone из эксперта Шефа): AO и AC вместе.
         # Зелёная — оба растут, красная — оба падают, серая — спорят.
-        # TOCHKA_ROZHDAETSYA_V1: начало, которое живёт дольше свечи
-        "точка_ноль": _tochka_nol(md, symbol, timeframe),
         "зона": _zona(md),
         "ac": {
             "значение": (md.get("ac") or {}).get("value"),
@@ -359,15 +323,6 @@ def slovami(stol: dict) -> str:
         f"{(p.get('разворотный_бар') or {}).get('сторона') or 'нет'}"
         + (f" @ {(p.get('разворотный_бар') or {}).get('цена')}"
            if (p.get('разворотный_бар') or {}).get('есть') else ""),
-        # TOCHKA_ROZHDAETSYA_V1: от начала трейдер и меряет волну 1
-        (lambda _t: (
-            f"ТОЧКА НОЛЬ: {_t.get('сторона') or '—'} @ {_t.get('цена')}"
-            f"   {_t.get('баров_назад')} бар(ов) назад"
-            f"   край после точки: {_t.get('край_после_точки')}"
-            f"   структура позади: {_t.get('структура_позади_баров')} бар."
-            f"   сейчас: {_t.get('цена_сейчас')}"
-            if _t.get("жива") else "ТОЧКА НОЛЬ: нет"))(
-                p.get("точка_ноль") or {}),
         f"зона (AO+AC): {p.get('зона') or '—'}   "
         f"AC: {(p.get('ac') or {}).get('значение')} "
         f"({(p.get('ac') or {}).get('растёт') or '—'})",
@@ -389,5 +344,3 @@ if __name__ == "__main__":
 # PRIBORY_NA_STOL_V1 - marker
 
 # KOMPAS_CHESTNYY_V1 - marker
-
-# TOCHKA_ROZHDAETSYA_V1 - marker

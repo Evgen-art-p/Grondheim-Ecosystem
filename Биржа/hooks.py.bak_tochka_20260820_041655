@@ -183,9 +183,7 @@ def save_trading_state(tstate: dict):
 # Код, без LLM — экономим токены Шефа на каждом баре.
 # ═══════════════════════════════════════════════════════════
 
-def proverit_tochku(md: dict, para: str = "") -> dict:
-    # TOCHKA_ROZHDAETSYA_V1: para — чья это точка («SYMBOL TF»).
-    # Пусто — старый общий блок, ничего из прежнего не ломается.
+def proverit_tochku(md: dict) -> dict:
     """
     Кодовая (без LLM) проверка живости точки c на текущем баре.
     Читает/пишет trading_state["iskra"]. Зовётся на КАЖДОМ баре
@@ -196,7 +194,7 @@ def proverit_tochku(md: dict, para: str = "") -> dict:
     "changed" — точка поменяла состояние на этом баре (для ленты).
     """
     tstate = load_trading_state()
-    isk = _blok_tochki(tstate, para)   # TOCHKA_ROZHDAETSYA_V1
+    isk = tstate.setdefault("iskra", {})
     alive = bool(isk.get("alive"))
     zp    = isk.get("zero_point_price")
     napr  = isk.get("trend_direction") or isk.get("napravlenie")
@@ -2253,110 +2251,6 @@ def run_live_council(bars: list, symbol: str, timeframe: str,
 # Это ФИЗИКА, а не суждение: рынок делает своё дело до того, как
 # кто-то за столом откроет рот. Поэтому рука зовётся первым шагом
 # wake_council — раньше Архивариуса и раньше трейдеров.
-# ═══════════════════════════════════════════════════════════
-# TOCHKA_ROZHDAETSYA_V1 — точку ноль зажигает КОД, а не Искра
-# ═══════════════════════════════════════════════════════════
-# proverit_tochku (TOCHKA_ZHIVA_V1) умела ВЕСТИ точку между барами,
-# но зажигала её только Искра (слоты/A01/мозг.py, ISKRA_ALIVE_V1).
-# Слот уехал в архив 06.08 — и alive=True не ставил больше никто.
-# Точка вечно мертва, разворотник на столе живёт одну свечу, мерить
-# от него откат нечем.
-#
-# Слово Шефа: «разворотник и есть точка; увидел разворотник и смотрю
-# от него же волну 1». Но бар истинен НЕ сам по себе: КАНОН_ВХОДА
-# §2.1 (модуль 6.2) — разворотник это пункт ЧЕТВЁРТЫЙ, печать в зоне
-# конца волны, а не поиск по всему графику. Зону меряет линейка по AO
-# (izmerit_volnovuyu_strukturu, 18.07): горб третьей → переход нуля →
-# дивергенция пятой. Её ответ — поле struktura_chitaetsya.
-# Рамку 100-140 не берём: окно — не фильтр (§5к-5п).
-#
-# Это ПОКАЗАНИЕ, а не решение: координата с датой, как фрактал или
-# зона. Что она значит — судит трейдер.
-
-def _para_tochki(symbol: str, timeframe: str) -> str:
-    """Имя ячейки на полке. У точки должно быть имя пары — иначе
-    сосед по цеху подменит её своей."""
-    s = (symbol or "").strip().upper()
-    tf = (timeframe or "").strip().upper()
-    return f"{s} {tf}".strip()
-
-
-def _blok_tochki(tstate: dict, para: str = "") -> dict:
-    """Ячейка точки. Пары нет — старый общий блок `iskra` (так зовут
-    те, кто был написан до полки). Пара есть — своя ячейка."""
-    if not para:
-        return tstate.setdefault("iskra", {})
-    return tstate.setdefault("точки", {}).setdefault(para, {})
-
-
-def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
-    """Родить точку ноль или вести уже рождённую. Код, без LLM.
-
-    Зовётся на каждом баре из rynok_novyy_bar. Никогда не падает:
-    в худшем случае отдаёт {"alive": False}.
-    """
-    para = _para_tochki(symbol, timeframe)
-    try:
-        wf = md.get("wave_form") or {}
-        napr = wf.get("bdb_dir")
-        cena = wf.get("bdb_price")
-        price = md.get("price") or {}
-        bar = md.get("bar_time")
-
-        t = load_trading_state()
-        isk = _blok_tochki(t, para)
-        zhiva = bool(isk.get("alive"))
-        storona = isk.get("trend_direction")
-
-        # ── разворотник на этом баре: рождение или ведение ──
-        # Рождаем ТОЛЬКО в зоне конца волны (модуль 6.2, пункты 1-2):
-        # бар без читаемой структуры — середина движения, не конец.
-        if napr in ("BULL", "BEAR") and cena is not None                 and wf.get("struktura_chitaetsya"):
-            if (not zhiva) or storona != napr:
-                isk["alive"] = True
-                isk["trend_direction"] = napr
-                isk["zero_point_price"] = cena
-                isk["rodilas_na_bare"] = bar
-                isk["t1_status"] = "DETECTED"
-                isk["neutral_bars_count"] = 0
-                isk["barov_s_tochki"] = 0
-                isk["kray_posle"] = cena
-                isk["struktura_pozadi"] = wf.get("dlina")
-                save_trading_state(t)
-                print(f"[ТОЧКА] ✦ {para}: родилась {napr} @ {cena} · "
-                      f"бар {bar} · структура позади: "
-                      f"{wf.get('dlina')} бар.")
-                return {"alive": True, "rodilas": True, "direction": napr}
-            # та же сторона и точка жива — ведёт proverit_tochku:
-            # там подпитка GREEN/SQUAT и структурный слом.
-
-        res = proverit_tochku(md, para)
-
-        # ── пока жива, копим два СЫРЫХ числа: край после точки
-        # (та самая макушка волны 1) и сколько баров прошло ──
-        if res.get("alive"):
-            t = load_trading_state()
-            isk = _blok_tochki(t, para)
-            isk["barov_s_tochki"] = int(isk.get("barov_s_tochki", 0) or 0) + 1
-            kray = isk.get("kray_posle")
-            zp = isk.get("zero_point_price")
-            napr2 = isk.get("trend_direction")
-            hi, lo = price.get("high"), price.get("low")
-            if napr2 == "BULL" and hi is not None:
-                isk["kray_posle"] = hi if kray is None else max(kray, hi)
-            elif napr2 == "BEAR" and lo is not None:
-                isk["kray_posle"] = lo if kray is None else min(kray, lo)
-            if isk.get("kray_posle") is None and zp is not None:
-                isk["kray_posle"] = zp
-            save_trading_state(t)
-        elif res.get("changed"):
-            print(f"[ТОЧКА] ✕ {para}: погасла — {res.get('reason')}")
-        return res
-    except Exception as e:
-        print(f"[ТОЧКА] ⚠️  не рассужена ({e}) — бар цел, работаем дальше")
-        return {"alive": False, "reason": f"сбой: {e}", "changed": False}
-
-
 def rynok_novyy_bar(symbol: str, timeframe: str,
                     window=None, point=None) -> dict:
     """Рассудить новый бар: что взято, что закрыто.
@@ -2438,10 +2332,6 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
     itog["закрыто"] = max(0, _bylo_v_stole - len(stalo))
     itog["позиций"] = len(stalo)
 
-    # TOCHKA_ROZHDAETSYA_V1: точка ноль — после физики, до трейдеров.
-    # Разворотник и есть точка; дальше её ведёт proverit_tochku.
-    _vesti_tochku(md, symbol, timeframe)
-
     if itog["активировано"] or itog["закрыто"]:
         print(f"[РЫНОК] 📊 бар {md.get('bar_time', '')} · "
               f"взято {itog['активировано']}, закрыто {itog['закрыто']}, "
@@ -2456,5 +2346,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # UBRAT_CHETVERTOGO_V1 - marker
 
 # SVEZHEST_V1 - marker
-
-# TOCHKA_ROZHDAETSYA_V1 - marker
