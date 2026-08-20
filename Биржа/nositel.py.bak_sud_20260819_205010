@@ -474,34 +474,6 @@ def zapisat_vyvod(magic, vyvod: str, pnl_r=None, limit: int = 10) -> dict:
     elif res.get("дописано"):
         print(f"[МОСТ] 🧠 ОПЫТ → {n['имя']}: «{vyvod}» "
               f"(якорей: {res.get('якорей')})")
-
-    # ── SUD_PATTERNA_V1: РЫНОК СУДИТ ПАТТЕРН ────────────────────
-    # Вторую половину суда не звал НИКТО: черновик ложился в маяки и
-    # оставался там навсегда. А она и решает его судьбу —
-    #     подтверждения → встаёт МЕТКОЙ (нажитое знание)
-    #     опровержения  → ГАСНЕТ в архив, честно
-    #     метку опровергли → падает обратно в черновики
-    # «Знание твердеет от СУДЬИ, а не от повторения» — а судья молчал.
-    #
-    # Ключ тот же, что при записи вывода (_klyuch_trader): придумывать
-    # нечего. Судим ФАКТ закрытия — плюс или минус, — без оценок.
-    try:
-        if pnl_r is not None:
-            _sud = d.verdikt_rynka(_klyuch_trader(vyvod),
-                                   plus=(float(pnl_r) > 0),
-                                   fakt=vyvod[:200])
-            _ishod = _sud.get("исход") or _sud.get("причина") or ""
-            if _sud.get("учтено"):
-                print(f"[СУД] ⚖ {n['имя']} · {_klyuch_trader(vyvod)}: "
-                      f"{_ishod} (за {_sud.get('за', 0)} / "
-                      f"против {_sud.get('против', 0)})")
-            elif _ishod:
-                print(f"[СУД] · {n['имя']}: {_ishod}")
-    except AttributeError:
-        print("[СУД] ⚠️  в dvizhok нет verdikt_rynka — паттерн не судится")
-    except Exception as _e:
-        print(f"[СУД] ⚠️  паттерн не рассужен ({_e}) — вывод записан, цикл цел")
-
     return res
 
 
@@ -817,5 +789,3 @@ def blok_pamyati(zapros: str, naydeno: str) -> str:
             "Это твоё, было с тобой. Теперь решай.")
 
 # PAMYAT_RABOTA_ZHIZN_V1 - marker
-
-# SUD_PATTERNA_V1 - marker
