@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-20T05:40:00.769589",
+  "updated": "2026-08-20T14:12:03.392405",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -14,14 +14,15 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "",
+    "reason": "Нет первого отката к новой волне, Аллигатор спит, цена в пасти.",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
     "action": "WAIT",
     "new_stop": null,
-    "add_lot": null
+    "add_lot": null,
+    "бар": "2026.04.30 20:00"
   },
   "avan": {
     "verdict": "REJECTED",
@@ -75,19 +76,19 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2025.05.05 20:00"
+    "бар": "2026.04.30 20:00"
   },
   "точки": {
     "EURUSD H4": {
       "alive": true,
-      "trend_direction": "BULL",
-      "zero_point_price": 1.12966,
-      "rodilas_na_bare": "2025.05.05 20:00",
+      "trend_direction": "BEAR",
+      "zero_point_price": 1.17416,
+      "rodilas_na_bare": "2026.04.30 20:00",
       "t1_status": "DETECTED",
       "neutral_bars_count": 0,
       "barov_s_tochki": 0,
-      "kray_posle": 1.12966,
-      "struktura_pozadi": 140
+      "kray_posle": 1.17416,
+      "struktura_pozadi": 110
     }
   }
 }

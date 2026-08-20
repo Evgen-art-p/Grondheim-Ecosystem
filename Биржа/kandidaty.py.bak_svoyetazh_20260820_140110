@@ -58,31 +58,10 @@ def v_okne(dlina) -> bool:
     return OKNO_VOLNY[0] <= dlina <= OKNO_VOLNY[1]
 
 
-def _dobrat_kompas(k: dict, bars: list, symbol: str, tf: str, point: float):
-    """ISKATEL_SVOY_ETAZH_V1: компас НАЙДЕННОМУ месту, по одному разу
-    на место, а не на каждый перебранный бар. Не вышло — остаётся то,
-    что дал рабочий этаж; место от этого не пропадает."""
-    try:
-        from williams_core import build_market_data
-        md = build_market_data(bars, symbol=symbol, timeframe=tf,
-                               point=point, starshiy=True)
-        if md and md.get("global_bias"):
-            k["компас"] = md.get("global_bias")
-    except Exception as e:
-        print(f"[ИСКАТЕЛЬ] компас месту не досчитан ({e}) — не беда")
-    return k
-
-
 def _priznaki(bars: list, symbol: str, tf: str, point: float):
-    """Факты последнего бара окна. Не кандидат — не None.
-
-    ISKATEL_SVOY_ETAZH_V1: ищем на СВОЁМ, рабочем этаже. Разворотный
-    бар и структура считаются здесь же, старший этаж для поиска не
-    нужен — и не спрашивается (слово Шефа 20.08).
-    """
+    """Факты последнего бара окна. Не кандидат — не None."""
     from williams_core import build_market_data
-    md = build_market_data(bars, symbol=symbol, timeframe=tf, point=point,
-                           starshiy=False)
+    md = build_market_data(bars, symbol=symbol, timeframe=tf, point=point)
     if not md:
         return None
     wf = md.get("wave_form") or {}
@@ -190,8 +169,6 @@ def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
             break
         p = _priznaki(okno, symbol, tf, point)
         if p:
-            _dobrat_kompas(p, okno, symbol, tf, point)   # ISKATEL_SVOY_ETAZH_V1
-        if p:
             posledniy_i = i
             # OKNO_ISKATELYA_V1: зовём только там, где масштаб годится.
             # Мимо — считаем и идём дальше: место не потеряно, просто
@@ -241,5 +218,3 @@ if __name__ == "__main__":
 # ISKATEL_V1 - marker
 
 # OKNO_ISKATELYA_V1 - marker
-
-# ISKATEL_SVOY_ETAZH_V1 - marker

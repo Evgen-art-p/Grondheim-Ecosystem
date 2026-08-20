@@ -1100,7 +1100,6 @@ def build_market_data(
     symbol:    str   = "UNKNOWN",
     timeframe: str   = "D1",
     point:     Optional[float] = None,
-    starshiy:  bool  = True,   # ISKATEL_SVOY_ETAZH_V1
 ) -> dict:
     """
     Из сырых баров собирает market_data для всего Совета.
@@ -1171,14 +1170,7 @@ def build_market_data(
     # Подменяет синюю рабочего (она была приближением, не старшим этажом).
     # Аллигатор рабочего НЕ тронут — старший меряется отдельно через источник.
     # Якорь упал / источник недоступен -> остаётся синяя (фоллбэк, стол цел).
-    # ISKATEL_SVOY_ETAZH_V1: starshiy=False — старший этаж не
-    # спрашиваем вовсе. Нужно тем, кто ищет на СВОЁМ этаже (искатель:
-    # разворотный бар и структура считаются на рабочем). Компас тогда
-    # остаётся синей линией рабочего — тот же запасной вариант, что
-    # стоял здесь при недоступном источнике.
     try:
-        if not starshiy:
-            raise RuntimeError("старший этаж не спрашиваем")
         from global_anchor import global_trend as _gt
         _bar_time = bars[-1]["date"]  # WILLIAMS_CORE_TYPING_V1: bars уже не пуст здесь (len>=40 отсечён выше)
         _r = _gt(symbol, timeframe, as_of_date=_bar_time)
@@ -1319,5 +1311,3 @@ if __name__ == "__main__":
 # ISKRA_WAVE_MEASURE_V1 - marker
 
 # AO_DIVERGENCE_GLUBZHE_V1 - marker
-
-# ISKATEL_SVOY_ETAZH_V1 - marker
