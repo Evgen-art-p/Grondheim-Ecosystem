@@ -2214,7 +2214,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 spisok = await loop.run_in_executor(
                     None, lambda s=_sym, t=_tf: (
                         _kd.iskat(s, t, skolko=skolko, govorit=print,
-                                  s_momenta=_ot_daty)   # POISK_S_DATY_V1
+                                  do_momenta=_ot_daty)
                         if _ot_daty else
                         _kd.iskat(s, t, skolko=skolko, govorit=print)))
             except Exception as e:
@@ -3594,5 +3594,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # SVYAZ_I_PAPKA_V1 - marker
 
 # PROGON_S_DATY_V1 - marker
-
-# POISK_S_DATY_V1 - marker

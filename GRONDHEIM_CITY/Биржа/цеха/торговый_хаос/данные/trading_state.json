@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-21T14:47:21.953482",
+  "updated": "2026-08-21T19:07:29.399367",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -14,7 +14,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "",
+    "reason": "ожидание первой волны и отката",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -22,7 +22,7 @@
     "action": "WAIT",
     "new_stop": null,
     "add_lot": null,
-    "бар": "2026.04.27 12:00"
+    "бар": "2026.07.15 20:00"
   },
   "avan": {
     "verdict": "REJECTED",
@@ -76,28 +76,9 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.04.27 12:00"
+    "бар": "2026.07.16 08:00"
   },
   "точки": {
-    "GBPUSD H4": {
-      "alive": true,
-      "trend_direction": "BEAR",
-      "zero_point_price": 1.35582,
-      "rodilas_na_bare": "2026.07.15 20:00",
-      "t1_status": "DETECTED",
-      "neutral_bars_count": 0,
-      "barov_s_tochki": 3,
-      "kray_posle": 1.35188,
-      "struktura_pozadi": 121,
-      "konec_volny_1": null,
-      "reshali_na_bare": "2026.07.16 08:00",
-      "otvet_bara": {
-        "alive": true,
-        "reason": "жива",
-        "changed": false,
-        "direction": "BEAR"
-      }
-    },
     "EURUSD H4": {
       "alive": true,
       "trend_direction": "BEAR",
@@ -117,12 +98,33 @@
         "rodilas": true,
         "direction": "BEAR"
       }
+    },
+    "GBPUSD H4": {
+      "alive": true,
+      "trend_direction": "BEAR",
+      "zero_point_price": 1.35582,
+      "rodilas_na_bare": "2026.07.15 20:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 3,
+      "kray_posle": 1.35188,
+      "struktura_pozadi": 121,
+      "konec_volny_1": null,
+      "konec_volny_2": null,
+      "попыток": 0,
+      "reshali_na_bare": "2026.07.16 08:00",
+      "otvet_bara": {
+        "alive": true,
+        "reason": "жива",
+        "changed": false,
+        "direction": "BEAR"
+      }
     }
   },
   "наблюдения": {
     "GBPUSD H4": {
       "A06": {
-        "за_чем": "Цена находится выше всех линий Аллигатора, что указывает на восходящий тренд. AO растет, подтверждая силу движения. При этом, есть медвежий разворотный бар и точка ноль, а также приседающий бар, что может говорить о возможном изменении направления. Однако, для моего входа (первый откат к новой волне) пока нет сформированной первой волны нового движения и отката к ней. НАБЛЮДАЮ: за формированием пе",
+        "за_чем": "Аллигатор бычий, но цена пока не подтверждает движение. Есть разворотный и приседающий бары, но для моего входа на откате к новой волне пока нет условий. Жду формирования первой волны и последующего отката.",
         "с_бара": "2026.07.15 20:00",
         "последний_бар": "2026.07.15 20:00"
       }

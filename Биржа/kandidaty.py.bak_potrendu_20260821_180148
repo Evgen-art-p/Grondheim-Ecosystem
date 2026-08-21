@@ -137,7 +137,6 @@ def est_seychas(symbol: str, tf: str):
 
 
 def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
-          s_momenta: str = "",   # POISK_S_DATY_V1: идти ВПЕРЁД от даты
           predel_barov: int = 4000, otstup: int = 12, govorit=None,
           tolko_v_okne: bool = True):
     """Пробежать историю НАЗАД от точки и набрать кандидатов.
@@ -179,34 +178,12 @@ def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
         if konec < 0:
             return []
 
-    # POISK_S_DATY_V1: слово Шефа — «чтобы начинался С даты, а не ДО».
-    # Поле в кабинете называлось «с даты», а ход шёл назад: нужное
-    # место оказывалось последним, а четыре взгляда уходили на дорогу.
-    # Теперь второй способ ходить — вперёд, в том порядке, в каком всё
-    # и случалось: точка, её волна, откат.
-    _vperyod = bool(s_momenta)
-    if _vperyod:
-        nachalo_i = None
-        for j, b in enumerate(vse):
-            if b.get("date", "") >= s_momenta:
-                nachalo_i = j
-                break
-        if nachalo_i is None:
-            return []
-        nachalo_i = max(OKNO_RASCHYOTA, nachalo_i)
-        konec_i = min(len(vse) - 1, nachalo_i + predel_barov)
-        hod = range(nachalo_i, konec_i + 1)
-    else:
-        hod = None
-
     nayden = []
     mimo = 0                       # OKNO_ISKATELYA_V1: прошли мимо рамки
-    _mimo_trenda = 0               # POISK_PO_TRENDU_V1
     posledniy_i = None
     nachalo = max(OKNO_RASCHYOTA, konec - predel_barov)
-    # POISK_S_DATY_V1: вперёд или назад — дальше всё одинаково.
-    for i in (hod if _vperyod else range(konec, nachalo - 1, -1)):
-        if posledniy_i is not None and abs(posledniy_i - i) < otstup:
+    for i in range(konec, nachalo - 1, -1):
+        if posledniy_i is not None and (posledniy_i - i) < otstup:
             continue
         okno = vse[max(0, i - OKNO_RASCHYOTA + 1):i + 1]
         if len(okno) < OKNO_RASCHYOTA // 2:
@@ -214,18 +191,6 @@ def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
         p = _priznaki(okno, symbol, tf, point)
         if p:
             _dobrat_kompas(p, okno, symbol, tf, point)   # ISKATEL_SVOY_ETAZH_V1
-            # POISK_PO_TRENDU_V1: место против старшего тренда — мимо.
-            # Трейдер пятнадцать раз подряд отказывал словами «это
-            # против направления», и был прав: 57% точек смотрели
-            # против дневного Аллигатора. Канон: не торговать
-            # разворотный бар против тренда в сильном тренде. Котин:
-            # «интересует, куда направлен ДНЕВНОЙ Аллигатор».
-            # Старшего этажа нет — место годится: из-за нехватки данных
-            # ничего не отсекаем.
-            _komp = p.get("компас")
-            if _komp in ("BULL", "BEAR") and _komp != p.get("разворотный"):
-                _mimo_trenda += 1
-                p = None
         if p:
             posledniy_i = i
             # OKNO_ISKATELYA_V1: зовём только там, где масштаб годится.
@@ -242,11 +207,6 @@ def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
                 break
     # OKNO_ISKATELYA_V1: отсеянные не пропадают молча — иначе однажды
     # фильтр съест всё, а мы будем гадать, почему пусто.
-    # POISK_PO_TRENDU_V1: отсев по старшей воде тоже вслух.
-    if _mimo_trenda:
-        _skazat = govorit or print
-        _skazat(f"[ИСКАТЕЛЬ] мимо старшего тренда: {_mimo_trenda} "
-                f"мест — там большая вода против")
     if mimo and govorit:
         govorit(f"[ИСКАТЕЛЬ] мимо рамки {OKNO_VOLNY[0]}-{OKNO_VOLNY[1]} "
                 f"баров: {mimo} мест — там масштаб не тот")
@@ -283,7 +243,3 @@ if __name__ == "__main__":
 # OKNO_ISKATELYA_V1 - marker
 
 # ISKATEL_SVOY_ETAZH_V1 - marker
-
-# POISK_PO_TRENDU_V1 - marker
-
-# POISK_S_DATY_V1 - marker
