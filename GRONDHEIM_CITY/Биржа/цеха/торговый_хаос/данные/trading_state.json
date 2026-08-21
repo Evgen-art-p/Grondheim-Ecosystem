@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-21T19:07:29.399367",
+  "updated": "2026-08-21T20:03:13.805124",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -14,7 +14,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "ожидание первой волны и отката",
+    "reason": "",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -22,7 +22,7 @@
     "action": "WAIT",
     "new_stop": null,
     "add_lot": null,
-    "бар": "2026.07.15 20:00"
+    "бар": "2026.04.30 20:00"
   },
   "avan": {
     "verdict": "REJECTED",
@@ -76,29 +76,9 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.07.16 08:00"
+    "бар": "2026.04.30 20:00"
   },
   "точки": {
-    "EURUSD H4": {
-      "alive": true,
-      "trend_direction": "BEAR",
-      "zero_point_price": 1.17549,
-      "rodilas_na_bare": "2026.04.27 12:00",
-      "t1_status": "DETECTED",
-      "neutral_bars_count": 0,
-      "barov_s_tochki": 0,
-      "kray_posle": 1.17549,
-      "struktura_pozadi": 111,
-      "konec_volny_1": null,
-      "konec_volny_2": null,
-      "попыток": 0,
-      "reshali_na_bare": "2026.04.27 12:00",
-      "otvet_bara": {
-        "alive": true,
-        "rodilas": true,
-        "direction": "BEAR"
-      }
-    },
     "GBPUSD H4": {
       "alive": true,
       "trend_direction": "BEAR",
@@ -117,6 +97,26 @@
         "alive": true,
         "reason": "жива",
         "changed": false,
+        "direction": "BEAR"
+      }
+    },
+    "EURUSD H4": {
+      "alive": true,
+      "trend_direction": "BEAR",
+      "zero_point_price": 1.17416,
+      "rodilas_na_bare": "2026.04.30 20:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 0,
+      "kray_posle": 1.17416,
+      "struktura_pozadi": 110,
+      "konec_volny_1": null,
+      "konec_volny_2": null,
+      "попыток": 0,
+      "reshali_na_bare": "2026.04.30 20:00",
+      "otvet_bara": {
+        "alive": true,
+        "rodilas": true,
         "direction": "BEAR"
       }
     }
