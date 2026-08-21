@@ -2206,48 +2206,23 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         import asyncio
         loop = asyncio.get_event_loop()
 
-        # 1. PROGON_PODRYAD_V1: идём по истории ПОДРЯД, бар за баром.
-        # Слово Шефа: «есть история — прогнал, посмотрел реально».
-        # Раньше здесь работал искатель: прыгал по своим «местам» от
-        # свежих к старым и половину отсеивал рамкой и трендом. Город
-        # видел не историю, а выборку, собранную нашими же правилами, —
-        # такая проверка проверяет только саму себя.
-        #
-        # Теперь: с даты пусто — последний год; задана — с неё до конца
-        # данных. Каждый бар город считает сам, молча и даром. Трейдера
-        # зовут только на открытом ключе.
+        # 1. код ищет места — бесплатно, поэтому ищем сразу всем
         mesta = []
         for _sl, _sym, _tf in rabotniki:
             try:
-                _vse = await loop.run_in_executor(
-                    None, lambda s=_sym, t=_tf: istoriya._vse_bary(s, t))
+                # PROGON_S_DATY_V1: пусто — от сегодня, как было.
+                spisok = await loop.run_in_executor(
+                    None, lambda s=_sym, t=_tf: (
+                        _kd.iskat(s, t, skolko=skolko, govorit=print,
+                                  s_momenta=_ot_daty)   # POISK_S_DATY_V1
+                        if _ot_daty else
+                        _kd.iskat(s, t, skolko=skolko, govorit=print)))
             except Exception as e:
-                print(f"[ПРОГОН] {_sl}: история не открылась — {e}")
+                print(f"[ПРОГОН] {_sl}: искать не вышло — {e}")
                 continue
-            if not _vse:
-                continue
-            _daty = [b.get("date", "") for b in _vse]
-            if _ot_daty:
-                _s = next((j for j, d in enumerate(_daty)
-                           if d >= _ot_daty), None)
-                if _s is None:
-                    print(f"[ПРОГОН] {_sl}: после {_ot_daty} баров нет")
-                    continue
-            else:
-                # год назад: на H4 это около 1500 баров, на D1 — 250.
-                # Берём по числу баров, а не по календарю: файл может
-                # кончаться раньше сегодняшнего дня.
-                _v_godu = {"MN1": 12, "W1": 52, "D1": 252, "H12": 500,
-                           "H8": 750, "H4": 1500, "H1": 6000}.get(
-                               str(_tf).upper(), 1500)
-                _s = max(0, len(_daty) - _v_godu)
-            _s = max(_s, 300)          # ядру нужно окно на разгон
-            for j in range(_s, len(_daty)):
-                mesta.append((_daty[j], _sl, _sym, _tf,
-                              {"дата": _daty[j], "подряд": True}))
-            print(f"[ПРОГОН] {_sl}: {_sym} {_tf} — "
-                  f"{len(_daty) - _s} баров, "
-                  f"с {_daty[_s]} по {_daty[-1]}")
+            for k in spisok:
+                mesta.append((k.get("момент") or k.get("дата", ""),
+                              _sl, _sym, _tf, k))
 
         if not mesta:
             state["tester_running"] = False
@@ -2262,10 +2237,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         mesta.sort(key=lambda x: x[0])
         state["chat_history"].append({
             "role": "system",
-            # PROGON_PODRYAD_V2: подряд — это бары, а не места.
-            "content": (f"Иду по истории: {len(mesta)} баров."
-                        if mesta and mesta[0][4].get("подряд")
-                        else f"Нашёл {len(mesta)} мест. Иду по ним.")})
+            "content": f"Нашёл {len(mesta)} мест. Иду по ним."})
         update_chat_display()
 
         # 2. по каждому месту: встать туда и спросить того, чьё оно
@@ -2278,23 +2250,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     update_chat_display()
                     break
                 istoriya.postavit(data)
-                # PROGON_PODRYAD_V1: на сплошном ходу считаем сами и
-                # смотрим ключ. Закрыт — идём дальше молча и даром.
-                if k.get("подряд"):
-                    try:
-                        def _tiho(s=_sym, t=_tf, sl=_sl):
-                            import hooks as _h2
-                            _h2.rynok_novyy_bar(s, t)
-                            return __import__("council")._klyuch_probuzhdeniya(
-                                s, t, sl)
-                        _kk = await loop.run_in_executor(None, _tiho)
-                    except Exception as _ek:
-                        print(f"[ПРОГОН] ключ не прочёлся: {_ek}")
-                        _kk = {"будим": False}
-                    if not _kk.get("будим"):
-                        continue
-                    k = dict(k)
-                    k["почему"] = _kk.get("почему", "")
                 # TOCHKA_NE_TASHCHITSYA_V1: прогон прыгнул в другой
                 # момент истории — точка с прошлого места сюда не
                 # едет. Иначе она формально жива, заново не рождается,
@@ -2324,12 +2279,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     pass
                 state["chat_history"].append({
                     "role": "system",
-                    # PROGON_PODRYAD_V2: на сплошном ходу говорим, ЧТО
-                    # случилось на баре, а не «разворотный None @ None».
-                    "content": (f"📍 {data} · {k.get('почему')} "
-                                f"→ спрашиваю {imya}"
-                                if k.get("подряд")
-                                else f"📍 {_kd.slovami(k)} → спрашиваю {imya}")})
+                    "content": f"📍 {_kd.slovami(k)} → спрашиваю {imya}"})
                 update_chat_display()
 
                 def _zvat():
@@ -2376,12 +2326,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         _sled = mesta[_i_tek + 1][0]
                 except Exception:
                     _sled = None
-                # PROGON_PODRYAD_V2: на сплошном ходу шаги вперёд не
-                # нужны — мы и так идём по каждому бару. Раньше два
-                # способа ходить работали разом, курсор уезжал вперёд,
-                # а внешний цикл продолжал из прошлого: время в ленте
-                # ехало назад, точки рождались по два раза.
-                while not k.get("подряд"):
+                while True:
                     if state.get("stop_requested"):
                         break
                     try:
@@ -3651,7 +3596,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PROGON_S_DATY_V1 - marker
 
 # POISK_S_DATY_V1 - marker
-
-# PROGON_PODRYAD_V1 - marker
-
-# PROGON_PODRYAD_V2 - marker

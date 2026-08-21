@@ -415,39 +415,16 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
                     "почему": f"точка родилась: {tch.get('trend_direction')} @ "
                               f"{tch.get('zero_point_price')}"}
 
-        # POZICIYA_NE_KAZHDYY_BAR_V1: заявка и позиция будят по
-        # СОБЫТИЮ, а не по факту существования. Раньше открытая позиция
-        # звала каждый бар — одна сделка на десять дней стоила шестьдесят
-        # оплаченных взглядов. Стоп ведёт код по фракталам, смотреть
-        # каждую свечу человеку не за чем: побарный мониторинг — ошибка
-        # большинства трейдеров (слово Шефа).
+        # позицию ведём всегда, чем бы ни кончилась точка
         sym = (symbol or "").strip().upper()
         for p in (t.get("positions") or []):
             if p.get("status") not in _ZHIVYE_STATUSY:
                 continue
             psym = (p.get("symbol") or "").strip().upper()
             # инструмента в записи нет (старая позиция) — считаем своей
-            if psym and sym and psym != sym:
-                continue
-            _st = p.get("status")
-            if _st in ("WATCHING", "PENDING"):
+            if not psym or psym == sym:
                 return {"будим": True,
-                        "почему": f"своя {_st} — заявка ещё висит"}
-            # открылась на ЭТОМ баре — вошёл, надо сказать
-            if bar_goroda and str(p.get("opened_at") or "") == bar_goroda:
-                return {"будим": True,
-                        "почему": f"вошёл @ {p.get('entry')} — позиция открыта"}
-            # просто стоит открытой — молчим, стоп ведёт код
-
-        # закрылась на этом баре — чем кончилось
-        _z = t.get("последнее_закрытие") or {}
-        if (_z and bar_goroda
-                and str(_z.get("бар") or "") == bar_goroda):
-            _zsym = (_z.get("symbol") or "").strip().upper()
-            if not (_zsym and sym and _zsym != sym):
-                return {"будим": True,
-                        "почему": f"сделка закрылась: {_z.get('причина')} "
-                                  f"@ {_z.get('выход')}"}
+                        "почему": f"своя {p.get('status')} — позицию ведём"}
 
         # KONEC_VOLNY_1_V1: второе СОБЫТИЕ, ради которого всё. Волна 1
         # от точки кончилась — значит есть от чего ждать откат. Слово
@@ -665,5 +642,3 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # KONEC_VOLNY_2_V1 - marker
 
 # KRAY_VOLNY_V1 - marker
-
-# POZICIYA_NE_KAZHDYY_BAR_V1 - marker

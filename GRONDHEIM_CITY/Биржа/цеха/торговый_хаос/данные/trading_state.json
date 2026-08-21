@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-21T20:03:13.805124",
+  "updated": "2026-08-22T01:21:53.246526",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -10,11 +10,11 @@
   "feed": {
     "mode": "tester",
     "symbol": "EURUSD",
-    "момент": "2024.11.26 00:00"
+    "момент": "2025.08.14 08:00"
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "",
+    "reason": "нет отката к новой волне",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -22,7 +22,7 @@
     "action": "WAIT",
     "new_stop": null,
     "add_lot": null,
-    "бар": "2026.04.30 20:00"
+    "бар": "2026.07.30 00:00"
   },
   "avan": {
     "verdict": "REJECTED",
@@ -76,7 +76,7 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.04.30 20:00"
+    "бар": "2026.07.31 20:00"
   },
   "точки": {
     "GBPUSD H4": {
@@ -101,23 +101,24 @@
       }
     },
     "EURUSD H4": {
-      "alive": true,
+      "alive": false,
       "trend_direction": "BEAR",
-      "zero_point_price": 1.17416,
-      "rodilas_na_bare": "2026.04.30 20:00",
+      "zero_point_price": 1.14751,
+      "rodilas_na_bare": "2026.07.30 00:00",
       "t1_status": "DETECTED",
       "neutral_bars_count": 0,
-      "barov_s_tochki": 0,
-      "kray_posle": 1.17416,
-      "struktura_pozadi": 110,
+      "barov_s_tochki": 3,
+      "kray_posle": 1.14343,
+      "struktura_pozadi": 79,
       "konec_volny_1": null,
       "konec_volny_2": null,
       "попыток": 0,
-      "reshali_na_bare": "2026.04.30 20:00",
+      "reshali_na_bare": "2026.07.31 20:00",
       "otvet_bara": {
-        "alive": true,
-        "rodilas": true,
-        "direction": "BEAR"
+        "alive": false,
+        "reason": "точки нет",
+        "changed": false,
+        "direction": null
       }
     }
   },
@@ -127,6 +128,13 @@
         "за_чем": "Аллигатор бычий, но цена пока не подтверждает движение. Есть разворотный и приседающий бары, но для моего входа на откате к новой волне пока нет условий. Жду формирования первой волны и последующего отката.",
         "с_бара": "2026.07.15 20:00",
         "последний_бар": "2026.07.15 20:00"
+      }
+    },
+    "EURUSD H4": {
+      "A06": {
+        "за_чем": "за формированием первой волны и последующим откатом к ней.",
+        "с_бара": "2026.07.30 00:00",
+        "последний_бар": "2026.07.30 00:00"
       }
     }
   }

@@ -2262,10 +2262,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         mesta.sort(key=lambda x: x[0])
         state["chat_history"].append({
             "role": "system",
-            # PROGON_PODRYAD_V2: подряд — это бары, а не места.
-            "content": (f"Иду по истории: {len(mesta)} баров."
-                        if mesta and mesta[0][4].get("подряд")
-                        else f"Нашёл {len(mesta)} мест. Иду по ним.")})
+            "content": f"Нашёл {len(mesta)} мест. Иду по ним."})
         update_chat_display()
 
         # 2. по каждому месту: встать туда и спросить того, чьё оно
@@ -2324,12 +2321,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     pass
                 state["chat_history"].append({
                     "role": "system",
-                    # PROGON_PODRYAD_V2: на сплошном ходу говорим, ЧТО
-                    # случилось на баре, а не «разворотный None @ None».
-                    "content": (f"📍 {data} · {k.get('почему')} "
-                                f"→ спрашиваю {imya}"
-                                if k.get("подряд")
-                                else f"📍 {_kd.slovami(k)} → спрашиваю {imya}")})
+                    "content": f"📍 {_kd.slovami(k)} → спрашиваю {imya}"})
                 update_chat_display()
 
                 def _zvat():
@@ -2376,12 +2368,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         _sled = mesta[_i_tek + 1][0]
                 except Exception:
                     _sled = None
-                # PROGON_PODRYAD_V2: на сплошном ходу шаги вперёд не
-                # нужны — мы и так идём по каждому бару. Раньше два
-                # способа ходить работали разом, курсор уезжал вперёд,
-                # а внешний цикл продолжал из прошлого: время в ленте
-                # ехало назад, точки рождались по два раза.
-                while not k.get("подряд"):
+                while True:
                     if state.get("stop_requested"):
                         break
                     try:
@@ -3653,5 +3640,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # POISK_S_DATY_V1 - marker
 
 # PROGON_PODRYAD_V1 - marker
-
-# PROGON_PODRYAD_V2 - marker

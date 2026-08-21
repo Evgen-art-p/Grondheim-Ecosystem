@@ -1393,18 +1393,6 @@ def _settle_positions(state: dict):
         chain["open_positions"] = still_open
         tstate = load_trading_state()
         tstate["positions"] = still_open
-        # POZICIYA_NE_KAZHDYY_BAR_V1: последнее закрытие — в стол, чтобы
-        # ключ мог позвать трейдера ровно на том баре, где сделка
-        # кончилась. Раньше закрытия жили только в журнале, и город
-        # молчал о самом важном.
-        _p = closed[-1]
-        tstate["последнее_закрытие"] = {
-            "бар": _p.get("closed_at"),
-            "symbol": _p.get("symbol"),
-            "причина": _p.get("close_reason"),
-            "выход": _p.get("exit"),
-            "pnl": _p.get("pnl_price"),
-        }
         save_trading_state(tstate)
         print(f"[SETTLE] 📒 Закрыто: {len(closed)}, осталось: {len(still_open)}")
 
@@ -2841,5 +2829,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # TRI_POPYTKI_V1 - marker
 
 # VEDENIE_FRAKTALY_V1 - marker
-
-# POZICIYA_NE_KAZHDYY_BAR_V1 - marker
