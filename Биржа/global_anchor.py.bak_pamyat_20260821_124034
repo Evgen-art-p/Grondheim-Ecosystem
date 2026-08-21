@@ -66,51 +66,13 @@ _PUSTO_POMNIM: dict = {}       # (символ, этаж) -> когда полу
 _PUSTO_ZHIVYOT = 60.0          # секунд молчать, не переспрашивая
 
 
-# GLUBINA_KOMPASA_V3 ─────────────────────────────────────────
-# Замер Шефа (XAUUSD H1, 1500 баров): 83 с всего, из них 68 — походы
-# за барами старшего этажа. 919 обращений к терминалу на 919 баров,
-# каждое с MetaTrader5.initialize и переводом двух тысяч дат в строки.
-# Старший этаж не должен спрашиваться чаще, чем он меняется: H8 живёт
-# восемь часов, а мы дёргали его девятьсот раз подряд.
-_BARY_KESH: dict = {}          # (символ, этаж, момент) -> (бары, point, когда)
-_KESH_ZHIVYOT = 20.0           # секунд в живом режиме (курсора нет)
-_KESH_PREDEL = 8               # больше ответов не храним
-
-
-def _moment_kursora() -> str:
-    """Где стоит курсор истории. В прогоне это пришпиливает память к
-    конкретному моменту прошлого — подмены быть не может. В живом
-    режиме курсора нет, вернётся пусто."""
-    try:
-        import istoriya
-        return str(istoriya.gde_stoim() or "")
-    except Exception:
-        return ""
-
-
 def _sprosit_starshiy(symbol: str, senior: str):
     """Бары старшего этажа. Ступень, которая сработала, запоминаем;
-    пустой ответ помним минуту и не переспрашиваем; сами бары держим
-    в памяти, пока они не могли измениться."""
+    пустой ответ помним минуту и не переспрашиваем."""
     import time
     from feed_source import bars as source_bars
 
     klyuch = (symbol, senior)
-
-    # ── память о самих барах ──
-    kesh_klyuch = (symbol, senior, _moment_kursora())
-    est = _BARY_KESH.get(kesh_klyuch)
-    if est is not None:
-        bary, point, kogda = est
-        # момент истории задан — ответ вечен: прошлое не меняется
-        if kesh_klyuch[2] or (time.time() - kogda) < _KESH_ZHIVYOT:
-            return bary, point
-
-    def _zapomnit(bary, point):
-        _BARY_KESH[kesh_klyuch] = (bary, point, time.time())
-        while len(_BARY_KESH) > _KESH_PREDEL:
-            _BARY_KESH.pop(next(iter(_BARY_KESH)))
-        return bary, point
     kogda = _PUSTO_POMNIM.get(klyuch)
     if kogda and (time.time() - kogda) < _PUSTO_ZHIVYOT:
         return [], None
@@ -126,10 +88,10 @@ def _sprosit_starshiy(symbol: str, senior: str):
         if sbars:
             _GLUBINA_POMNIM[klyuch] = glubina
             _PUSTO_POMNIM.pop(klyuch, None)
-            return _zapomnit(sbars, point)   # GLUBINA_KOMPASA_V3
+            return sbars, point
 
     _PUSTO_POMNIM[klyuch] = time.time()
-    return _zapomnit([], None)               # GLUBINA_KOMPASA_V3
+    return [], None
 
 
 def global_trend(symbol: str, working_tf: str,
@@ -249,5 +211,3 @@ def apply_global_bias(market_data: dict, symbol: str, working_tf: str) -> dict:
 # GLUBINA_KOMPASA_V1 - marker
 
 # GLUBINA_KOMPASA_V2 - marker
-
-# GLUBINA_KOMPASA_V3 - marker

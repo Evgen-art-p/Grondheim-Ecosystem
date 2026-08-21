@@ -436,15 +436,6 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
                     "почему": f"волна 1 кончилась @ {kv.get('цена')} "
                               f"({kv.get('баров_от_точки')} бар. от точки)"}
 
-        # KONEC_VOLNY_2_V1: третье событие — откат к первой волне
-        # кончился. Момент того, кто работает третье место.
-        kv2 = tch.get("konec_volny_2") or {}
-        if kv2 and str(kv2.get("бар") or "") == bar_goroda and bar_goroda:
-            return {"будим": True,
-                    "почему": f"откат кончился @ {kv2.get('цена')} "
-                              f"({kv2.get('баров_от_макушки')} бар. "
-                              f"от макушки)"}
-
         # «Наблюдаю» само по себе дверь НЕ открывает: пока трейдер
         # следит, город считает молча и бесплатно.
         return {"будим": False, "почему": "точки нет, события нет, "
@@ -625,5 +616,3 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # KONEC_VOLNY_1_V1 - marker
 
 # SLYSHIM_ZHDU_V1 - marker
-
-# KONEC_VOLNY_2_V1 - marker

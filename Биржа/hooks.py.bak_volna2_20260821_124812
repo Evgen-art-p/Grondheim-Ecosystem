@@ -2434,30 +2434,6 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
         # ── разворотник на этом баре: рождение или ведение ──
         # Рождаем ТОЛЬКО в зоне конца волны (модуль 6.2, пункты 1-2):
         # бар без читаемой структуры — середина движения, не конец.
-        # KONEC_VOLNY_2_V1: разворотник В СТОРОНУ точки, пришедший
-        # ПОСЛЕ отмеченной макушки, — это конец отката, а не подпитка.
-        # КАНОН §4.1: волна 2 сама маленький зигзаг, и её конец ловится
-        # той же механикой РБ, только этажом мельче и без требования
-        # яркой ангуляции. Различает подпитку и откат одно: была
-        # макушка или нет. Ни порогов, ни новых чисел.
-        # До макушки всё по-старому — такой бар углубляет точку
-        # (TOCHKA_ZHIVA_V1), и это верно: волна ещё не пошла.
-        if (zhiva and napr in ("BULL", "BEAR") and storona == napr
-                and cena is not None and isk.get("konec_volny_1")
-                and not isk.get("konec_volny_2")):
-            _kv1 = isk.get("konec_volny_1") or {}
-            _ot_makushki = (int(isk.get("barov_s_tochki") or 0)
-                            - int(_kv1.get("баров_от_точки") or 0))
-            isk["konec_volny_2"] = {
-                "цена": cena, "бар": bar,
-                "баров_от_макушки": max(0, _ot_makushki),
-            }
-            save_trading_state(t)
-            print(f"[ОТКАТ] ↩ {para}: кончился @ {cena} · бар {bar} "
-                  f"· {max(0, _ot_makushki)} бар(ов) от макушки")
-            return _zapomnit_otvet({"alive": True, "konec_volny_2": True,
-                                    "direction": storona})
-
         # KONEC_VOLNY_1_V1: разворотник в ОБРАТНУЮ сторону внутри живой
         # точки — это не новое начало, а конец первой волны от неё,
         # если структура позади укладывается ПОСЛЕ точки. По
@@ -2510,7 +2486,6 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
                 # точки и навсегда запирала событие: за 1.8 года срабатывало
                 # ровно один раз, хотя обратных разворотников было девять.
                 isk["konec_volny_1"] = None
-                isk["konec_volny_2"] = None   # KONEC_VOLNY_2_V1
                 save_trading_state(t)
                 print(f"[ТОЧКА] ✦ {para}: родилась {napr} @ {cena} · "
                       f"бар {bar} · структура позади: "
@@ -2695,5 +2670,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # TOCHKA_DO_SLOMA_V1 - marker
 
 # ODIN_BAR_ODNO_RESHENIE_V1 - marker
-
-# KONEC_VOLNY_2_V1 - marker

@@ -126,15 +126,6 @@ def _tochka_nol(md: dict, symbol: str = "", timeframe: str = "") -> dict:
             "бар": _k.get("бар"),
             "баров_от_точки": _k.get("баров_от_точки"),
         } if _k else {"кончилась": False}))(isk.get("konec_volny_1") or {}),
-        # KONEC_VOLNY_2_V1: откат — третья координата, рядом с точкой и
-        # волной. Трейдер говорил «волна кончилась, но мне нужен откат
-        # к ней» — вот он, тем же прибором.
-        "волна_2": (lambda _k: ({
-            "кончилась": True,
-            "цена": _k.get("цена"),
-            "бар": _k.get("бар"),
-            "баров_от_макушки": _k.get("баров_от_макушки"),
-        } if _k else {"кончилась": False}))(isk.get("konec_volny_2") or {}),
         "цена_сейчас": ((md or {}).get("price") or {}).get("close"),
     }
 
@@ -415,13 +406,6 @@ def slovami(stol: dict) -> str:
             if _v.get("кончилась") else "ВОЛНА 1: ещё идёт"))(
                 (p.get("точка_ноль") or {}).get("волна_1") or {},
                 p.get("точка_ноль") or {}),
-        # KONEC_VOLNY_2_V1: и откат к ней — если он уже кончился.
-        (lambda _o: (
-            f"ОТКАТ: кончился @ {_o.get('цена')}"
-            f"   {_o.get('баров_от_макушки')} бар(ов) от макушки"
-            f"   бар {_o.get('бар')}"
-            if _o.get("кончилась") else "ОТКАТ: идёт"))(
-                (p.get("точка_ноль") or {}).get("волна_2") or {}),
         f"зона (AO+AC): {p.get('зона') or '—'}   "
         f"AC: {(p.get('ac') or {}).get('значение')} "
         f"({(p.get('ac') or {}).get('растёт') or '—'})",
@@ -451,5 +435,3 @@ if __name__ == "__main__":
 # REZINKA_CHESTNAYA_V1 - marker
 
 # VOLNA_NA_STOLE_V1 - marker
-
-# KONEC_VOLNY_2_V1 - marker
