@@ -1066,37 +1066,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         i = state.get("kandidat_i")
         _k_kandidatu(0 if i is None else i + kuda)
 
-    def _razobrat_datu(s: str) -> str:
-        """PROGON_S_DATY_V1: понять дату, как её пишет человек.
-
-        Отдаём в том виде, в каком её держит история: «ГГГГ.ММ.ДД ЧЧ:ММ».
-        Не разобралась — возвращаем пусто, и прогон идёт от сегодня, как
-        и раньше. Ругаться на человека за формат мы не будем.
-        """
-        s = (s or "").strip().replace("-", ".").replace("/", ".")
-        if not s:
-            return ""
-        chasti = s.split()
-        d = chasti[0]
-        vremya = chasti[1] if len(chasti) > 1 else "00:00"
-        kuski = [k for k in d.split(".") if k]
-        if len(kuski) != 3:
-            print(f"[ПРОГОН] дату «{s}» не разобрал — иду от сегодня")
-            return ""
-        if len(kuski[0]) == 4:                 # 2026.04.28
-            god, mes, den = kuski
-        else:                                  # 28.04.2026
-            den, mes, god = kuski
-        if ":" not in vremya:
-            vremya = "00:00"
-        try:
-            itog = f"{int(god):04d}.{int(mes):02d}.{int(den):02d} {vremya}"
-        except ValueError:
-            print(f"[ПРОГОН] дату «{s}» не разобрал — иду от сегодня")
-            return ""
-        print(f"[ПРОГОН] ищу места до {itog}")
-        return itog
-
     def _shagnut(skolko):
         """Шаг по истории. skolko=None — в конец (снять курсор)."""
         if state.get("mode") != "tester":
@@ -1626,7 +1595,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         except Exception:
             pass
         for key in ("bars_input", "stop_btn", "bars_label",
-                    "ot_daty_label", "ot_daty_input",   # PROGON_S_DATY_V1
                     "learn_btn"):   # TORG_LEARN_SWITCH_V1
 
             el = toolbar_refs.get(key)
@@ -2178,7 +2146,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
 
         skolko = int(state.get("bars_to_live") or 1)
-        _ot_daty = _razobrat_datu(state.get("progon_ot_daty") or "")
         # OTCHYOT_PROGONA_V1: заводим папку прогона — туда лягут
         # таблица, строки машиной и кадр КАЖДОГО места.
         try:
@@ -2210,13 +2177,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         mesta = []
         for _sl, _sym, _tf in rabotniki:
             try:
-                # PROGON_S_DATY_V1: пусто — от сегодня, как было.
                 spisok = await loop.run_in_executor(
-                    None, lambda s=_sym, t=_tf: (
-                        _kd.iskat(s, t, skolko=skolko, govorit=print,
-                                  do_momenta=_ot_daty)
-                        if _ot_daty else
-                        _kd.iskat(s, t, skolko=skolko, govorit=print)))
+                    None, lambda s=_sym, t=_tf: _kd.iskat(
+                        s, t, skolko=skolko, govorit=print))
             except Exception as e:
                 print(f"[ПРОГОН] {_sl}: искать не вышло — {e}")
                 continue
@@ -3311,26 +3274,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         toolbar_refs["bars_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
                         with toolbar_refs["bars_label"]:
                             ui.label("ловить:").style("color:rgba(255,255,255,0.45);font-size:11px;")
-                        # PROGON_S_DATY_V1: поле «с даты». Пусто — ищем
-                        # от сегодня, как было. Заполнено — искатель
-                        # встаёт в этот момент истории и ищет назад.
-                        toolbar_refs["ot_daty_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
-                        with toolbar_refs["ot_daty_label"]:
-                            ui.label("с даты:").style("color:rgba(255,255,255,0.45);font-size:11px;")
-                        toolbar_refs["ot_daty_input"] = ui.element("div").style("display:none;align-items:center;")
-                        with toolbar_refs["ot_daty_input"]:
-                            def _on_daty_change(e):   # PROGON_S_DATY_V1
-                                state["progon_ot_daty"] = (e.value or "").strip()
-                            ui.input(
-                                value="", placeholder="2026.04.28",
-                                on_change=_on_daty_change,
-                            ).props(
-                                'dense outlined '
-                                'input-style="color:rgba(0,204,255,0.95);'
-                                'font-family:JetBrains Mono;font-size:12px;'
-                                'text-align:center;padding:0 2px;"'
-                            ).style("width:140px;")
-
                         toolbar_refs["bars_input"] = ui.element("div").style("display:none;align-items:center;")
                         with toolbar_refs["bars_input"]:
                             def _on_bars_change(e):   # TORG_BARS_ONCHANGE_V1
@@ -3592,5 +3535,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PROGON_BEZ_OKNA_V1 - marker
 
 # SVYAZ_I_PAPKA_V1 - marker
-
-# PROGON_S_DATY_V1 - marker

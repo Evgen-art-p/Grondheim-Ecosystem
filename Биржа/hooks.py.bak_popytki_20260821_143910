@@ -1324,24 +1324,6 @@ def _settle_positions(state: dict):
         }
         closed.append(record)
 
-        # TRI_POPYTKI_V1: выбило стоп — попытка засчитана. Слово Шефа:
-        # «не попала, ждёт следующий разворотник, так три раза; после
-        # третьего думает, то ли она делает». Счётчик живёт при точке:
-        # новая точка — новый счёт с нуля. Город не запрещает четвёртый
-        # вход, он только говорит вслух то, что трейдер и сам заметил.
-        if reason == "STOP_LOSS":
-            try:
-                _t = load_trading_state()
-                _isk = _blok_tochki(
-                    _t, _para_tochki(pos.get("symbol") or symbol,
-                                     md.get("timeframe") or ""))
-                _isk["попыток"] = int(_isk.get("попыток") or 0) + 1
-                save_trading_state(_t)
-                print(f"[ПОПЫТКА] ✗ стоп выбил · попытка "
-                      f"{_isk['попыток']} на этой структуре")
-            except Exception as _ep:
-                print(f"[ПОПЫТКА] не сосчиталась ({_ep}) — работаем дальше")
-
         PNL_PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(PNL_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -2407,68 +2389,6 @@ def zabyt_tochku(symbol: str = "", timeframe: str = "") -> bool:
         return False
 
 
-# ═══════════════════════════════════════════════════════════
-# VEDENIE_FRAKTALY_V1 — стоп на два фрактала назад
-# ═══════════════════════════════════════════════════════════
-# «РЫНОЧНЫЙ ФРАКТАЛ», §4.2: «Стоп-лосс перемещается на уровень,
-# расположенный на два фрактала назад в противоположном направлении.
-# Это позволяет плыть по течению и защищает прибыль при развороте.»
-#
-# Ни порогов, ни процентов. Только фракталы, которые и так считаются.
-# Стоп ходит ТОЛЬКО в сторону прибыли — назад никогда.
-
-def _vesti_stopy(md: dict) -> int:
-    """Подтянуть стопы открытых позиций. Возвращает, сколько сдвинуто.
-
-    Это не решение о сделке, а исполнение правила, которое трейдер
-    принял, когда входил. Потому и делается кодом, без вопросов.
-    """
-    try:
-        fr = (md or {}).get("fractals") or {}
-        verh = list(fr.get("all_up") or [])
-        niz = list(fr.get("all_down") or [])
-        _bar_sym = str((md or {}).get("symbol", "") or "").strip().upper()
-
-        t = load_trading_state()
-        sdvinuto = 0
-        for pos in (t.get("positions") or []):
-            if pos.get("status") not in ("OPEN", "WATCHING"):
-                continue
-            _psym = (pos.get("symbol") or "").strip().upper()
-            if _psym and _bar_sym and _psym != _bar_sym:
-                continue          # чужой рынок — не наше дело
-            napr = (pos.get("direction") or "").upper()
-            stop = pos.get("stop")
-            if stop is None:
-                continue
-            # два фрактала назад в ПРОТИВОПОЛОЖНОМ направлении
-            if napr == "LONG":
-                if len(niz) < 2:
-                    continue
-                novyy = niz[-2].get("price")
-                dvigat = novyy is not None and novyy > stop
-            elif napr == "SHORT":
-                if len(verh) < 2:
-                    continue
-                novyy = verh[-2].get("price")
-                dvigat = novyy is not None and novyy < stop
-            else:
-                continue
-            if not dvigat:
-                continue          # назад стоп не ходит
-            pos["stop"] = novyy
-            pos["stop_vedyot"] = "два фрактала назад"
-            sdvinuto += 1
-            print(f"[ВЕДЕНИЕ] ⇢ {napr} {pos.get('entry')} · "
-                  f"стоп {stop} → {novyy} (2 фрактала назад)")
-        if sdvinuto:
-            save_trading_state(t)
-        return sdvinuto
-    except Exception as e:
-        print(f"[ВЕДЕНИЕ] стопы не подтянулись ({e}) — позиции целы")
-        return 0
-
-
 def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
     """Родить точку ноль или вести уже рождённую. Код, без LLM.
 
@@ -2629,7 +2549,6 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
                 # ровно один раз, хотя обратных разворотников было девять.
                 isk["konec_volny_1"] = None
                 isk["konec_volny_2"] = None   # KONEC_VOLNY_2_V1
-                isk["попыток"] = 0            # TRI_POPYTKI_V1
                 save_trading_state(t)
                 print(f"[ТОЧКА] ✦ {para}: родилась {napr} @ {cena} · "
                       f"бар {bar} · структура позади: "
@@ -2780,11 +2699,6 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
     itog["закрыто"] = max(0, _bylo_v_stole - len(stalo))
     itog["позиций"] = len(stalo)
 
-    # VEDENIE_FRAKTALY_V1: подтянуть стопы по фракталам. После
-    # закрытия — чтобы бар судил позицию тем стопом, с которым она в
-    # этот бар вошла, а не подтянутым задним числом.
-    _vesti_stopy(md)
-
     # TOCHKA_ROZHDAETSYA_V1: точка ноль — после физики, до трейдеров.
     # Разворотник и есть точка; дальше её ведёт proverit_tochku.
     _vesti_tochku(md, symbol, timeframe)
@@ -2825,7 +2739,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # NOVAYA_MAKUSHKA_V1 - marker
 
 # KRAY_VOLNY_V1 - marker
-
-# TRI_POPYTKI_V1 - marker
-
-# VEDENIE_FRAKTALY_V1 - marker

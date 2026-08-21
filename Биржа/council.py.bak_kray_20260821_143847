@@ -432,21 +432,8 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
         # трейдер ждёт событие, а не пялится в каждую свечу.
         kv = tch.get("konec_volny_1") or {}
         if kv and str(kv.get("бар") or "") == bar_goroda and bar_goroda:
-            # KRAY_VOLNY_V1: первый раз — кончилась; дальше край просто
-            # сдвинулся, и волна продолжается. Разные события — разные
-            # слова, иначе трейдер спорит с ключом и он прав.
-            _st = tch.get("trend_direction")
-            _kray = "вершина" if _st == "BULL" else "дно"
-            _ok = "лась" if _st == "BULL" else "лось"
-            if kv.get("сдвинулась"):
-                return {"будим": True,
-                        "почему": f"{_kray} волны 1 сдвину{_ok} → "
-                                  f"{kv.get('цена')} "
-                                  f"({kv.get('баров_от_точки')} бар. "
-                                  f"от точки)"}
             return {"будим": True,
-                    "почему": f"волна 1 кончилась, {_kray} @ "
-                              f"{kv.get('цена')} "
+                    "почему": f"волна 1 кончилась @ {kv.get('цена')} "
                               f"({kv.get('баров_от_точки')} бар. от точки)"}
 
         # KONEC_VOLNY_2_V1: третье событие — откат к первой волне
@@ -455,8 +442,8 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
         if kv2 and str(kv2.get("бар") or "") == bar_goroda and bar_goroda:
             return {"будим": True,
                     "почему": f"откат кончился @ {kv2.get('цена')} "
-                              f"({kv2.get('баров_от_макушки')} бар. от "
-                              f"{'вершины' if tch.get('trend_direction') == 'BULL' else 'дна'})"}
+                              f"({kv2.get('баров_от_макушки')} бар. "
+                              f"от макушки)"}
 
         # «Наблюдаю» само по себе дверь НЕ открывает: пока трейдер
         # следит, город считает молча и бесплатно.
@@ -640,5 +627,3 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # SLYSHIM_ZHDU_V1 - marker
 
 # KONEC_VOLNY_2_V1 - marker
-
-# KRAY_VOLNY_V1 - marker

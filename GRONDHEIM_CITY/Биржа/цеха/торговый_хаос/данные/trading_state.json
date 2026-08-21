@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-21T01:55:32.297434",
+  "updated": "2026-08-21T14:47:21.953482",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -14,7 +14,7 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "Аллигатор спит, нет четкого тренда и первой волны для отката.",
+    "reason": "",
     "direction": null,
     "entry": null,
     "stop": null,
@@ -22,7 +22,7 @@
     "action": "WAIT",
     "new_stop": null,
     "add_lot": null,
-    "бар": "2026.04.30 20:00"
+    "бар": "2026.04.27 12:00"
   },
   "avan": {
     "verdict": "REJECTED",
@@ -76,7 +76,7 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.05.01 08:00"
+    "бар": "2026.04.27 12:00"
   },
   "точки": {
     "GBPUSD H4": {
@@ -99,21 +99,22 @@
       }
     },
     "EURUSD H4": {
-      "alive": false,
+      "alive": true,
       "trend_direction": "BEAR",
-      "zero_point_price": 1.17416,
-      "rodilas_na_bare": "2026.04.30 20:00",
+      "zero_point_price": 1.17549,
+      "rodilas_na_bare": "2026.04.27 12:00",
       "t1_status": "DETECTED",
       "neutral_bars_count": 0,
-      "barov_s_tochki": 2,
-      "kray_posle": 1.1723,
-      "struktura_pozadi": 110,
+      "barov_s_tochki": 0,
+      "kray_posle": 1.17549,
+      "struktura_pozadi": 111,
       "konec_volny_1": null,
-      "reshali_na_bare": "2026.05.01 08:00",
+      "konec_volny_2": null,
+      "попыток": 0,
+      "reshali_na_bare": "2026.04.27 12:00",
       "otvet_bara": {
-        "alive": false,
-        "reason": "структурный слом (close): цена закрылась за 1.17416",
-        "changed": true,
+        "alive": true,
+        "rodilas": true,
         "direction": "BEAR"
       }
     }
@@ -125,7 +126,6 @@
         "с_бара": "2026.07.15 20:00",
         "последний_бар": "2026.07.15 20:00"
       }
-    },
-    "EURUSD H4": {}
+    }
   }
 }
