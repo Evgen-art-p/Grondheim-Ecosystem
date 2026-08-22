@@ -478,16 +478,10 @@ def rabota_dlya(ceh: str, slot: str) -> dict:
     # паттерн, то пусть работает». Значит готовность стоит на трёх
     # ногах, и паттерн (место входа) — такая же нога, как инструмент.
     pattern = (chitat(ceh, slot).get("текст") or "").strip()
-    # MESTO_BEZ_VYBORA_V1: слово Шефа — «снимай привязку места от
-    # выбора входа, должны работать Нининым кодом». Движок стал общим:
-    # точка, волна, откат, наблюдение, попытки лежат в hooks, council и
-    # столе одинаково для всех трёх мест. Чужой стратегии в коде больше
-    # нет, значит и запирать дверь не за чем. Паттерн читается и идёт
-    # трейдеру в стопку как прежде — просто он больше не пропуск.
     return {"инструмент": instr, "этаж": etazh, "паттерн": pattern,
             "откуда_инструмент": otk_i if instr else "",
             "откуда_этаж": otk_e,
-            "готов": bool(instr and etazh)}
+            "готов": bool(instr and etazh and pattern)}
 
 
 def pochemu_molchit(ceh: str, slot: str) -> str:
@@ -497,9 +491,8 @@ def pochemu_molchit(ceh: str, slot: str) -> str:
         return ""
     if not r["инструмент"]:
         return "инструмент не задан и не выбран"
-    # MESTO_BEZ_VYBORA_V1: без выбора место больше не молчит —
-    # работает общим кодом. Строка оставлена на случай, если
-    # готовность когда-нибудь снова свяжут с паттерном.
+    if not r.get("паттерн"):
+        return "свой вход ещё не выбран"
     return "рабочий этаж не выбран"   # OTPERET_V1: теперь почти не бывает
 
 
@@ -510,5 +503,3 @@ def pochemu_molchit(ceh: str, slot: str) -> str:
 # OTPERET_V1 - marker
 
 # VYBOR_NE_MESHAET_V1 - marker
-
-# MESTO_BEZ_VYBORA_V1 - marker
