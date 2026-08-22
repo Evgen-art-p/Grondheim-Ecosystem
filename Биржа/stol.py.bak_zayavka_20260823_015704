@@ -309,8 +309,6 @@ def nakryt(symbol: str, timeframe: str,
                       "цена_по_другую_сторону_губ": rb.get("za_gubami")},
         "цена": md.get("price"),
         "бар": md.get("bar_time"),
-        # ZAYAVKA_I_SPRED_V1: имя пары нужно, чтобы спросить спред
-        "инструмент": symbol,
         # ALLIG_NA_VHODE_V1: шаг цены — чтобы разброс линий читался в
         # пунктах инструмента, а не в сырых долях. На золоте и на евро
         # одно и то же «0.004» значит совершенно разное.
@@ -469,11 +467,9 @@ def slovami(stol: dict) -> str:
                 c.get("close")),
         # TRI_POPYTKI_V1: вход и стоп — по разворотному бару, и какая
         # это попытка на текущей структуре.
-        # ZAYAVKA_I_SPRED_V1: уровни готовыми числами, с обеих сторон.
-        # Раньше стояла одна цена и слова «стоп за ним же» — считать
-        # приходилось в уме, а в уме легко решить «подожду пробоя».
         (lambda _rb, _t: (
-            (_urovni_zayavki(_rb, c, p)
+            (f"ВХОД: заявка за разворотником @ {_rb.get('цена')}, "
+             f"стоп за ним же"
              if _rb.get("есть") else "ВХОД: разворотного бара сейчас нет")
             + ((f"   ·   ПОПЫТКА {_t.get('попыток')}-я на этой структуре"
                 + ("  — то ли ты делаешь?"
@@ -576,74 +572,3 @@ def _razbros_linij(al: dict, p: dict) -> str:
     return f"{razmah:.5f}"
 
 # ALLIG_NA_VHODE_V1 - marker
-
-
-# ══════════════════════════════════════════════════════════════
-# ZAYAVKA_I_SPRED_V1 — уровни заявки и стопа
-# ══════════════════════════════════════════════════════════════
-# Правило Шефа про УРОВЕНЬ, а не про сделку: выше свечи — два спреда,
-# ниже — один. Разворотный бар это всегда ТЕКУЩИЙ бар (так его и
-# ловит ядро), поэтому его края — это high/low цены на столе.
-#
-# Спред в истории нулевой: в файлах колонка есть, значения нет. Число
-# не выдумываем — говорим, что его нет, и показываем голые уровни.
-# Выдуманный спред был бы тем же, чем был порог «50 пунктов».
-
-def _spred_ceny(symbol: str, timeframe: str, point) -> tuple:
-    """(спред в цене, откуда) — или (None, почему нет).
-
-    MT5 отдаёт спред целым числом ПУНКТОВ, поэтому умножаем на шаг
-    цены. Ноль — это не «спред нулевой», это «в файле не записан».
-    """
-    try:
-        from feed_source import bars as _bars
-        b, p = _bars(symbol, timeframe, 3)
-        if not b:
-            return None, "котировок нет"
-        sp = (b[-1] or {}).get("spread")
-        shag = point or p
-        if sp in (None, "") or not shag:
-            return None, "в баре нет спреда"
-        sp = float(sp)
-        if sp <= 0:
-            return None, "история без спреда"
-        return sp * float(shag), f"{sp:.0f} пункт(ов)"
-    except Exception as e:
-        return None, f"не прочитан ({e})"
-
-
-def _urovni_zayavki(rb: dict, c: dict, p: dict) -> str:
-    """ВХОД одной строкой: куда заявка, куда стоп, с обеих сторон."""
-    storona = (rb.get("сторона") or "").upper()
-    try:
-        h = float(c.get("high"))
-        l = float(c.get("low"))
-    except (TypeError, ValueError):
-        return f"ВХОД: разворотник есть @ {rb.get('цена')}, краёв бара нет"
-
-    spred, otkuda = _spred_ceny((p or {}).get("инструмент") or "",
-                                (p or {}).get("этаж") or "",
-                                (p or {}).get("point"))
-    s = spred or 0.0
-    znakov = 5
-    try:
-        shag = float((p or {}).get("point") or 0)
-        if shag >= 0.01:
-            znakov = 2
-    except (TypeError, ValueError):
-        pass
-
-    if storona == "BULL":
-        zayavka, stop = h + 2 * s, l - s
-        kuda = "Buy Stop"
-    else:
-        zayavka, stop = l - s, h + 2 * s
-        kuda = "Sell Stop"
-
-    hvost = (f"   (спред {otkuda})" if spred else
-             f"   ⚠ спред НЕ учтён: {otkuda} — в реале добавь "
-             f"два спреда сверху, один снизу")
-    return (f"ВХОД: {kuda} @ {zayavka:.{znakov}f}   стоп {stop:.{znakov}f}"
-            f"   (бар: H {h:.{znakov}f} / L {l:.{znakov}f})" + hvost)
-
-# ZAYAVKA_I_SPRED_V1 - marker
