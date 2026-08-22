@@ -2597,62 +2597,26 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
             return _zapomnit_otvet(proverit_tochku(md, para))
 
         if (zhiva and napr in ("BULL", "BEAR") and storona != napr
-                and cena is not None
+                and cena is not None and wf.get("struktura_chitaetsya")
                 and not isk.get("konec_volny_1")):
-            # VOLNA_V_MASSHTABE_V1: условия «пятёрка читается» здесь
-            # БОЛЬШЕ НЕТ. Оно судило не нашу волну: линейка отматывает
-            # четыре нуля AO назад от текущего бара, и замер 22.08
-            # показал, что её длина одинакова на всех этажах (71-102
-            # бара везде) — то есть она меряет своё окно, а не волну от
-            # точки. Двадцать восемь срабатываний из шестидесяти девяти
-            # были совпадением, а не суждением.
-            #
-            # Теперь волна меряется В СВОЁМ МАСШТАБЕ (глава 7: волна
-            # должна занять 100-140 баров, иначе прибор смотрит чужой
-            # уровень), а вместо приговора «годится / не годится» на
-            # стол ложатся ЧИСЛА: сколько баров, на каком этаже,
-            # читается ли пятёрка, сколько пуль сошлось. Что это
-            # значит — решает трейдер.
+            # KONEC_VOLNY_1_V2: снято моё лишнее условие «структура
+            # уложилась в прожитое точкой». Линейка меряет структуру
+            # четырьмя нулями AO назад — медиана 76 баров, она почти
+            # всегда достаёт за точку. С условием событие случалось раз
+            # в полтора года, без него — пять раз в год, ровно как Шеф
+            # и насчитал по длине волны.
             _dlina = wf.get("dlina") or 0
             _prozhito = int(isk.get("barov_s_tochki") or 0)
-            _izm, _puli = {}, {}
-            try:
-                import pyat_pul as _pp
-                _izm = _pp.merit_volnu(
-                    symbol, timeframe,
-                    str(isk.get("rodilas_na_bare") or ""), str(bar or ""),
-                    storona)
-                _puli = _pp.pyat_pul(md, storona)
-            except Exception as _epp:
-                print(f"[ВОЛНА 1] масштаб не померен ({_epp}) — "
-                      f"отмечаю без него")
             if True:
                 isk["konec_volny_1"] = {
                     "цена": cena, "бар": bar, "сторона": napr,
                     "структура": _dlina,
                     "баров_от_точки": _prozhito,
-                    # VOLNA_V_MASSHTABE_V1: волна в своём масштабе
-                    "этаж_волны": _izm.get("этаж"),
-                    "баров_на_этаже": _izm.get("баров"),
-                    "в_окне_100_140": _izm.get("в_окне"),
-                    "пятёрка": _izm.get("читается"),
-                    "пятёрка_почему": _izm.get("почему"),
-                    "пуль_сошлось": _puli.get("сошлось"),
-                    "пуль_посчитано": _puli.get("посчитано"),
-                    "пули": _puli.get("пули"),
                 }
                 save_trading_state(t)
-                _hvost = ""
-                if _izm:
-                    _hvost = (f" · волна {_izm.get('баров')} бар. на "
-                              f"{_izm.get('этаж')}"
-                              f", пятёрка: "
-                              f"{'да' if _izm.get('читается') else 'нет'}")
-                if _puli:
-                    _hvost += (f", пуль {_puli.get('сошлось')}"
-                               f"/{_puli.get('посчитано')}")
                 print(f"[ВОЛНА 1] ⛰ {para}: кончилась @ {cena} · бар {bar} "
-                      f"· {_prozhito} бар(ов) от точки{_hvost}")
+                      f"· {_prozhito} бар(ов) от точки "
+                      f"(структура {_dlina})")
                 return _zapomnit_otvet({"alive": True, "konec_volny_1": True,
                                         "direction": storona})
 
@@ -2879,5 +2843,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # VEDENIE_FRAKTALY_V1 - marker
 
 # POZICIYA_NE_KAZHDYY_BAR_V1 - marker
-
-# VOLNA_V_MASSHTABE_V1 - marker

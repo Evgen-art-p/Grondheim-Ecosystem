@@ -1627,8 +1627,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             pass
         for key in ("bars_input", "stop_btn", "bars_label",
                     "ot_daty_label", "ot_daty_input",   # PROGON_S_DATY_V1
-                    "po_datu_label", "po_datu_input",   # TESTER_PULT_V1
-                    "symbol_label", "symbol_input",     # TESTER_PULT_V1
                     "learn_btn"):   # TORG_LEARN_SWITCH_V1
 
             el = toolbar_refs.get(key)
@@ -2166,20 +2164,11 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
 
         # кто может работать: у кого есть и инструмент, и этаж
-        # TESTER_PULT_V1: инструмент можно подменить на время прогона.
-        # Пусто — работаем парой места, как и раньше. Задан — гоним по
-        # нему, а пост и метка жителя остаются нетронутыми: это
-        # проверка, а не переназначение места.
-        _podmena = (state.get("progon_symbol") or "").strip().upper()
         rabotniki = []
         for _sl in ("A06", "A07", "A08"):
             r = vybor.rabota_dlya(tseh_id, _sl)
             if r.get("готов"):
-                _sym_r = _podmena or r["инструмент"]
-                rabotniki.append((_sl, _sym_r, r["этаж"]))
-                if _podmena and _podmena != r["инструмент"]:
-                    print(f"[ПРОГОН] {_sl}: на время прогона "
-                          f"{r['инструмент']} → {_podmena}")
+                rabotniki.append((_sl, r["инструмент"], r["этаж"]))
             else:
                 print(f"[ПРОГОН] {_sl} не участвует: "
                       f"{vybor.pochemu_molchit(tseh_id, _sl)}")
@@ -2188,19 +2177,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                       type="warning")
             return
 
-        # TESTER_PULT_V1: «ловить N» — это ПРЕДЕЛ ПО СРАБАТЫВАНИЯМ, а
-        # не по барам. Бар город считает даром, а вопрос трейдеру стоит
-        # денег, и считать надо оплаченные взгляды. 0 или пусто — без
-        # предела, идём весь отрезок.
-        try:
-            skolko = int(state.get("bars_to_live") or 0)
-        except (TypeError, ValueError):
-            skolko = 0
+        skolko = int(state.get("bars_to_live") or 1)
         _ot_daty = _razobrat_datu(state.get("progon_ot_daty") or "")
-        _po_datu = _razobrat_datu(state.get("progon_po_datu") or "")
-        if _ot_daty and _po_datu and _po_datu < _ot_daty:
-            _ot_daty, _po_datu = _po_datu, _ot_daty
-            print("[ПРОГОН] даты стояли задом наперёд — поменял местами")
         # OTCHYOT_PROGONA_V1: заводим папку прогона — туда лягут
         # таблица, строки машиной и кадр КАЖДОГО места.
         try:
@@ -2221,12 +2199,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         state["chat_history"].append({
             "role": "system",
             "content": (f"▶ ПРОГОН ПО ИСТОРИИ · {len(rabotniki)} "
-                        f"трейдер(ов)"
-                        + (f" · {_podmena}" if _podmena else "")
-                        + (f" · с {_ot_daty}" if _ot_daty else "")
-                        + (f" · по {_po_datu}" if _po_datu else "")
-                        + (f" · ловлю {skolko} срабатывани(й)"
-                           if skolko else " · до конца отрезка"))})
+                        f"трейдер(ов) · ищу до {skolko} мест каждому")})
         update_chat_display()
         ui.notify("🔍 ищу места в истории…", type="info")
 
@@ -2269,29 +2242,12 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                                str(_tf).upper(), 1500)
                 _s = max(0, len(_daty) - _v_godu)
             _s = max(_s, 300)          # ядру нужно окно на разгон
-            # TESTER_PULT_V1: верхняя граница отрезка. Раньше её не
-            # было вовсе — от даты и до конца файла, вырезать кусок
-            # истории было нечем.
-            _e = len(_daty)
-            if _po_datu:
-                _e = next((j for j, d in enumerate(_daty) if d > _po_datu),
-                          len(_daty))
-                if not _ot_daty:
-                    # Год отсчитываем НАЗАД ОТ верхней границы, а не от
-                    # конца файла: иначе «только по дату» давало пустой
-                    # отрезок — нижняя граница оказывалась позже верхней.
-                    _s = max(0, _e - _v_godu)
-            _s = max(_s, 300)          # ядру нужно окно на разгон
-            if _e <= _s:
-                print(f"[ПРОГОН] {_sl}: между {_ot_daty or 'началом'} и "
-                      f"{_po_datu} баров нет")
-                continue
-            for j in range(_s, _e):
+            for j in range(_s, len(_daty)):
                 mesta.append((_daty[j], _sl, _sym, _tf,
                               {"дата": _daty[j], "подряд": True}))
             print(f"[ПРОГОН] {_sl}: {_sym} {_tf} — "
-                  f"{_e - _s} баров, "
-                  f"с {_daty[_s]} по {_daty[_e - 1]}")
+                  f"{len(_daty) - _s} баров, "
+                  f"с {_daty[_s]} по {_daty[-1]}")
 
         if not mesta:
             state["tester_running"] = False
@@ -2314,7 +2270,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
         # 2. по каждому месту: встать туда и спросить того, чьё оно
         proydeno = 0
-        _razbudili = 0          # TESTER_PULT_V1: оплаченных взглядов
         try:
             for data, _sl, _sym, _tf, k in mesta:
                 if state.get("stop_requested"):
@@ -2340,10 +2295,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         continue
                     k = dict(k)
                     k["почему"] = _kk.get("почему", "")
-                    # TESTER_PULT_V1: вот оно, настоящее срабатывание —
-                    # ключ открылся, сейчас трейдера спросят. Считаем
-                    # здесь, а не по барам: платим мы за вопросы.
-                    _razbudili += 1
                 # TOCHKA_NE_TASHCHITSYA_V1: прогон прыгнул в другой
                 # момент истории — точка с прошлого места сюда не
                 # едет. Иначе она формально жива, заново не рождается,
@@ -2423,17 +2374,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     "role": "assistant", "agent": _sl,
                     "content": skazal or "(без текста)"})
                 update_chat_display()
-                # TESTER_PULT_V1: предел по срабатываниям. Проверяем
-                # ПОСЛЕ ответа, чтобы последний взгляд был договорён до
-                # конца, а не обрезан на полуслове.
-                if skolko and _razbudili >= skolko:
-                    state["chat_history"].append({
-                        "role": "system",
-                        "content": (f"⏹ поймано {_razbudili} "
-                                    f"срабатывани(й) — предел, "
-                                    f"останавливаюсь")})
-                    update_chat_display()
-                    break
 
                 # ── PROGON_VPERYOD_V1 ────────────────────────
                 # Слово Шефа: «в чём разница факта? что на истории он
@@ -3461,43 +3401,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                                 'text-align:center;padding:0 2px;"'
                             ).style("width:140px;")
 
-                        # TESTER_PULT_V1: верхняя граница отрезка.
-                        # Вдвоём с «с даты» вырезает любой кусок истории.
-                        toolbar_refs["po_datu_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
-                        with toolbar_refs["po_datu_label"]:
-                            ui.label("по дату:").style("color:rgba(255,255,255,0.45);font-size:11px;")
-                        toolbar_refs["po_datu_input"] = ui.element("div").style("display:none;align-items:center;")
-                        with toolbar_refs["po_datu_input"]:
-                            def _on_po_datu_change(e):   # TESTER_PULT_V1
-                                state["progon_po_datu"] = (e.value or "").strip()
-                            ui.input(
-                                value="", placeholder="2026.07.30",
-                                on_change=_on_po_datu_change,
-                            ).props(
-                                'dense outlined '
-                                'input-style="color:rgba(0,204,255,0.95);'
-                                'font-family:JetBrains Mono;font-size:12px;'
-                                'text-align:center;padding:0 2px;"'
-                            ).style("width:140px;")
-
-                        # TESTER_PULT_V1: чем гнать. Пусто — парой места.
-                        toolbar_refs["symbol_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
-                        with toolbar_refs["symbol_label"]:
-                            ui.label("инструмент:").style("color:rgba(255,255,255,0.45);font-size:11px;")
-                        toolbar_refs["symbol_input"] = ui.element("div").style("display:none;align-items:center;")
-                        with toolbar_refs["symbol_input"]:
-                            def _on_symbol_change(e):   # TESTER_PULT_V1
-                                state["progon_symbol"] = (e.value or "").strip().upper()
-                            ui.input(
-                                value="", placeholder="как у места",
-                                on_change=_on_symbol_change,
-                            ).props(
-                                'dense outlined '
-                                'input-style="color:rgba(0,204,255,0.95);'
-                                'font-family:JetBrains Mono;font-size:12px;'
-                                'text-align:center;padding:0 2px;"'
-                            ).style("width:130px;")
-
                         toolbar_refs["bars_input"] = ui.element("div").style("display:none;align-items:center;")
                         with toolbar_refs["bars_input"]:
                             def _on_bars_change(e):   # TORG_BARS_ONCHANGE_V1
@@ -3769,5 +3672,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PROGON_PODRYAD_V2 - marker
 
 # KONEC_VOLNY_NE_SYEDEN_V1 - marker
-
-# TESTER_PULT_V1 - marker
