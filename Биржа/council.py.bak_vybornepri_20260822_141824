@@ -547,11 +547,6 @@ def wake_council(symbol: str = "", timeframe: str = "",
         _p = _para_slota(ceh_id, _slot)   # UBRAT_CHETVERTOGO_V1
         _pary[_slot] = _p
         if not _p["готов"]:
-            # VYBOR_NE_PRI_MESTE_V1: сюда попадает и пустое место —
-            # и попадает ДО того, как рынок будет рассужен его парой.
-            # Раньше вакансия с инструментом из поста доводила дело до
-            # ключа и падала уже в мозге («носителя нет»), успев
-            # посчитать чужой рынок и родить точку в общем столе.
             print(f"[СОВЕТ] 🤐 {_slot} молчит: {_p['почему']}")
             _emit({"type": "молчит", "slot": _slot, "почему": _p["почему"]})
             continue
@@ -672,5 +667,3 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # KRAY_VOLNY_V1 - marker
 
 # POZICIYA_NE_KAZHDYY_BAR_V1 - marker
-
-# VYBOR_NE_PRI_MESTE_V1 - marker
