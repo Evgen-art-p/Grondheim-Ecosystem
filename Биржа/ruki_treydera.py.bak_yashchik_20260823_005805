@@ -248,13 +248,6 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
             return f"волна на {tf} не померилась: {e}"
 
     def _dnevnik(args: dict) -> str:
-        """YASHCHIK_STOLA_V1: журнал МЕСТА, а не твоя память.
-
-        Тетрадь лежит при посте и переживает жильцов. Раньше она
-        отдавалась молча, и чужие записи читались как свои — так
-        новый человек на A06 выучил канон прежнего. Теперь у каждой
-        записи видно автора, а сверху сказано прямо, чьё это.
-        """
         n = int(args.get("сколько") or 5)
         if dnevnik_fn is None:
             return "дневник недоступен"
@@ -262,24 +255,10 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
             zapisi = dnevnik_fn(n) or []
             if not zapisi:
                 return "записей пока нет"
-            _ya = (imya_zhitelya or "").strip()
-            _avtory = sorted({str(z.get("кто") or z.get("житель") or "").strip()
-                              for z in zapisi} - {""})
-            _chuzhie = [a for a in _avtory if _ya and a != _ya]
-            _shapka = (f"=== ЖУРНАЛ МЕСТА · последние {len(zapisi)} ===\n"
-                       "Это записи РАБОЧЕГО МЕСТА, а не твоя память. "
-                       "Место старше тебя.\n")
-            if _chuzhie:
-                _shapka += (f"Среди них есть чужие — писали: "
-                            f"{', '.join(_chuzhie)}. Их канон это ИХ канон, "
-                            f"не твой.\n")
-            elif not _avtory:
-                _shapka += ("Записи без подписи — старые, автор "
-                            "неизвестен. Своими их не считай.\n")
-            return (_shapka
+            return ("=== ДНЕВНИК · последние " + str(len(zapisi)) + " ===\n"
                     + json.dumps(zapisi, ensure_ascii=False, indent=1)[:3000])
         except Exception as e:
-            return f"журнал не прочитался: {e}"
+            return f"дневник не прочитался: {e}"
 
     def _rastyanut(args: dict) -> str:
         """RASTYAZHKA_V1: возвращает МЕТКУ кадра — картинку дошлёт
@@ -457,5 +436,3 @@ def _ruka_mayaka_ruki(kto: str) -> dict:
 # UCHEBNIK_V_RUKE_V1 - marker
 
 # UCHEBNIK_DISCIPLINY_V1 - marker
-
-# YASHCHIK_STOLA_V1 - marker

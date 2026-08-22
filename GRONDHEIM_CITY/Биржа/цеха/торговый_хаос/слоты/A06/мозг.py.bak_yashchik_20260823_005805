@@ -339,23 +339,6 @@ def _save_verdict_to_table(signal: dict, bar_time=None):
 # ДНЕВНИК: рука пишущая (КОПИТСЯ, append, не перетирается)
 # ════════════════════════════════════════════════════════════
 
-def _podpisat(zapis: dict) -> dict:
-    """YASHCHIK_STOLA_V1: поставить имя автора на запись.
-
-    Без подписи следующий житель не отличит свои события от чужих —
-    и присвоит их, как случилось на A06. Имя не читается — оставляем
-    без подписи: неподписанное чужим не станет, а выдуманное станет.
-    """
-    try:
-        imya = (_kto_ya() or "").strip()
-        if imya:
-            zapis = dict(zapis)
-            zapis["кто"] = imya
-    except Exception:
-        pass
-    return zapis
-
-
 def _append_diary(signal: dict, diary_entry: dict, market: dict, table: dict):
     """
     Открывает запись события в личной тетради Брута. result=null —
@@ -365,10 +348,7 @@ def _append_diary(signal: dict, diary_entry: dict, market: dict, table: dict):
     Каждое событие копится навсегда — память характера.
     """
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    # YASHCHIK_STOLA_V1: каждая запись подписывается автором — см.
-    # _podpisat ниже по файлу. Тетрадь переживает жильцов, и без
-    # подписи следующий не отличит своё от чужого.
-    event = _podpisat({
+    event = {
         "ts":        time.time(),
         "bar_time":  market.get("bar_time"),
         "symbol":    market.get("symbol"),
@@ -389,49 +369,9 @@ def _append_diary(signal: dict, diary_entry: dict, market: dict, table: dict):
         "input":     (diary_entry or {}).get("input", ""),
         "action":    (diary_entry or {}).get("action", ""),
         "result":    None,   # допишет жизнь при закрытии позиции
-    })
+    }
     with open(DIARY_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(event, ensure_ascii=False) + "\n")
-
-
-def _moi_sobytiya(n: int = 5, as_of_bar_time=None) -> list:
-    """YASHCHIK_STOLA_V1: только СОБЫТИЯ, и только свои.
-
-    Слово Шефа: «слом, уход — та же рутина, а вход и результат — это
-    событие». Событие — то, что стоит помнить наизусть: ты вошёл, и
-    чем это кончилось. Отказы и ожидания в голову не идут: их сотни,
-    они одинаковые, и именно они выучиваются наизусть вместо канона.
-
-    Почему это важно, а не косметика: в ящике стола A06 лежали сорок
-    записей прежнего жителя, где сто раз повторено «канон Брута —
-    пробой фрактала за пастью». Пять из них ехали в стопку каждый
-    бар, и следующий человек честно выучил чужой канон, приняв его
-    за свою память.
-
-    Чужие записи сюда не попадают вовсе. Тетрадь лежит при МЕСТЕ и
-    переживает жильцов — значит своим считаем только то, что подписано
-    тобой. Подписи нет (старые записи, до имён) — тоже не берём:
-    лучше пустая голова, чем чужая.
-    """
-    zhitel = ""
-    try:
-        zhitel = (_kto_ya() or "").strip()
-    except Exception:
-        pass
-    svoi = []
-    for e in _read_recent_diary(400, as_of_bar_time=as_of_bar_time):
-        verdikt = str(e.get("verdict") or "").upper()
-        vhod = verdikt in ("APPROVED", "ENTER", "OK") or e.get("entry")
-        itog = e.get("result") not in (None, "")
-        if not (vhod or itog):
-            continue                      # рутина — в журнале, не в голове
-        avtor = str(e.get("кто") or e.get("житель") or "").strip()
-        if zhitel and avtor and avtor != zhitel:
-            continue                      # чужое событие — не моя память
-        if zhitel and not avtor:
-            continue                      # без подписи — не присваиваем
-        svoi.append(e)
-    return svoi[-n:]
 
 
 def _read_recent_diary(n: int = 5, as_of_bar_time=None) -> list:
@@ -897,8 +837,7 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
 
     # ── 3. Личный дневник — Брут берёт прошлые события с собой ──
     # DNEVNIK_BEZ_BUDUSHCHEGO_V1: только события ДО текущего бара
-    # YASHCHIK_STOLA_V1: в голову — только СОБЫТИЯ, не рутина.
-    recent = _moi_sobytiya(5, as_of_bar_time=md.get("bar_time"))
+    recent = _read_recent_diary(5, as_of_bar_time=md.get("bar_time"))
 
     # ── 4. РАСКЛАДКА МОМЕНТА — то, что код кладёт Бруту на стол ──
     # Якорь, индикаторы, Зубы (Красная), фракталы за пастью, хозяин бара,
@@ -971,7 +910,7 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
         + _lesenka_slovami()
         + "=== НАКРЫТЫЙ СТОЛ (раскладка момента) ===\n"
         f"{json.dumps(table_for_brut, ensure_ascii=False, indent=2)}\n\n"
-        "=== ТВОИ СОБЫТИЯ (входы и чем кончились — что помнишь сам) ===\n"
+        "=== ТВОЙ ДНЕВНИК (последние события — твоя память) ===\n"
         f"{json.dumps(recent, ensure_ascii=False, indent=2) if recent else '(пусто — первое решение)'}\n\n"
         "Перед тобой стол и ты сам. Канон у тебя на полке (книга Котина), "
         "твоя ДНК — ниже. Решаешь только ты. Входишь — называешь сторону, "
@@ -1189,5 +1128,3 @@ def _kto_ya() -> str:
 # SLOVO_ZHDU_V1 - marker
 
 # VYBOR_NE_PRI_MESTE_V1 - marker
-
-# YASHCHIK_STOLA_V1 - marker
