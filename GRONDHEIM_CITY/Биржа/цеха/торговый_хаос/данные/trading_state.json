@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-22T01:21:53.246526",
+  "updated": "2026-08-22T13:34:01.365832",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -26,12 +26,12 @@
   },
   "avan": {
     "verdict": "REJECTED",
-    "reason": "нет четкого отката к новой волне и разворотного бара, цена в пасти Аллигатора",
+    "reason": "агент не ответил (вакансия — за столом никого, смотреть некому)",
     "direction": null,
     "entry": null,
     "stop": null,
     "lot": null,
-    "action": "WAIT",
+    "action": null,
     "new_stop": null,
     "add_lot": null
   },
@@ -76,11 +76,11 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.07.31 20:00"
+    "бар": "2025.07.16 04:00"
   },
   "точки": {
     "GBPUSD H4": {
-      "alive": true,
+      "alive": false,
       "trend_direction": "BEAR",
       "zero_point_price": 1.35582,
       "rodilas_na_bare": "2026.07.15 20:00",
@@ -92,12 +92,12 @@
       "konec_volny_1": null,
       "konec_volny_2": null,
       "попыток": 0,
-      "reshali_na_bare": "2026.07.16 08:00",
+      "reshali_na_bare": "2025.07.16 00:00",
       "otvet_bara": {
-        "alive": true,
-        "reason": "жива",
+        "alive": false,
+        "reason": "точки нет",
         "changed": false,
-        "direction": "BEAR"
+        "direction": null
       }
     },
     "EURUSD H4": {
@@ -113,12 +113,33 @@
       "konec_volny_1": null,
       "konec_volny_2": null,
       "попыток": 0,
-      "reshali_na_bare": "2026.07.31 20:00",
+      "reshali_na_bare": "2025.07.16 00:00",
       "otvet_bara": {
         "alive": false,
         "reason": "точки нет",
         "changed": false,
         "direction": null
+      }
+    },
+    "XAUUSD H4": {
+      "alive": true,
+      "trend_direction": "BULL",
+      "zero_point_price": 3323.78,
+      "rodilas_na_bare": "2025.07.16 00:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 1,
+      "barov_s_tochki": 1,
+      "kray_posle": 3338.61,
+      "struktura_pozadi": 39,
+      "konec_volny_1": null,
+      "konec_volny_2": null,
+      "попыток": 0,
+      "reshali_na_bare": "2025.07.16 04:00",
+      "otvet_bara": {
+        "alive": true,
+        "reason": "TWR нейтрален 1 бар(а) — жива, ритм замер",
+        "changed": false,
+        "direction": "BULL"
       }
     }
   },
