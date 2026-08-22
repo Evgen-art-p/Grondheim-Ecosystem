@@ -677,13 +677,8 @@ def chat_with_images_and_tools(
 
     ruki = dict(executors or {})
     sdelano = 0
-    # RUKI_NE_TERYAT_SLOVO_V1: последнее, что собеседник сказал СЛОВАМИ.
-    # Он может писать текст в том же ответе, где просит руку, — и
-    # раньше этот текст выбрасывался, если круг кончался.
-    posledneye_slovo = ""
-    zvali_ruki: list = []          # за чем бегал по кругу
 
-    for _krug in range(max_tool_rounds + 1):
+    for _ in range(max_tool_rounds + 1):
         payload: dict = {"model": _CURRENT_MODEL, "messages": messages,
                          "max_tokens": LLM_MAX_TOKENS}
         if temperature is not None:
@@ -691,15 +686,6 @@ def chat_with_images_and_tools(
         if tools_schema and sdelano < max_tool_rounds:
             payload["tools"] = tools_schema
             payload["tool_choice"] = "auto"
-        elif tools_schema:
-            # RUKI_NE_TERYAT_SLOVO_V1: раньше мы просто молча убирали
-            # руки и ждали, что собеседник догадается. Он не
-            # догадывался — просил снова. Теперь говорим прямо.
-            messages.append({
-                "role": "user",
-                "content": ("Рук больше не будет — предел на этот взгляд "
-                            "исчерпан. Ответь тем, что уже видишь: "
-                            "словами и своим JSON, как обычно.")})
 
         r = _post_with_retry(
             "https://openrouter.ai/api/v1/chat/completions",
@@ -728,12 +714,6 @@ def chat_with_images_and_tools(
                            knowledge_source=knowledge_source)
             return content
 
-        # RUKI_NE_TERYAT_SLOVO_V1: запомнить слово, сказанное вместе с
-        # просьбой о руке. Оно и есть ответ, если круг кончится.
-        _skazal_seychas = (msg.get("content") or "").strip()
-        if _skazal_seychas:
-            posledneye_slovo = _skazal_seychas
-
         messages.append({"role": "assistant",
                          "content": msg.get("content") or "",
                          "tool_calls": msg["tool_calls"]})
@@ -744,24 +724,16 @@ def chat_with_images_and_tools(
             except json.JSONDecodeError:
                 args = {}
             ruka = ruki.get(imya)
-            zvali_ruki.append(imya)
-            # RUKI_NE_TERYAT_SLOVO_V1: заход считаем ВСЕГДА. Раньше
-            # счётчик рос только на найденной руке — и звонок в пустоту
-            # тратил заход, не двигая счётчик. Круг выкручивался
-            # вхолостую и упирался в предел, ни разу его не увеличив.
-            sdelano += 1
             if ruka:
                 try:
                     otvet = str(ruka(args))
                 except Exception as e:
                     otvet = f"рука {imya} сорвалась: {e}"
+                sdelano += 1
                 print(f"[РУКА] 🖐 {imya}({args}) → {len(otvet)} симв. "
                       f"({sdelano}/{max_tool_rounds})")
             else:
-                otvet = (f"Такой руки нет: {imya}. Больше её не проси — "
-                         f"её не появится.")
-                print(f"[РУКА] ✕ {imya} — такой руки нет "
-                      f"({sdelano}/{max_tool_rounds})")
+                otvet = f"Такой руки нет: {imya}"
             if on_tool_call:
                 try:
                     on_tool_call(imya, args, otvet)
@@ -789,22 +761,7 @@ def chat_with_images_and_tools(
                 except Exception as _ek:
                     print(f"[РУКА] кадр не дослался: {_ek}")
 
-    # RUKI_NE_TERYAT_SLOVO_V1: круг кончился. Раньше здесь терялось
-    # всё, что собеседник успел сказать, и в отчёт уходила заглушка
-    # вместо слов трейдера. Слово дороже нашей аккуратности.
-    if posledneye_slovo:
-        print(f"[РУКИ] круг кончился ({sdelano}/{max_tool_rounds}), "
-              f"беру последнее сказанное словами")
-        return posledneye_slovo
-    _skolko = {}
-    for _i in zvali_ruki:
-        _skolko[_i] = _skolko.get(_i, 0) + 1
-    _spisok = ", ".join(f"{k}×{v}" for k, v in
-                        sorted(_skolko.items(), key=lambda x: -x[1]))
-    print(f"[РУКИ] ⚠️  круг кончился и НИ СЛОВА не сказано. "
-          f"Звали: {_spisok or 'ничего'}")
-    return (f"(промолчал: круг рук кончился, слов не было. "
-            f"Звал: {_spisok or 'ничего'})")
+    return "Разговор с руками не сошёлся — рук попросили больше, чем можно."
 
 
 # RUKI_TREYDERA_V1 - marker
@@ -814,5 +771,3 @@ def chat_with_images_and_tools(
 # RASTYAZHKA_V1 - marker
 
 # KRAYNIYE_TOCHKI_V1 - marker
-
-# RUKI_NE_TERYAT_SLOVO_V1 - marker

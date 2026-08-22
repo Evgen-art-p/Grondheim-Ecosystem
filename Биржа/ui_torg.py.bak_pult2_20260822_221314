@@ -1627,7 +1627,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             pass
         for key in ("bars_input", "stop_btn", "bars_label",
                     "ot_daty_label", "ot_daty_input",   # PROGON_S_DATY_V1
-                    "po_datu_input",                    # TESTER_PULT_V2
+                    "po_datu_label", "po_datu_input",   # TESTER_PULT_V1
+                    "symbol_label", "symbol_input",     # TESTER_PULT_V1
                     "learn_btn"):   # TORG_LEARN_SWITCH_V1
 
             el = toolbar_refs.get(key)
@@ -2165,19 +2166,11 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
 
         # кто может работать: у кого есть и инструмент, и этаж
-        # TESTER_PULT_V2: чем гнать — говорит ПОЛКА слева, та строка,
-        # по которой Шеф кликнул. Отдельного поля в панели нет и не
-        # надо: этим же выбором уже берётся пара для кадра, и заводить
-        # вторую дверь к одному и тому же — плодить расхождение.
-        # Полка пуста — работаем парой места, как было.
-        # Берём с полки ТОЛЬКО инструмент. Этаж остаётся у места:
-        # масштаб дело трейдера, полка ему не указ.
-        _podmena = ""
-        try:
-            _ps, _pt = _aktivnyy_rynok()
-            _podmena = (_ps or "").strip().upper()
-        except Exception as _epol:
-            print(f"[ПРОГОН] полку не спросил ({_epol}) — иду парой места")
+        # TESTER_PULT_V1: инструмент можно подменить на время прогона.
+        # Пусто — работаем парой места, как и раньше. Задан — гоним по
+        # нему, а пост и метка жителя остаются нетронутыми: это
+        # проверка, а не переназначение места.
+        _podmena = (state.get("progon_symbol") or "").strip().upper()
         rabotniki = []
         for _sl in ("A06", "A07", "A08"):
             r = vybor.rabota_dlya(tseh_id, _sl)
@@ -3453,43 +3446,58 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         # встаёт в этот момент истории и ищет назад.
                         toolbar_refs["ot_daty_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
                         with toolbar_refs["ot_daty_label"]:
-                            # TESTER_PULT_V2: одна подпись на обе даты
-                            ui.label("отрезок:").style("color:rgba(255,255,255,0.45);font-size:11px;")
+                            ui.label("с даты:").style("color:rgba(255,255,255,0.45);font-size:11px;")
                         toolbar_refs["ot_daty_input"] = ui.element("div").style("display:none;align-items:center;")
                         with toolbar_refs["ot_daty_input"]:
                             def _on_daty_change(e):   # PROGON_S_DATY_V1
                                 state["progon_ot_daty"] = (e.value or "").strip()
                             ui.input(
-                                value="", placeholder="с 2026.04.28",
+                                value="", placeholder="2026.04.28",
                                 on_change=_on_daty_change,
                             ).props(
                                 'dense outlined '
                                 'input-style="color:rgba(0,204,255,0.95);'
-                                'font-family:JetBrains Mono;font-size:11px;'
+                                'font-family:JetBrains Mono;font-size:12px;'
                                 'text-align:center;padding:0 2px;"'
-                            ).style("width:112px;")
+                            ).style("width:140px;")
 
                         # TESTER_PULT_V1: верхняя граница отрезка.
                         # Вдвоём с «с даты» вырезает любой кусок истории.
-                        # TESTER_PULT_V2: подписи у второй даты нет —
-                        # подсказка внутри поля говорит сама, а строка
-                        # панели узкая и каждый ярлык стоит места.
+                        toolbar_refs["po_datu_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
+                        with toolbar_refs["po_datu_label"]:
+                            ui.label("по дату:").style("color:rgba(255,255,255,0.45);font-size:11px;")
                         toolbar_refs["po_datu_input"] = ui.element("div").style("display:none;align-items:center;")
                         with toolbar_refs["po_datu_input"]:
                             def _on_po_datu_change(e):   # TESTER_PULT_V1
                                 state["progon_po_datu"] = (e.value or "").strip()
                             ui.input(
-                                value="", placeholder="по 2026.07.30",
+                                value="", placeholder="2026.07.30",
                                 on_change=_on_po_datu_change,
                             ).props(
                                 'dense outlined '
                                 'input-style="color:rgba(0,204,255,0.95);'
-                                'font-family:JetBrains Mono;font-size:11px;'
+                                'font-family:JetBrains Mono;font-size:12px;'
                                 'text-align:center;padding:0 2px;"'
-                            ).style("width:112px;")
+                            ).style("width:140px;")
 
-                        # TESTER_PULT_V2: поля «инструмент» здесь больше
-                        # нет — чем гнать, говорит полка слева.
+                        # TESTER_PULT_V1: чем гнать. Пусто — парой места.
+                        toolbar_refs["symbol_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
+                        with toolbar_refs["symbol_label"]:
+                            ui.label("инструмент:").style("color:rgba(255,255,255,0.45);font-size:11px;")
+                        toolbar_refs["symbol_input"] = ui.element("div").style("display:none;align-items:center;")
+                        with toolbar_refs["symbol_input"]:
+                            def _on_symbol_change(e):   # TESTER_PULT_V1
+                                state["progon_symbol"] = (e.value or "").strip().upper()
+                            ui.input(
+                                value="", placeholder="как у места",
+                                on_change=_on_symbol_change,
+                            ).props(
+                                'dense outlined '
+                                'input-style="color:rgba(0,204,255,0.95);'
+                                'font-family:JetBrains Mono;font-size:12px;'
+                                'text-align:center;padding:0 2px;"'
+                            ).style("width:130px;")
+
                         toolbar_refs["bars_input"] = ui.element("div").style("display:none;align-items:center;")
                         with toolbar_refs["bars_input"]:
                             def _on_bars_change(e):   # TORG_BARS_ONCHANGE_V1
@@ -3763,5 +3771,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # KONEC_VOLNY_NE_SYEDEN_V1 - marker
 
 # TESTER_PULT_V1 - marker
-
-# TESTER_PULT_V2 - marker
