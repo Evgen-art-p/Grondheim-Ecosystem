@@ -6146,3 +6146,4 @@
 {"ts": "2026-08-22T23:16:19.413949", "agent_id": "A05_ARKHIV", "slot_id": "trading", "model": "google/gemini-2.5-flash", "prompt_tokens": 2439, "completion_tokens": 97, "call_type": "chat_with_tools", "knowledge_source": "internal"}
 {"ts": "2026-08-22T23:16:35.461866", "agent_id": "A06_BRUT", "slot_id": "trading", "model": "google/gemini-2.5-flash", "prompt_tokens": 18411, "completion_tokens": 563, "call_type": "chat_with_images_and_tools", "knowledge_source": "internal"}
 {"ts": "2026-08-22T23:16:39.447852", "agent_id": "A09_ISPOLNITEL", "slot_id": "trading", "model": "google/gemini-2.5-flash", "prompt_tokens": 3412, "completion_tokens": 549, "call_type": "chat_with_tools", "knowledge_source": "internal"}
+{"ts": "2026-08-22T23:38:10.753805", "agent_id": "A06_BRUT", "slot_id": "trading", "model": "google/gemini-2.5-flash", "prompt_tokens": 14428, "completion_tokens": 84, "call_type": "chat_with_images", "knowledge_source": "internal"}
