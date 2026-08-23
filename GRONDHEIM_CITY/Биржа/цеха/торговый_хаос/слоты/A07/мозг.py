@@ -471,7 +471,76 @@ def _parse_avan(response: str) -> tuple[str, dict, dict]:
                                 obj.get("diary_entry", {}) or {})
                     except json.JSONDecodeError:
                         break
+    # NE_TERYAT_RESHENIE_V1: JSON не собрался — не выбрасываем решение.
+    # 23.08 трейдер вошёл (ENTER, SHORT, цена и стоп посчитаны), но
+    # ответил строками «ключ: значение» вместо скобок — и вход пропал
+    # целиком: ордер не поставлен, в отчёте ноль. Смысл был, синтаксис
+    # поплыл. Разбираем строками.
+    _rasskaz, _signal, _dnevnik = _razobrat_strokami(response)
+    if _signal or _dnevnik:
+        print(f"[РАЗБОР] ⚠️  ответ не JSON — разобрал строками: "
+              f"{len(_signal)} поле(й) сигнала, "
+              f"{len(_dnevnik)} дневника")
+        return _rasskaz, _signal, _dnevnik
     return response.strip(), {}, {}
+
+
+# NE_TERYAT_RESHENIE_V1 ─────────────────────────────────────────
+_CHISLA = ("_entry", "_stop", "_lot", "_new_stop", "_add_lot")
+
+
+def _znachenie(s: str, klyuch: str):
+    """Строку значения — в число, None или текст. Ничего не выдумываем:
+    пусто и null остаются пустотой, а не нулём."""
+    s = s.strip().strip('",').strip()
+    if s.lower() in ("null", "none", "", "-", "—"):
+        return None
+    if klyuch.endswith(_CHISLA):
+        try:
+            return float(s.replace(",", "."))
+        except ValueError:
+            return None
+    return s
+
+
+def _razobrat_strokami(response: str):
+    """Запасной разбор: «ключ: значение» построчно.
+
+    Ответ идёт разделами (narrative / signal / diary_entry), поля
+    внутри — с отступом. Раздел определяем по строке без значения,
+    поля сигнала узнаём по имени: они всегда с приставкой ключа
+    трейдера (brut_/avan_/cons_), спутать не с чем.
+    """
+    rasskaz, signal, dnevnik = "", {}, {}
+    razdel = ""
+    for stroka in (response or "").splitlines():
+        golaya = stroka.strip()
+        if not golaya or golaya.startswith("```"):
+            continue
+        if ":" not in golaya:
+            continue
+        klyuch, _, znach = golaya.partition(":")
+        klyuch = klyuch.strip().strip('"').lower()
+        znach = znach.strip()
+        if klyuch in ("narrative", "signal", "diary_entry"):
+            razdel = klyuch
+            if klyuch == "narrative" and znach:
+                rasskaz = znach.strip('",')
+            continue
+        if re.match(r"^(brut|avan|cons)_", klyuch):
+            signal[klyuch] = _znachenie(znach, klyuch)
+        elif razdel == "diary_entry" and klyuch in ("input", "action",
+                                                    "result"):
+            dnevnik[klyuch] = _znachenie(znach, klyuch)
+    if not rasskaz:
+        # рассказа отдельной строкой не было — берём первый связный
+        # кусок текста до начала разделов, это и есть его голос
+        for stroka in (response or "").splitlines():
+            g = stroka.strip()
+            if g and ":" not in g[:20] and not g.startswith("```"):
+                rasskaz = g
+                break
+    return rasskaz, signal, dnevnik
 
 
 def _sanitize(signal: dict) -> dict:
@@ -1129,3 +1198,5 @@ def _kto_ya() -> str:
 # VYBOR_NE_PRI_MESTE_V1 - marker
 
 # YASHCHIK_STOLA_V1 - marker
+
+# NE_TERYAT_RESHENIE_V1 - marker

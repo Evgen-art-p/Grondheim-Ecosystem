@@ -87,11 +87,7 @@ class Otchyot:
                 k.get("длина_волны")
                 and OKNO[0] <= k["длина_волны"] <= OKNO[1]),
             "компас": k.get("компас"),
-            # NE_TERYAT_RESHENIE_V1: «без вердикта» звучало безобидно и
-            # пряталось за нулём во входах — а за ним стоял потерянный
-            # вход. Называем прямо.
-            "вердикт": verdikt or ("промолчал" if not skazal
-                                   else "ОТВЕТ НЕ РАЗОБРАН"),
+            "вердикт": verdikt or ("промолчал" if not skazal else "без вердикта"),
             "причина": prichina,
             "сказал": skazal,
             "кадр": imya_kadra,
@@ -188,5 +184,3 @@ class Otchyot:
 # OTCHYOT_PROGONA_V1 - marker
 
 # VOLNA_NA_STOLE_V1 - marker
-
-# NE_TERYAT_RESHENIE_V1 - marker
