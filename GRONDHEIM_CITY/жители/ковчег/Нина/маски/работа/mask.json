@@ -1,13 +1,13 @@
 {
   "_note": "маска 'работа' (слой 2 паспорта). Активирована Братом при назначении роли.",
-  "_активна": false,
+  "_активна": true,
   "Social_Rank": "",
   "Profession": "",
   "Area_of_Responsibility": "",
   "Access_Level": "",
-  "Workshop_ID": "",
-  "Turbo_Role": "",
+  "Workshop_ID": "торговый_хаос",
+  "Turbo_Role": "A07",
   "Quarter": "",
   "Core_Phrase": "Я не жду идеального входа — я жду, пока тишина договорит.",
-  "magic": null
+  "magic": 100002
 }

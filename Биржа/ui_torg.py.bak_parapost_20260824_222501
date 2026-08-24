@@ -2165,22 +2165,28 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
 
         # кто может работать: у кого есть и инструмент, и этаж
-        # PARA_PO_POSTU_V1: пара приходит из ПОСТА каждого, и ниоткуда
-        # больше. Подмены с полки здесь БОЛЬШЕ НЕТ: пока на Бирже сидел
-        # один человек, она выглядела разумной, а на двоих согнала обоих
-        # на один инструмент — 24.08 Илья и Нина пошли по евро, хотя у
-        # Нины в посте золото. Для сравнения двух трейдеров это срыв
-        # самой затеи: они должны идти по своей паре, а не по той, что
-        # кабинет молча выбрал за них.
-        #
-        # Полка слева снова только то, ЧТО СМОТРИШЬ. Нужен общий рынок
-        # для сравнения — пропиши обоим одну пару в постах.
+        # TESTER_PULT_V2: чем гнать — говорит ПОЛКА слева, та строка,
+        # по которой Шеф кликнул. Отдельного поля в панели нет и не
+        # надо: этим же выбором уже берётся пара для кадра, и заводить
+        # вторую дверь к одному и тому же — плодить расхождение.
+        # Полка пуста — работаем парой места, как было.
+        # Берём с полки ТОЛЬКО инструмент. Этаж остаётся у места:
+        # масштаб дело трейдера, полка ему не указ.
         _podmena = ""
+        try:
+            _ps, _pt = _aktivnyy_rynok()
+            _podmena = (_ps or "").strip().upper()
+        except Exception as _epol:
+            print(f"[ПРОГОН] полку не спросил ({_epol}) — иду парой места")
         rabotniki = []
         for _sl in ("A06", "A07", "A08"):
             r = vybor.rabota_dlya(tseh_id, _sl)
             if r.get("готов"):
-                rabotniki.append((_sl, r["инструмент"], r["этаж"]))
+                _sym_r = _podmena or r["инструмент"]
+                rabotniki.append((_sl, _sym_r, r["этаж"]))
+                if _podmena and _podmena != r["инструмент"]:
+                    print(f"[ПРОГОН] {_sl}: на время прогона "
+                          f"{r['инструмент']} → {_podmena}")
             else:
                 print(f"[ПРОГОН] {_sl} не участвует: "
                       f"{vybor.pochemu_molchit(tseh_id, _sl)}")
@@ -2223,10 +2229,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             "role": "system",
             "content": (f"▶ ПРОГОН ПО ИСТОРИИ · {len(rabotniki)} "
                         f"трейдер(ов)"
-                        # PARA_PO_POSTU_V1: у каждого своя пара — пишем
-                        # их все, чтобы сразу видеть, кто чем гонит.
-                        + " · " + ", ".join(f"{_s}:{_sy} {_tf2}"
-                                            for _s, _sy, _tf2 in rabotniki)
+                        + (f" · {_podmena}" if _podmena else "")
                         + (f" · с {_ot_daty}" if _ot_daty else "")
                         + (f" · по {_po_datu}" if _po_datu else "")
                         + (f" · ловлю {skolko} срабатывани(й)"
@@ -3442,11 +3445,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             "padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;"
                             "cursor:pointer;background:rgba(255,255,255,0.03);"
                             "color:rgba(255,255,255,0.45);border:1px solid rgba(255,255,255,0.08);")
-                        # PARA_PO_POSTU_V1: «ловить» переехало ВНИЗ, к
-                        # своему полю. Раньше подпись стояла здесь, а
-                        # число — после дат, и на панели читалось
-                        # «ловить: отрезок: 01.02 10.03 15»: подпись от
-                        # одного поля, значение от другого.
+                        toolbar_refs["bars_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
+                        with toolbar_refs["bars_label"]:
+                            ui.label("ловить:").style("color:rgba(255,255,255,0.45);font-size:11px;")
                         # PROGON_S_DATY_V1: поле «с даты». Пусто — ищем
                         # от сегодня, как было. Заполнено — искатель
                         # встаёт в этот момент истории и ищет назад.
@@ -3488,12 +3489,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             ).style("width:112px;")
 
                         # TESTER_PULT_V2: поля «инструмент» здесь больше
-                        # нет — чем работать, говорит пост трейдера.
-                        # PARA_PO_POSTU_V1: подпись «ловить» теперь тут,
-                        # вплотную к своему полю.
-                        toolbar_refs["bars_label"] = ui.element("div").style("display:none;align-items:center;gap:5px;")
-                        with toolbar_refs["bars_label"]:
-                            ui.label("ловить:").style("color:rgba(255,255,255,0.45);font-size:11px;")
+                        # нет — чем гнать, говорит полка слева.
                         toolbar_refs["bars_input"] = ui.element("div").style("display:none;align-items:center;")
                         with toolbar_refs["bars_input"]:
                             def _on_bars_change(e):   # TORG_BARS_ONCHANGE_V1
@@ -3769,5 +3765,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # TESTER_PULT_V1 - marker
 
 # TESTER_PULT_V2 - marker
-
-# PARA_PO_POSTU_V1 - marker
