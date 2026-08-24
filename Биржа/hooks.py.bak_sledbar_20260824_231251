@@ -1077,20 +1077,6 @@ def _aktivirovat_ordera(state: dict):
             ostalis.append(pos)
             continue
 
-        # ZAYAVKA_SLED_BAR_V1: на баре своего рождения заявка не
-        # активируется. Уровни сняты С ЭТОГО бара — он накрывает их по
-        # построению, и «рынок дошёл» получалось само собой, в тот же
-        # миг, когда ордер поставили. А следом бар накрывал и стоп:
-        # 24.08 обе сделки умерли ровно так, минус R по арифметике, а
-        # не по рынку. Отложка ждёт БУДУЩЕГО движения; бар, по
-        # которому считали, — прошлое.
-        _rodilas_na = str(pos.get("_ждёт_с") or "")
-        if _rodilas_na and _rodilas_na == str(bar_time or ""):
-            print(f"[ОРДЕР] ⏳ {pos.get('trader')} {d} @ {entry} — "
-                  f"поставлен на этом баре, ждёт следующего")
-            ostalis.append(pos)
-            continue
-
         srabotal = ((d == "LONG"  and high >= entry) or
                     (d == "SHORT" and low  <= entry))
 
@@ -2895,5 +2881,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # POZICIYA_NE_KAZHDYY_BAR_V1 - marker
 
 # VOLNA_V_MASSHTABE_V1 - marker
-
-# ZAYAVKA_SLED_BAR_V1 - marker
