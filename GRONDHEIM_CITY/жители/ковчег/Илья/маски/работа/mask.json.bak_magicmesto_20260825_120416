@@ -5,9 +5,9 @@
   "Profession": "",
   "Area_of_Responsibility": "",
   "Access_Level": "",
-  "Workshop_ID": "",
-  "Turbo_Role": "Хранитель архива",
+  "Workshop_ID": "торговый_хаос",
+  "Turbo_Role": "A06",
   "Quarter": "",
   "Core_Phrase": "",
-  "magic": null
+  "magic": 100001
 }

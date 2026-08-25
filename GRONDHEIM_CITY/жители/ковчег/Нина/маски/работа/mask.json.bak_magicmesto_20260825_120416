@@ -5,9 +5,9 @@
   "Profession": "",
   "Area_of_Responsibility": "",
   "Access_Level": "",
-  "Workshop_ID": "контора",
-  "Turbo_Role": "архивариус",
+  "Workshop_ID": "торговый_хаос",
+  "Turbo_Role": "A07",
   "Quarter": "",
-  "Core_Phrase": "В прошлый раз было так.",
-  "magic": null
+  "Core_Phrase": "Я не жду идеального входа — я жду, пока тишина договорит.",
+  "magic": 100002
 }

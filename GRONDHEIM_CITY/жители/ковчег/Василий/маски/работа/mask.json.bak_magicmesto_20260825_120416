@@ -7,7 +7,7 @@
   "Access_Level": "",
   "Workshop_ID": "Академия",
   "Turbo_Role": "студент",
-  "magic": null,
+  "magic": 100003,
   "Quarter": "",
   "Core_Phrase": "Лучше не войти, чем войти в убыток."
 }

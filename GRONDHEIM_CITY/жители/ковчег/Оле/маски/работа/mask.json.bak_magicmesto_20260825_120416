@@ -6,8 +6,8 @@
   "Area_of_Responsibility": "",
   "Access_Level": "",
   "Workshop_ID": "",
-  "Turbo_Role": "Хранитель архива",
+  "Turbo_Role": "Библиотекарь Академии",
   "Quarter": "",
   "Core_Phrase": "",
-  "magic": null
+  "magic": 100001
 }
