@@ -1,13 +1,12 @@
 {
   "_note": "маска 'работа' (слой 2 паспорта). Активирована Братом при назначении роли.",
-  "_активна": false,
+  "_активна": true,
   "Social_Rank": "",
   "Profession": "",
   "Area_of_Responsibility": "",
   "Access_Level": "",
-  "Workshop_ID": null,
-  "Turbo_Role": null,
+  "Workshop_ID": "торговый_хаос",
+  "Turbo_Role": "A02",
   "Quarter": "",
-  "Core_Phrase": "Сиди на руках в пасти, отсутствие позиции = позиция",
-  "magic": null
+  "Core_Phrase": "Сиди на руках в пасти, отсутствие позиции = позиция"
 }

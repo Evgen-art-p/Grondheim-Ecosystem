@@ -1817,19 +1817,7 @@ def _judge_iskra_by_result(pos: dict, pnl_r):
             pass
 
         from nositel import _zval, dyhnut_slovom   # MAYAK_SENSOROV_V1
-        # SUDYA_BEZ_PRIZRAKOV_V1: сперва спрашиваем, есть ли место.
-        # Сенсоров убрали 06.08 вместе с Искрой — папок A01…A04 в цехе
-        # нет, постов тоже. А таблица их всё перечисляла, и после
-        # КАЖДОЙ сделки два готовых вывода уходили в пустоту:
-        # «дописано: False, слот пуст». Таблицу не трогаем: заведёшь
-        # сенсоры снова — заработает само.
-        _est = _slot_sushchestvuet("торговый_хаос")
-        _prizraki = [s for s in SENSOR_SLOTS.values() if not _est(s)]
-        if _prizraki:
-            print(f"[МАЯК] мест нет, пропускаю: {', '.join(_prizraki)}")
         for key, slot in SENSOR_SLOTS.items():
-            if not _est(slot):
-                continue
             pokazanie = stol.get(key) or {}
             zval = _zval(key, pokazanie, direction)
             vyvod = sudit_sensora(key, pokazanie, direction, pnl_r, trader, bar)
@@ -2909,34 +2897,3 @@ def rynok_novyy_bar(symbol: str, timeframe: str,
 # VOLNA_V_MASSHTABE_V1 - marker
 
 # ZAYAVKA_SLED_BAR_V1 - marker
-
-
-# ══════════════════════════════════════════════════════════════
-# SUDYA_BEZ_PRIZRAKOV_V1 — есть ли такое место в цехе
-# ══════════════════════════════════════════════════════════════
-
-def _slot_sushchestvuet(ceh: str):
-    """Вернёт проверялку: есть ли у цеха такой слот НА ДИСКЕ.
-
-    Спрашиваем папку, а не маски и не посты: маска переживает
-    упразднение места (так было и с магиком Локи), а пост у сенсоров
-    не заводили вовсе. Папка со слотом — то, что есть или чего нет.
-
-    Список считаем ОДИН раз на сделку и держим в замыкании: судья
-    ходит по четырём сенсорам, и лазить на диск четырежды незачем.
-    """
-    imena = set()
-    try:
-        from pathlib import Path as _P
-        _koren = _P(__file__).resolve().parent.parent / "GRONDHEIM_CITY"
-        _d = _koren / "Биржа" / "цеха" / ceh / "слоты"
-        if _d.is_dir():
-            imena = {p.name for p in _d.iterdir() if p.is_dir()}
-    except Exception as e:
-        print(f"[МАЯК] слоты цеха не прочлись ({e}) — сужу как раньше")
-        return lambda _s: True          # не знаем — не мешаем
-    if not imena:
-        return lambda _s: True
-    return lambda s: s in imena
-
-# SUDYA_BEZ_PRIZRAKOV_V1 - marker
