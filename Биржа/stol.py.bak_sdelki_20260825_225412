@@ -482,15 +482,10 @@ def slovami(stol: dict) -> str:
         (lambda _rb, _t: (
             (_urovni_zayavki(_rb, c, p)
              if _rb.get("есть") else "ВХОД: разворотного бара сейчас нет")
-            + ((f"   ·   ПОПЫТКА {int(_t.get('попыток') or 0) + 1}-я "
-                f"на этой структуре"
+            + ((f"   ·   ПОПЫТКА {_t.get('попыток')}-я на этой структуре"
                 + ("  — то ли ты делаешь?"
                    if int(_t.get("попыток") or 0) >= 3 else ""))
                if int(_t.get("попыток") or 0) else "")
-            # SVOI_SDELKI_VIDNO_V1: чем кончились прошлые попытки —
-            # прямо здесь, без запроса в память. Это и есть «видеть
-            # свои сделки»: пришёл на структуру — знаешь, что было.
-            + _proshlye_popytki(_t)
         ))(p.get("разворотный_бар") or {}, p.get("точка_ноль") or {}),
         # KONEC_VOLNY_2_V1: и откат к ней — если он уже кончился.
         (lambda _o, _t: (
@@ -710,33 +705,3 @@ def _uroven_sloma(p: dict, c: dict) -> str:
             + hvost)
 
 # UROVEN_SLOMA_V1 - marker
-
-
-# ══════════════════════════════════════════════════════════════
-# SVOI_SDELKI_VIDNO_V1 — чем кончились прошлые попытки
-# ══════════════════════════════════════════════════════════════
-
-def _proshlye_popytki(t: dict) -> str:
-    """Исходы прошлых входов на ЭТОЙ структуре, одной строкой.
-
-    Не упрёк и не запрет: три попытки — право трейдера, слово Шефа.
-    Просто факт о себе рядом с фактами о рынке, как «попытка 3-я».
-    Живёт при точке: новая структура — пусто, чужих граблей не
-    наследуем.
-    """
-    ish = (t or {}).get("исходы") or []
-    if not ish:
-        return ""
-    kuski = []
-    for i in ish:
-        if not isinstance(i, dict):
-            continue
-        cena = i.get("цена")
-        kuda = (i.get("куда") or "").upper()
-        kuski.append(f"{i.get('попытка')}: {kuda} → {i.get('чем')}"
-                     + (f" @ {cena}" if cena is not None else ""))
-    if not kuski:
-        return ""
-    return "   ·   БЫЛО: " + "; ".join(kuski)
-
-# SVOI_SDELKI_VIDNO_V1 - marker

@@ -854,24 +854,6 @@ class Dvizhok:
                 zapisi.extend(data.get("entries", []))
         except Exception:
             pass
-        # SVOI_SDELKI_VIDNO_V1: маяки и метки — там лежит ОПЫТ, в том
-        # числе торговый. Раньше поиск их не видел: выводы из сделок
-        # пишет dopisat_vyvod (маяки/метки), а искали мы в sensory,
-        # resonance и archive. Человек спрашивал «где меня стопануло»
-        # и получал «следа нет», хотя след был — в другом ящике.
-        for _rel in ("3_маяки/mayaki.json", "2_метки/metki.json"):
-            try:
-                _p = self.dom / _rel
-                if not _p.exists():
-                    continue
-                _d = json.loads(_p.read_text(encoding="utf-8"))
-                _it = _d if isinstance(_d, list) else (
-                    _d.get("маяки") or _d.get("метки") or [])
-                for _x in _it:
-                    if isinstance(_x, dict):
-                        zapisi.append(_x)
-            except Exception:
-                pass
         # resonance + archive — JSONL, строка за строкой
         for rel in ("resonance/event_log.jsonl", "archive/archive.jsonl"):
             try:
@@ -1145,5 +1127,3 @@ class Dvizhok:
 # PAMYAT_RABOTA_ZHIZN_V1 - marker
 
 # UCHYOBA_NA_STOLE_V1 - marker
-
-# SVOI_SDELKI_VIDNO_V1 - marker

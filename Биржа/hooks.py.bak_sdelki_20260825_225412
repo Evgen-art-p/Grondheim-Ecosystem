@@ -1350,24 +1350,6 @@ def _settle_positions(state: dict):
                     _t, _para_tochki(pos.get("symbol") or symbol,
                                      md.get("timeframe") or ""))
                 _isk["попыток"] = int(_isk.get("попыток") or 0) + 1
-                # SVOI_SDELKI_VIDNO_V1: рядом со счётчиком — сами
-                # исходы. Счётчик говорит «которая по счёту», а это —
-                # «чем кончились прошлые». Не запрет: три попытки его
-                # право, и четвёртая тоже не заказана. Просто человек
-                # приходит на структуру и ВИДИТ, что уже пробовал, —
-                # без того, чтобы догадаться спросить память.
-                # Живёт при точке и гаснет вместе с ней: новая
-                # структура — чистый лист, чужих граблей не наследуем.
-                _ish = list(_isk.get("исходы") or [])
-                _ish.append({
-                    "попытка": _isk["попыток"],
-                    "чем": "стоп",
-                    "цена": pos.get("stop"),
-                    "вход": pos.get("entry"),
-                    "куда": pos.get("direction"),
-                    "бар": md.get("bar_time"),
-                })
-                _isk["исходы"] = _ish[-3:]     # больше трёх незачем
                 save_trading_state(_t)
                 print(f"[ПОПЫТКА] ✗ стоп выбил · попытка "
                       f"{_isk['попыток']} на этой структуре")
@@ -2958,5 +2940,3 @@ def _slot_sushchestvuet(ceh: str):
     return lambda s: s in imena
 
 # SUDYA_BEZ_PRIZRAKOV_V1 - marker
-
-# SVOI_SDELKI_VIDNO_V1 - marker
