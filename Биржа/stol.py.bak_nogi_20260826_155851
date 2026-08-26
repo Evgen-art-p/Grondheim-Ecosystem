@@ -125,9 +125,6 @@ def _tochka_nol(md: dict, symbol: str = "", timeframe: str = "") -> dict:
             "макушка": _k.get("цена"),
             "бар": _k.get("бар"),
             "баров_от_точки": _k.get("баров_от_точки"),
-            # NOGI_SCHYOTNYE_V1: которая это нога от точки. Пусто у
-            # структур, начатых до патча, — тогда просто первая.
-            "нога": _k.get("нога") or 1,
         } if _k else {"кончилась": False}))(isk.get("konec_volny_1") or {}),
         # TRI_POPYTKI_V1: чем входить. Разворотник — он же и мера риска:
         # вход за ним, стоп за ним же. Не совет входить, а цена, которую
@@ -141,7 +138,6 @@ def _tochka_nol(md: dict, symbol: str = "", timeframe: str = "") -> dict:
             "цена": _k.get("цена"),
             "бар": _k.get("бар"),
             "баров_от_макушки": _k.get("баров_от_макушки"),
-            "нога": _k.get("нога") or 1,   # NOGI_SCHYOTNYE_V1
         } if _k else {"кончилась": False}))(isk.get("konec_volny_2") or {}),
         "попыток": int(isk.get("попыток") or 0),   # TRI_POPYTKI_V1
         "цена_сейчас": ((md or {}).get("price") or {}).get("close"),
@@ -434,16 +430,12 @@ def slovami(stol: dict) -> str:
         # а на столе этого не было, и он честно отвечал «первой
         # волны нет».
         (lambda _v, _t: (
-            f"ВОЛНА {_v.get('нога') or 1}: от {_t.get('цена')} → "
+            f"ВОЛНА 1: от {_t.get('цена')} → "
             f"{'вершина' if _t.get('сторона') == 'BULL' else 'дно'} "
             f"{_v.get('макушка')}"
             f"   {_v.get('баров_от_точки')} бар(ов) от точки"
             f"   бар {_v.get('бар')}"
-            # NOGI_SCHYOTNYE_V1: нога от точки, а не всегда «первая».
-            + (f"   нога {_v.get('нога')} от точки"
-               if (_v.get('нога') or 1) > 1 else "")
-            if _v.get("кончилась")
-            else f"ВОЛНА {(_t.get('нога_идёт') or 1)}: ещё идёт"))(
+            if _v.get("кончилась") else "ВОЛНА 1: ещё идёт"))(
                 (p.get("точка_ноль") or {}).get("волна_1") or {},
                 p.get("точка_ноль") or {}),
         # VOLNA_V_MASSHTABE_V1: та же волна, померенная в СВОЁМ
@@ -506,8 +498,6 @@ def slovami(stol: dict) -> str:
             f"   {_o.get('баров_от_макушки')} бар(ов) от "
             f"{'вершины' if _t.get('сторона') == 'BULL' else 'дна'}"
             f"   бар {_o.get('бар')}"
-            + (f"   нога {_o.get('нога')} от точки"   # NOGI_SCHYOTNYE_V1
-               if (_o.get('нога') or 1) > 1 else "")
             if _o.get("кончилась") else "ОТКАТ: идёт"))(
                 (p.get("точка_ноль") or {}).get("волна_2") or {},
                 p.get("точка_ноль") or {}),
@@ -750,5 +740,3 @@ def _proshlye_popytki(t: dict) -> str:
     return "   ·   БЫЛО: " + "; ".join(kuski)
 
 # SVOI_SDELKI_VIDNO_V1 - marker
-
-# NOGI_SCHYOTNYE_V1 - marker

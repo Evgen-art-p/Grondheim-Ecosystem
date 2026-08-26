@@ -2590,12 +2590,8 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
             }
             save_trading_state(t)
             _slovo = "вершины" if storona == "BULL" else "дна"
-            _n = int(isk.get("нога") or 1)   # NOGI_SCHYOTNYE_V1
-            isk["konec_volny_2"]["нога"] = _n
-            save_trading_state(t)
             print(f"[ОТКАТ] ↩ {para}: кончился @ {cena} · бар {bar} "
-                  f"· {max(0, _ot_makushki)} бар(ов) от {_slovo} "
-                  f"· нога {_n}")
+                  f"· {max(0, _ot_makushki)} бар(ов) от {_slovo}")
             return _zapomnit_otvet({"alive": True, "konec_volny_2": True,
                                     "direction": storona})
 
@@ -2643,39 +2639,6 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
                                         "direction": storona})
             # не дальше прежней — это ход отката, ничего не трогаем
             return _zapomnit_otvet(proverit_tochku(md, para))
-
-        # NOGI_SCHYOTNYE_V1: макушка и откат уже отмечены, а пришёл
-        # ещё один разворотник против точки. От точки до точки идёт
-        # пятиволновка (слово Шефа 26.08): после отката начинается
-        # следующая нога, у неё своя макушка и свой откат — той же
-        # механикой, тем же баром. Раньше это событие пропадало:
-        # оба гнезда заняты, и точка молчала до слома, хотя внутри
-        # неё проходили ещё две волны со своими шансами на вход.
-        #
-        # Номер ноги — ФАКТ, а не разметка. Третья это волна или
-        # пятая, решает трейдер: он смотрит.
-        if (zhiva and napr in ("BULL", "BEAR") and storona != napr
-                and cena is not None and isk.get("konec_volny_1")
-                and isk.get("konec_volny_2")):
-            _n = int(isk.get("нога") or 1) + 1
-            isk["нога"] = _n
-            isk["konec_volny_1"] = {
-                "цена": cena, "бар": bar, "сторона": napr,
-                "структура": wf.get("dlina") or 0,
-                "баров_от_точки": int(isk.get("barov_s_tochki") or 0),
-                "нога": _n,
-            }
-            isk["konec_volny_2"] = None
-            isk["kray_posle"] = cena
-            # три попытки — право на ОДНОМ сигнале; следующий откат
-            # будет новым сигналом, счёт начинается заново
-            isk["попыток"] = 0
-            save_trading_state(t)
-            _slovo = "вершина" if storona == "BULL" else "дно"
-            print(f"[ВОЛНА {_n}] ⛰ {para}: нога {_n} кончилась @ {cena} "
-                  f"· бар {bar} · {_slovo} новой ноги от той же точки")
-            return _zapomnit_otvet({"alive": True, "konec_volny_1": True,
-                                    "нога": _n, "direction": storona})
 
         if (zhiva and napr in ("BULL", "BEAR") and storona != napr
                 and cena is not None
@@ -2738,21 +2701,7 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
                                         "direction": storona})
 
         if napr in ("BULL", "BEAR") and cena is not None                 and wf.get("struktura_chitaetsya"):
-            # ODNA_TOCHKA_ZA_RAZ_V1: пока жива старая — новая не родится.
-            # Было `(not zhiva) or storona != napr`: живая точка не
-            # мешала, и любой разворотник против неё объявлял себя новым
-            # началом, стирая её волну 1, откат и счётчик попыток.
-            # Отсюда 33 точки в год вместо 3-5 и 74 пустые структуры из
-            # 87 — точка не доживала до собственной волны.
-            #
-            # Слово Шефа (25.08): точка ноль — конец коррекции СТАРШЕГО
-            # порядка, ОДНА на движение, не переезжает. Всё, что внутри,
-            # это её волны и откаты, они доживают до слома.
-            #
-            # Исходов у точки по-прежнему ДВА, третьего не заводим:
-            # структурный слом по Close (proverit_tochku) или её волна.
-            # Замер: точек 33 → 5.8 в год, ног 8 → 18, жизнь 4 → 6 баров.
-            if not zhiva:
+            if (not zhiva) or storona != napr:
                 # KONEC_VOLNY_1_V1: сюда обратный разворотник попадает
                 # только если конец волны 1 уже был отмечен или его
                 # структура НЕ уложилась после точки — тогда это правда
@@ -2773,22 +2722,12 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
                 isk["konec_volny_1"] = None
                 isk["konec_volny_2"] = None   # KONEC_VOLNY_2_V1
                 isk["попыток"] = 0            # TRI_POPYTKI_V1
-                isk["нога"] = 0               # NOGI_SCHYOTNYE_V1
                 save_trading_state(t)
                 print(f"[ТОЧКА] ✦ {para}: родилась {napr} @ {cena} · "
                       f"бар {bar} · структура позади: "
                       f"{wf.get('dlina')} бар.")
                 return _zapomnit_otvet({"alive": True, "rodilas": True,
                                         "direction": napr})
-            elif storona != napr:
-                # ODNA_TOCHKA_ZA_RAZ_V1: разворотник против живой точки,
-                # который не стал ни концом волны 1, ни концом отката
-                # (оба блока стоят выше и возвращают сами). Раньше он
-                # рождал новую точку поверх живой. Теперь — строка в
-                # ленту и ведение прежней: волна ещё идёт.
-                print(f"[ТОЧКА] · {para}: жива {storona} @ "
-                      f"{isk.get('zero_point_price')} — разворотник "
-                      f"{napr} @ {cena} новой не делает (бар {bar})")
             # та же сторона и точка жива — ведёт proverit_tochku:
             # там подпитка GREEN/SQUAT и структурный слом.
 
@@ -3021,7 +2960,3 @@ def _slot_sushchestvuet(ceh: str):
 # SUDYA_BEZ_PRIZRAKOV_V1 - marker
 
 # SVOI_SDELKI_VIDNO_V1 - marker
-
-# ODNA_TOCHKA_ZA_RAZ_V1 - marker
-
-# NOGI_SCHYOTNYE_V1 - marker
