@@ -4,10 +4,7 @@
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
-    "history_dna": "",
-    "alive": false,
-    "trend_direction": null,
-    "rodilas_na_bare": null
+    "history_dna": ""
   },
   "positions": [],
   "feed": {
@@ -82,7 +79,98 @@
   "рынок": {
     "бар": "2025.04.23 20:00"
   },
-  "точки": {},
+  "точки": {
+    "GBPUSD H4": {
+      "alive": false,
+      "trend_direction": "BEAR",
+      "zero_point_price": 1.35582,
+      "rodilas_na_bare": "2026.07.15 20:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 3,
+      "kray_posle": 1.35188,
+      "struktura_pozadi": 121,
+      "konec_volny_1": null,
+      "konec_volny_2": null,
+      "попыток": 0,
+      "reshali_na_bare": "2025.07.16 00:00",
+      "otvet_bara": {
+        "alive": false,
+        "reason": "точки нет",
+        "changed": false,
+        "direction": null
+      }
+    },
+    "XAUUSD H4": {
+      "alive": true,
+      "trend_direction": "BULL",
+      "zero_point_price": 3323.78,
+      "rodilas_na_bare": "2025.07.16 00:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 1,
+      "barov_s_tochki": 1,
+      "kray_posle": 3338.61,
+      "struktura_pozadi": 39,
+      "konec_volny_1": null,
+      "konec_volny_2": null,
+      "попыток": 0,
+      "reshali_na_bare": "2025.07.16 04:00",
+      "otvet_bara": {
+        "alive": true,
+        "reason": "TWR нейтрален 1 бар(а) — жива, ритм замер",
+        "changed": false,
+        "direction": "BULL"
+      }
+    },
+    "EURUSD H4": {
+      "alive": false,
+      "trend_direction": "BEAR",
+      "zero_point_price": 1.09242,
+      "rodilas_na_bare": "2025.04.02 20:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 2,
+      "kray_posle": 1.08044,
+      "struktura_pozadi": 58,
+      "konec_volny_1": null,
+      "konec_volny_2": null,
+      "попыток": 0,
+      "reshali_na_bare": "2025.04.23 20:00",
+      "otvet_bara": {
+        "alive": false,
+        "reason": "точки нет",
+        "changed": false,
+        "direction": null
+      },
+      "исходы": [
+        {
+          "попытка": 1,
+          "чем": "стоп",
+          "цена": 1.03875,
+          "вход": 1.03744,
+          "куда": "SHORT",
+          "бар": "2025.02.05 08:00"
+        },
+        {
+          "попытка": 1,
+          "чем": "стоп",
+          "цена": 1.03676,
+          "вход": 1.03549,
+          "куда": "SHORT",
+          "бар": "2025.02.12 04:00"
+        },
+        {
+          "попытка": 2,
+          "чем": "стоп",
+          "цена": 1.03676,
+          "вход": 1.03549,
+          "куда": "SHORT",
+          "бар": "2025.02.12 04:00"
+        }
+      ],
+      "нога": 0
+    }
+  },
   "наблюдения": {
     "GBPUSD H4": {
       "A06": {

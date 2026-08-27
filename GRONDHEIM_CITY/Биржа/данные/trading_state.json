@@ -6,50 +6,9 @@
     "zero_point_price": null,
     "history_dna": "",
     "alive": false,
-    "rodilas_na_bare": null
+    "rodilas_na_bare": null,
+    "trend_direction": null
   },
   "positions": [],
-  "точки": {
-    "EURUSD H4": {
-      "reshali_na_bare": "2026.08.03 00:00",
-      "otvet_bara": {
-        "alive": true,
-        "reason": "жива",
-        "changed": false,
-        "direction": "BULL"
-      },
-      "alive": true,
-      "trend_direction": "BULL",
-      "zero_point_price": 1.13533,
-      "rodilas_na_bare": "2026.07.28 12:00",
-      "t1_status": "DETECTED",
-      "neutral_bars_count": 0,
-      "barov_s_tochki": 37,
-      "kray_posle": 1.15587,
-      "struktura_pozadi": 62,
-      "konec_volny_1": {
-        "цена": 1.14751,
-        "бар": "2026.07.30 00:00",
-        "сторона": "BEAR",
-        "структура": 79,
-        "баров_от_точки": 25,
-        "этаж_волны": "M15",
-        "баров_на_этаже": 144,
-        "в_окне_100_140": false,
-        "пятёрка": false,
-        "пятёрка_почему": "шум: 7 пересечений",
-        "пуль_сошлось": 3,
-        "пуль_посчитано": 4,
-        "пули": {
-          "дивергенция": true,
-          "целевая_зона": null,
-          "фрактал_на_краю": true,
-          "приседающий": true,
-          "моментум_развернулся": false
-        }
-      },
-      "konec_volny_2": null,
-      "попыток": 0
-    }
-  }
+  "точки": {}
 }

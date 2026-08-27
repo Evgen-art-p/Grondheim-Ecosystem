@@ -149,20 +149,6 @@ def global_trend(symbol: str, working_tf: str,
     bias=NONE — старший Аллигатор спит (боковик): большой воды нет.
     Это честный факт, не ошибка — трейдеры узнают, что фильтра нет.
     """
-    # VODA_NA_STOLE_V1: направление старшего этажа меряется СТРУКТУРОЙ
-    # (две вершины и две впадины по фракталу, подтверждение этажом выше),
-    # а не веером Аллигатора. Веер соврал на откате в 43% случаев — такой
-    # факт трейдеру на стол класть нельзя. Вид ответа прежний, читатели
-    # не меняются. Вода не сложилась — вернётся bias=NONE, и это честное
-    # «воды нет», а не поломка.
-    try:
-        import voda as _voda
-        _v = _voda.voda_na_stole(symbol, working_tf, as_of_date=as_of_date)
-        if _v:
-            return _v
-    except Exception as _e:
-        print(f"[ЯКОРЬ] вода не посчиталась ({_e}) — беру старый веер")
-
     senior = senior_timeframe(working_tf)
     if senior is None:
         return {"bias": "NONE", "senior_tf": None, "ok": False,
@@ -265,5 +251,3 @@ def apply_global_bias(market_data: dict, symbol: str, working_tf: str) -> dict:
 # GLUBINA_KOMPASA_V2 - marker
 
 # GLUBINA_KOMPASA_V3 - marker
-
-# VODA_NA_STOLE_V1 - marker

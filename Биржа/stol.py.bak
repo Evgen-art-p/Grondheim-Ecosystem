@@ -218,8 +218,6 @@ def nakryt(symbol: str, timeframe: str,
     compass = None
     starshiy_tf = None
     starshiy_prishyol = False
-    _voda_etazhi = None       # VODA_NA_STOLE_V1
-    _voda_why = ""            # VODA_NA_STOLE_V1
     try:
         from global_anchor import global_trend, senior_timeframe
         starshiy_tf = senior_timeframe(timeframe)
@@ -228,9 +226,6 @@ def nakryt(symbol: str, timeframe: str,
         starshiy_prishyol = bool((st or {}).get("ok"))
         b = (st or {}).get("bias")
         compass = b if b in ("BULL", "BEAR") else None
-        # VODA_NA_STOLE_V1: чем именно вода такая — целиком на стол
-        _voda_etazhi = (st or {}).get("вода_этажи")
-        _voda_why = (st or {}).get("why") or ""
     except Exception:
         compass = None
     # KOMPAS_CHESTNYY_V1: раньше здесь стояла ПОДМЕНА — старший этаж
@@ -292,12 +287,6 @@ def nakryt(symbol: str, timeframe: str,
     ao = md.get("ao", {}) or {}
     stol["приборы"] = {
         "старший_аллигатор": compass,          # куда смотрит большая вода
-        # VODA_NA_STOLE_V1: вода — ФАКТ рядом с сигналом, не ворота.
-        # Считается структурой старших этажей (фрактал: две вершины,
-        # две впадины). Нет согласия этажей — нет и воды.
-        "вода": compass,
-        "вода_этажи": _voda_etazhi,
-        "вода_почему": _voda_why,
         # KOMPAS_CHESTNYY_V1: чем именно пуст компас и что говорит
         # рабочий этаж — под своим именем, а не под чужим
         "старший_этаж": starshiy_tf,
@@ -388,7 +377,14 @@ def slovami(stol: dict) -> str:
     nt = p.get("натяжение", {}) or {}
     c = p.get("цена", {}) or {}
     L = [
-        _voda_strokoy(p),   # VODA_NA_STOLE_V1
+        (f"старший Аллигатор: {p.get('старший_аллигатор')}"
+         if p.get('старший_аллигатор')
+         else f"старший Аллигатор: НЕТ ДАННЫХ "
+              f"({p.get('старший_этаж') or 'старший этаж'} не пришёл)")
+        + (f"   направление рабочего: {p.get('направление_рабочего')}"
+           if p.get('направление_рабочего') else "")
+        + f"   "
+        f"этаж: {p.get('этаж') or '—'}",
         # ALLIG_NA_VHODE_V1: слова «спит» здесь больше нет. Оно тянуло
         # за собой готовый вывод «боковик, не торгуй» — а на конце
         # отката сомкнутая пасть это норма, там и надо входить.
@@ -526,32 +522,12 @@ def slovami(stol: dict) -> str:
     return "\n".join(f"— {x}" for x in L)
 
 
-# ══════════════════════════════════════════════════════════════
-# VODA_NA_STOLE_V1 — вода отдельной строкой
-# ══════════════════════════════════════════════════════════════
-
-def _voda_strokoy(p: dict) -> str:
-    # Вода на столе: сторона, оба этажа, и чем её нет, если её нет.
-    # Слово Шефа: вода не разрешает и не запрещает. Она лежит рядом с
-    # сигналом, и трейдер решает сам — в том числе войти против неё, со
-    # своим стопом. Поэтому здесь нет ни «можно», ни «нельзя»: только
-    # куда смотрит структура старших этажей.
-    v = (p or {}).get("вода")
-    etazhi = (p or {}).get("вода_этажи") or ""
-    pochemu = (p or {}).get("вода_почему") or ""
-    svoy = (p or {}).get("направление_рабочего")
-    hvost = (f"   направление рабочего: {svoy}" if svoy else "")
-    hvost += f"   этаж: {(p or {}).get('этаж') or '—'}"
-    golova = f"ВОДА: {v}" if v in ("BULL", "BEAR") else "ВОДА: НЕТ НА СТОЛЕ"
-    if pochemu:
-        golova += f"   ({pochemu})"
-    golova += hvost
-    if etazhi:
-        golova += f"\n     этажи: {etazhi}"
-    return golova
-
-
-
+if __name__ == "__main__":
+    # Проверка без модели и без денег: python stol.py EURUSD H1
+    s = sys.argv[1] if len(sys.argv) > 1 else "EURUSD"
+    tf = sys.argv[2] if len(sys.argv) > 2 else "H1"
+    print(f"Стол {s} {tf}:\n")
+    print(slovami(nakryt(s, tf)))
 
 # PRIBORY_NA_STOL_V1 - marker
 
@@ -776,17 +752,3 @@ def _proshlye_popytki(t: dict) -> str:
 # SVOI_SDELKI_VIDNO_V1 - marker
 
 # NOGI_SCHYOTNYE_V1 - marker
-
-# VODA_NA_STOLE_V1 - marker
-
-# VODA_STROKOY_MESTO_V1 - marker
-
-
-if __name__ == "__main__":
-    # Проверка без модели и без денег: python stol.py EURUSD H1
-    s = sys.argv[1] if len(sys.argv) > 1 else "EURUSD"
-    tf = sys.argv[2] if len(sys.argv) > 2 else "H1"
-    print(f"Стол {s} {tf}:\n")
-    print(slovami(nakryt(s, tf)))
-
-# ZAPUSK_V_KONEC_V1 - marker

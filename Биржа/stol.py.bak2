@@ -526,32 +526,12 @@ def slovami(stol: dict) -> str:
     return "\n".join(f"— {x}" for x in L)
 
 
-# ══════════════════════════════════════════════════════════════
-# VODA_NA_STOLE_V1 — вода отдельной строкой
-# ══════════════════════════════════════════════════════════════
-
-def _voda_strokoy(p: dict) -> str:
-    # Вода на столе: сторона, оба этажа, и чем её нет, если её нет.
-    # Слово Шефа: вода не разрешает и не запрещает. Она лежит рядом с
-    # сигналом, и трейдер решает сам — в том числе войти против неё, со
-    # своим стопом. Поэтому здесь нет ни «можно», ни «нельзя»: только
-    # куда смотрит структура старших этажей.
-    v = (p or {}).get("вода")
-    etazhi = (p or {}).get("вода_этажи") or ""
-    pochemu = (p or {}).get("вода_почему") or ""
-    svoy = (p or {}).get("направление_рабочего")
-    hvost = (f"   направление рабочего: {svoy}" if svoy else "")
-    hvost += f"   этаж: {(p or {}).get('этаж') or '—'}"
-    golova = f"ВОДА: {v}" if v in ("BULL", "BEAR") else "ВОДА: НЕТ НА СТОЛЕ"
-    if pochemu:
-        golova += f"   ({pochemu})"
-    golova += hvost
-    if etazhi:
-        golova += f"\n     этажи: {etazhi}"
-    return golova
-
-
-
+if __name__ == "__main__":
+    # Проверка без модели и без денег: python stol.py EURUSD H1
+    s = sys.argv[1] if len(sys.argv) > 1 else "EURUSD"
+    tf = sys.argv[2] if len(sys.argv) > 2 else "H1"
+    print(f"Стол {s} {tf}:\n")
+    print(slovami(nakryt(s, tf)))
 
 # PRIBORY_NA_STOL_V1 - marker
 
@@ -777,16 +757,29 @@ def _proshlye_popytki(t: dict) -> str:
 
 # NOGI_SCHYOTNYE_V1 - marker
 
+
+# ══════════════════════════════════════════════════════════════
+# VODA_NA_STOLE_V1 — вода отдельной строкой
+# ══════════════════════════════════════════════════════════════
+
+def _voda_strokoy(p: dict) -> str:
+    # Вода на столе: сторона, оба этажа, и чем её нет, если её нет.
+    # Слово Шефа: вода не разрешает и не запрещает. Она лежит рядом с
+    # сигналом, и трейдер решает сам — в том числе войти против неё, со
+    # своим стопом. Поэтому здесь нет ни «можно», ни «нельзя»: только
+    # куда смотрит структура старших этажей.
+    v = (p or {}).get("вода")
+    etazhi = (p or {}).get("вода_этажи") or ""
+    pochemu = (p or {}).get("вода_почему") or ""
+    svoy = (p or {}).get("направление_рабочего")
+    hvost = (f"   направление рабочего: {svoy}" if svoy else "")
+    hvost += f"   этаж: {(p or {}).get('этаж') or '—'}"
+    golova = f"ВОДА: {v}" if v in ("BULL", "BEAR") else "ВОДА: НЕТ НА СТОЛЕ"
+    if pochemu:
+        golova += f"   ({pochemu})"
+    golova += hvost
+    if etazhi:
+        golova += f"\n     этажи: {etazhi}"
+    return golova
+
 # VODA_NA_STOLE_V1 - marker
-
-# VODA_STROKOY_MESTO_V1 - marker
-
-
-if __name__ == "__main__":
-    # Проверка без модели и без денег: python stol.py EURUSD H1
-    s = sys.argv[1] if len(sys.argv) > 1 else "EURUSD"
-    tf = sys.argv[2] if len(sys.argv) > 2 else "H1"
-    print(f"Стол {s} {tf}:\n")
-    print(slovami(nakryt(s, tf)))
-
-# ZAPUSK_V_KONEC_V1 - marker

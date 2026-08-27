@@ -551,7 +551,12 @@ def _voda_strokoy(p: dict) -> str:
     return golova
 
 
-
+if __name__ == "__main__":
+    # Проверка без модели и без денег: python stol.py EURUSD H1
+    s = sys.argv[1] if len(sys.argv) > 1 else "EURUSD"
+    tf = sys.argv[2] if len(sys.argv) > 2 else "H1"
+    print(f"Стол {s} {tf}:\n")
+    print(slovami(nakryt(s, tf)))
 
 # PRIBORY_NA_STOL_V1 - marker
 
@@ -780,13 +785,3 @@ def _proshlye_popytki(t: dict) -> str:
 # VODA_NA_STOLE_V1 - marker
 
 # VODA_STROKOY_MESTO_V1 - marker
-
-
-if __name__ == "__main__":
-    # Проверка без модели и без денег: python stol.py EURUSD H1
-    s = sys.argv[1] if len(sys.argv) > 1 else "EURUSD"
-    tf = sys.argv[2] if len(sys.argv) > 2 else "H1"
-    print(f"Стол {s} {tf}:\n")
-    print(slovami(nakryt(s, tf)))
-
-# ZAPUSK_V_KONEC_V1 - marker

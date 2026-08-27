@@ -2567,44 +2567,6 @@ def _vesti_tochku(md: dict, symbol: str = "", timeframe: str = "") -> dict:
         zhiva = bool(isk.get("alive"))
         storona = isk.get("trend_direction")
 
-        # VERSHINA_NE_NIZHE_KRAYA_V1: вершина не может быть НИЖЕ того,
-        # куда цена потом дошла.
-        #
-        # Конец волны 1 ставит разворотный бар — так в каноне, это не
-        # трогаем. Но проверялась эта отметка только ДРУГИМ разворотным
-        # баром (NOVAYA_MAKUSHKA_V1). Если цена идёт дальше и обратных
-        # разворотников не даёт, вершина остаётся внизу, хотя рынок её
-        # давно прошёл. Глазом это видно сразу, у кода проверки не было.
-        #
-        # Край после точки код и так копит каждый бар — самый дальний
-        # экстремум с рождения точки, «та самая макушка волны 1». Здесь
-        # просто сверяем два числа, которые уже лежат рядом. Ни порогов,
-        # ни допусков, ни новых данных.
-        #
-        # Переезд ≠ «волна кончилась заново» (KRAY_VOLNY_V1): волна как
-        # раз продолжается. Событий трейдеру не добавляем, не будим.
-        if (zhiva and isk.get("konec_volny_1")
-                and not isk.get("konec_volny_2")):
-            _kv = isk.get("konec_volny_1") or {}
-            _vershina = _kv.get("цена")
-            _kray = isk.get("kray_posle")
-            if _vershina is not None and _kray is not None:
-                try:
-                    _dalshe = (_kray > _vershina if storona == "BULL"
-                               else _kray < _vershina)
-                except TypeError:
-                    _dalshe = False
-                if _dalshe:
-                    _kv["цена"] = _kray
-                    _kv["бар"] = bar
-                    _kv["баров_от_точки"] = int(isk.get("barov_s_tochki") or 0)
-                    _kv["сдвинулась_ценой"] = True
-                    isk["konec_volny_1"] = _kv
-                    save_trading_state(t)
-                    _slovo = "вершина" if storona == "BULL" else "дно"
-                    print(f"[ВОЛНА 1] ↗ {para}: {_slovo} подтянулась "
-                          f"{_vershina} → {_kray} (цена ушла дальше)")
-
         # ── разворотник на этом баре: рождение или ведение ──
         # Рождаем ТОЛЬКО в зоне конца волны (модуль 6.2, пункты 1-2):
         # бар без читаемой структуры — середина движения, не конец.
@@ -3063,5 +3025,3 @@ def _slot_sushchestvuet(ceh: str):
 # ODNA_TOCHKA_ZA_RAZ_V1 - marker
 
 # NOGI_SCHYOTNYE_V1 - marker
-
-# VERSHINA_NE_NIZHE_KRAYA_V1 - marker

@@ -222,15 +222,10 @@ def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
             # «интересует, куда направлен ДНЕВНОЙ Аллигатор».
             # Старшего этажа нет — место годится: из-за нехватки данных
             # ничего не отсекаем.
-            # VODA_NA_STOLE_V1: ВОРОТ БОЛЬШЕ НЕТ. Раньше место против
-            # старшего тренда выбрасывалось — код решал за трейдера,
-            # входить или нет. Слово Шефа: вода это факт на столе, а не
-            # разрешение. Место отдаётся как есть, вода кладётся рядом
-            # отдельным полем; решает человек — он и рискует своим стопом.
             _komp = p.get("компас")
-            p["вода"] = _komp
             if _komp in ("BULL", "BEAR") and _komp != p.get("разворотный"):
                 _mimo_trenda += 1
+                p = None
         if p:
             posledniy_i = i
             # OKNO_ISKATELYA_V1: зовём только там, где масштаб годится.
@@ -250,8 +245,8 @@ def iskat(symbol: str, tf: str, do_momenta: str = "", skolko: int = 10,
     # POISK_PO_TRENDU_V1: отсев по старшей воде тоже вслух.
     if _mimo_trenda:
         _skazat = govorit or print
-        _skazat(f"[ИСКАТЕЛЬ] против воды: {_mimo_trenda} мест — "
-                f"отданы трейдеру как есть, судит он")
+        _skazat(f"[ИСКАТЕЛЬ] мимо старшего тренда: {_mimo_trenda} "
+                f"мест — там большая вода против")
     if mimo and govorit:
         govorit(f"[ИСКАТЕЛЬ] мимо рамки {OKNO_VOLNY[0]}-{OKNO_VOLNY[1]} "
                 f"баров: {mimo} мест — там масштаб не тот")
@@ -292,5 +287,3 @@ if __name__ == "__main__":
 # POISK_PO_TRENDU_V1 - marker
 
 # POISK_S_DATY_V1 - marker
-
-# VODA_NA_STOLE_V1 - marker
