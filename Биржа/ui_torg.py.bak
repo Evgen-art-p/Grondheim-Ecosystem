@@ -762,15 +762,6 @@ def _vahta_zavesti():
 
 
 
-# KABINET_ZHIVYOT_PRI_GORODE_V1: память кабинета живёт ПРИ ГОРОДЕ,
-# а не при вкладке. Раньше state рождался внутри страницы: моргнула
-# связь или обновилась страница — рождался новый пустой, лента
-# исчезала с экрана, а прогон продолжал писать в старый, которого
-# уже никто не видит. Один кабинет на цех — как один стол и один
-# момент истории.
-_KABINETY: dict = {}
-
-
 def page_torg(tseh_id: str = "торговый_хаос") -> None:
     # OTPERET_V1: назвать цех столу СРАЗУ при входе в кабинет. Совет
     # называет его сам, но до Совета стол успевает открыть тот, кто
@@ -788,7 +779,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
     roster = _build_roster(static_prefix)
 
     # ── состояние страницы (как было в ui_exchange.py) ──────────
-    _svezhee = {
+    state = {
         # POCHINIT_SOSTAV_V1: активным встаёт первый, кто реально есть
         # на диске. Состав собран строкой выше, поэтому берём прямо
         # здесь — раньше это стояло ДО создания state и роняло кабинет.
@@ -825,14 +816,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         "vahta": False,
         "vahta_bar": "",
     }
-
-    # KABINET_ZHIVYOT_PRI_GORODE_V1: берём кабинет этого цеха, если он
-    # уже открыт был — тогда лента, полка и режим на месте. Первый
-    # раз — кладём свежий. Новые ключи (после патчей) доливаем, чтобы
-    # старый кабинет не падал на том, чего в нём ещё нет.
-    state = _KABINETY.setdefault(tseh_id, _svezhee)
-    for _k, _v in _svezhee.items():
-        state.setdefault(_k, _v)
 
     llm.set_model(state["model"])  # BIRZHA_MODEL_SEL_V1: применяем сразу при открытии кабинета
 
@@ -890,27 +873,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         ui.html(f'<div class="chat-msg-user"><b>ШЕФ:</b> {content}</div>')
                     else:
                         ui.html(f'<div class="chat-msg-assistant"><b>{who}:</b> {content}</div>')
-
-    # KABINET_ZHIVYOT_PRI_GORODE_V1: лента сама догоняет.
-    # Прогон, начатый в другой вкладке (или до обновления страницы),
-    # держит ссылку на СТАРОЕ окно и в это уже не пишет. Раз в
-    # секунду смотрим, не выросла ли лента, и дорисовываем — тогда
-    # фоновый прогон снова виден на экране.
-    _lenta_vidno = {"skolko": -1}
-
-    def _dognat_lentu():
-        try:
-            n = len(state.get("chat_history") or [])
-            if n != _lenta_vidno["skolko"]:
-                _lenta_vidno["skolko"] = n
-                _risovat_chat()
-        except Exception:
-            pass
-
-    try:
-        ui.timer(1.0, _dognat_lentu)
-    except Exception as _e_tmr:
-        print(f"[КАБИНЕТ] лента не догоняет ({_e_tmr}) — не беда")
 
     # ── KABINET_GRAFIK_V1: кадр ──────────────────────────────
     def _aktivnyy_rynok() -> tuple:
@@ -3809,5 +3771,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # TESTER_PULT_V2 - marker
 
 # PARA_PO_POSTU_V1 - marker
-
-# KABINET_ZHIVYOT_PRI_GORODE_V1 - marker

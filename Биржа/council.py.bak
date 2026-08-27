@@ -262,25 +262,8 @@ def _deshyovaya_proverka_tochki(symbol: str, timeframe: str,
     bars = window
     _point = point
     if bars is None:
-        # SOVET_CHEREZ_KRAN_V1: спрашиваем бары у КРАНА, а не у
-        # терминала напрямую. Кран сам знает, какой режим включён
-        # кнопкой: тестер — читает CSV и MT5 не трогает вообще,
-        # реал — идёт в терминал, как и раньше.
-        #
-        # Прежде здесь стоял прямой вызов mt5_feed.pull_bars, который
-        # про кран не знает. А он внутри на КАЖДОМ обращении делает
-        # mt5.initialize() и следом mt5.shutdown() — поднимает живой
-        # терминал и тут же гасит. На сплошном прогоне это сотни
-        # циклов «включить-выключить» подряд: терминал терял связь и
-        # ругался, хотя история читается из файлов и живой рынок там
-        # не нужен вовсе.
-        try:
-            from feed_source import bars as _kran
-            bars, _point = _kran(symbol, timeframe, 300)
-        except Exception as _e_kran:
-            print(f"[СОВЕТ] кран недоступен ({_e_kran}) — иду прежним путём")
-            from mt5_feed import pull_bars
-            bars, _point = pull_bars(symbol, timeframe, 300)
+        from mt5_feed import pull_bars
+        bars, _point = pull_bars(symbol, timeframe, 300)
 
     if not bars or _point is None:
         return {"trigger": False, "kind": None, "napravlenie": None,
@@ -691,5 +674,3 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # POZICIYA_NE_KAZHDYY_BAR_V1 - marker
 
 # VYBOR_NE_PRI_MESTE_V1 - marker
-
-# SOVET_CHEREZ_KRAN_V1 - marker
