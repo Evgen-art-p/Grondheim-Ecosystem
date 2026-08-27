@@ -771,102 +771,6 @@ def _vahta_zavesti():
 _KABINETY: dict = {}
 
 
-
-def _bystryy_pasport(p) -> dict:
-    """Три числа о файле БЕЗ разбора баров: сколько строк, первая
-    дата, последняя.
-
-    POLKA_NE_DUSHIT_SVYAZ_V1. Формат тот же, что читает read_mt5_csv:
-    MT5-выгруз в utf-16-le, поля через запятую, дата первым полем.
-
-    Строки считаем кусками по мегабайту — это чтение с диска и ничего
-    больше. Последнюю строку берём с ХВОСТА файла, не проходя его
-    целиком. Не вышло — возвращаем None, и зовущий разберёт файл
-    по-старому.
-    """
-    try:
-        razmer = p.stat().st_size
-        if razmer <= 0:
-            return None
-
-        KUSOK = 1 << 20          # мегабайт за раз
-        perevodov = 0
-        pervaya = b""
-        with open(p, "rb") as f:
-            kusok = f.read(KUSOK)
-            if not kusok:
-                return None
-            pervaya = kusok.split(b"\n", 1)[0]
-            while kusok:
-                perevodov += kusok.count(b"\n")
-                kusok = f.read(KUSOK)
-
-            # Хвост: последняя непустая строка. Кодировка utf-16-le —
-            # два байта на букву, поэтому и начало куска, и разбор
-            # должны идти по буквам, а не по байтам, иначе последняя
-            # дата читается мусором.
-            hvost_dlina = min(8192, razmer)
-            nachalo = razmer - hvost_dlina
-            if nachalo % 2:            # встать на границу буквы
-                nachalo += 1
-            f.seek(nachalo)
-            hvost = f.read(razmer - nachalo)
-
-        def _stroka_v_datu(syrye: bytes):
-            try:
-                s = syrye.decode("utf-16-le", errors="ignore")
-            except Exception:
-                return None
-            s = s.strip().lstrip("\ufeff").strip("\x00").strip()
-            if not s:
-                return None
-            chasti = s.split(",")
-            if len(chasti) < 6:
-                return None
-            data = chasti[0].strip()
-            # у настоящего бара дальше идут числа — проверяем одно
-            try:
-                float(chasti[1])
-            except (ValueError, IndexError):
-                return None
-            return data or None
-
-        do_konca = _stroka_v_datu(pervaya)
-
-        posle = None
-        try:
-            hvost_tekst = hvost.decode("utf-16-le", errors="ignore")
-        except Exception:
-            hvost_tekst = ""
-        for stroka in reversed(hvost_tekst.split("\n")):
-            stroka = stroka.strip().lstrip("\ufeff").strip("\x00").strip()
-            if not stroka:
-                continue
-            chasti = stroka.split(",")
-            if len(chasti) < 6:
-                continue
-            try:
-                float(chasti[1])
-            except (ValueError, IndexError):
-                continue
-            posle = chasti[0].strip()
-            if posle:
-                break
-
-        if not do_konca or not posle:
-            return None
-
-        # строк с данными: переводы строк минус возможная пустая
-        # последняя. Точность до одной строки полке не важна, но
-        # заниженным числом пугать тоже не будем.
-        barov = max(1, perevodov)
-        return {"bars": barov, "date_from": do_konca, "date_to": posle}
-    except Exception as e:
-        print(f"[ПОЛКА] быстро не прочитал {getattr(p, 'name', p)} ({e}) — "
-              f"разберу полностью")
-        return None
-
-
 def page_torg(tseh_id: str = "торговый_хаос") -> None:
     # OTPERET_V1: назвать цех столу СРАЗУ при входе в кабинет. Совет
     # называет его сам, но до Совета стол успевает открыть тот, кто
@@ -3090,29 +2994,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             klyuch = None
         if klyuch is not None and klyuch in _PASPORTA_KESH:
             return dict(_PASPORTA_KESH[klyuch])
-
-        # POLKA_NE_DUSHIT_SVYAZ_V1: полке нужны ТРИ числа — сколько
-        # баров, первая дата, последняя. Раньше ради них разбирался
-        # ВЕСЬ файл, и на тридцати трёх файлах это было около полутора
-        # миллионов баров в главной нитке. Пока сервер их грыз, он не
-        # отвечал браузеру — тот рвал связь («Connection lost»), после
-        # переподключения страница строилась заново, и всё по кругу.
-        # Отсюда же пустой экран и «пузыри не жмутся»: нажатие до
-        # сервера доходит, а ответить некому.
-        #
-        # Считаем строки кусками, даты берём с двух концов файла.
-        # Ни одно число не разбирается. Не получилось — падаем на
-        # прежний полный разбор, чтобы файл не пропал с полки.
-        _bystro = _bystryy_pasport(p)
-        if _bystro is not None:
-            symbol, tf = _parse_symbol_tf(p.name)
-            _pasport = dict(_bystro)
-            _pasport.update({"name": p.name, "path": str(p),
-                             "symbol": symbol, "timeframe": tf})
-            if klyuch is not None:
-                _PASPORTA_KESH[klyuch] = dict(_pasport)
-            return _pasport
-
         bars = read_mt5_csv(str(p))
         if not bars:
             return None
@@ -3930,5 +3811,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PARA_PO_POSTU_V1 - marker
 
 # KABINET_ZHIVYOT_PRI_GORODE_V1 - marker
-
-# POLKA_NE_DUSHIT_SVYAZ_V1 - marker
