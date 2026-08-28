@@ -154,7 +154,6 @@ def kartridzhi() -> list:
             m = _chitat(cd / "manifest.json") or {}
             out.append({"цех": cd.name, "папка_квартала": kv.name,
                         "вид": "контора" if cd.name == "контора" else "цех",
-                        "папка": str(cd),   # MENEDZHER_KARTRIDZHEY_V1
                         "здание": m.get("здание", ""),
                         "квартал": m.get("квартал", ""),
                         "слоты": m.get("слоты", []) or []})

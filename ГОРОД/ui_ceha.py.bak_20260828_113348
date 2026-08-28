@@ -67,11 +67,8 @@ _BELYY_SHRIFT = r"""
 
 
 KOREN = Path(__file__).resolve().parent.parent
+CEHA = KOREN / "GRONDHEIM_CITY" / "Биржа" / "цеха"
 CHULAN = KOREN / "_УБОРКА"
-
-# MENEDZHER_KARTRIDZHEY_V1: путей к кварталам страница больше не держит.
-# Список приходит от kartridzhi() — единственного сканера города. Куда
-# класть копию, знает сам картридж: рядом с собой.
 
 # что НЕ переезжает в копию: это нажитое оригиналом, не устройство
 NE_KOPIRUEM = {"данные", "журналы", "__pycache__", "кадры"}
@@ -114,51 +111,39 @@ def _rabota():
 
 
 def ceha() -> list:
-    """Картриджи ВСЕГО города. MENEDZHER_KARTRIDZHEY_V1.
-
-    Списка не держим и по папкам сами не ходим — спрашиваем kartridzhi(),
-    единственный сканер города. Он же говорит вид: контора или цех.
-    Контора постоянная, её не размножают и не вынимают.
-    """
+    """Цеха Биржи. Списка не держим — смотрим папки."""
     out = []
+    if not CEHA.is_dir():
+        return out
     R = _rabota()
-    if R is None:
-        return out
-    try:
-        vse = R.kartridzhi()
-    except Exception:
-        return out
-
-    for k in vse:
-        d = Path(k.get("папка") or "")
-        if not d.is_dir():
+    for d in sorted(CEHA.iterdir()):
+        mf = d / "manifest.json"
+        if not d.is_dir() or not mf.exists():
             continue
-        m = _chitat(d / "manifest.json") or {}
+        m = _chitat(mf) or {}
         sloty = []
         for s in (m.get("слоты") or []):
             imya = s.get("слот")
             if not imya:
                 continue
             kto = ""
-            try:
-                kto = R.kto_na_slote(k["цех"], imya)
-            except Exception:
-                kto = ""
+            if R is not None:
+                try:
+                    kto = R.kto_na_slote(d.name, imya)
+                except Exception:
+                    kto = ""
             sloty.append({
                 "слот": imya, "роль": s.get("роль", ""),
                 "мозг": (d / "слоты" / imya / "мозг.py").exists(),
                 "кто": kto})
         out.append({
-            "имя": k["цех"], "папка": d, "манифест": m,
-            "квартал": k.get("папка_квартала", ""),
-            "вид": k.get("вид", "цех"),
-            "название": m.get("название", k["цех"]),
+            "имя": d.name, "папка": d, "манифест": m,
+            "название": m.get("название", d.name),
             "здание": m.get("здание", ""),
             "слоты": sloty,
-            "свой_стол": (d / "данные").is_dir(),
+            "свой_стол": (d / "данные" / "trading_state.json").exists(),
             "от_кого": m.get("_от_кого", ""),
         })
-    out.sort(key=lambda c: (c["квартал"], c["вид"] != "контора", c["имя"]))
     return out
 
 
@@ -169,16 +154,10 @@ def _chistoe(s: str) -> str:
 
 def razmnozhit(iz: dict, imya: str, nazvanie: str) -> tuple:
     """Снять копию цеха один в один. Оригинал не трогаем."""
-    # MENEDZHER_KARTRIDZHEY_V1: контору не размножают — она одна на
-    # квартал по устройству. Копия ложится РЯДОМ с оригиналом, то есть
-    # в его же квартал: цех привязан к зданию и судье, копия в чужом
-    # квартале была бы сиротой.
-    if iz.get("вид") == "контора":
-        return False, "контора не размножается — она одна на квартал"
     imya = _chistoe(imya)
     if not imya:
         return False, "у цеха должно быть имя"
-    cel = Path(iz["папка"]).parent / imya
+    cel = CEHA / imya
     if cel.exists():
         return False, f"цех «{imya}» уже есть"
 
@@ -223,13 +202,7 @@ def razmnozhit(iz: dict, imya: str, nazvanie: str) -> tuple:
 
 
 def ubrat(ceh: dict) -> tuple:
-    """Вынуть картридж. Занятый не выдёргиваем.
-
-    MENEDZHER_KARTRIDZHEY_V1: контору не вынимаем никогда. Она часть
-    квартала, а не сменная деталь: вместе с папкой уехали бы её журналы.
-    """
-    if ceh.get("вид") == "контора":
-        return False, "контора не вынимается — она часть квартала"
+    """Вынуть картридж. Занятый не выдёргиваем."""
     zanyaty = [s for s in ceh["слоты"] if s["кто"]]
     if zanyaty:
         kto = ", ".join(s["кто"] for s in zanyaty)
@@ -252,7 +225,7 @@ def page_ceha():
 
     with ui.element("div").classes("c-head"):
         ui.html('<div style="font-weight:800; letter-spacing:0.14em; '
-                'font-size:0.95rem;">ГОРОД · КАРТРИДЖИ</div>')
+                'font-size:0.95rem;">БИРЖА · ЦЕХА</div>')
         refs["schet"] = ui.html("")
         ui.element("div").style("flex:1")
         ui.button("← РАБОТА",
@@ -280,22 +253,15 @@ def page_ceha():
                 ui.label("цехов нет").style(
                     "color:rgba(255,255,255,0.35); font-size:0.78rem;")
                 return
-            kvartal_bylo = None
             for c in vse:
-                # MENEDZHER_KARTRIDZHEY_V1: группируем по кварталам —
-                # город растёт, плоский список перестал читаться.
-                if c.get("квартал") != kvartal_bylo:
-                    kvartal_bylo = c.get("квартал")
-                    ui.html(f'<div class="c-podpis">{kvartal_bylo}</div>')
                 zhivyh = sum(1 for s in c["слоты"] if s["мозг"])
                 kto = sum(1 for s in c["слоты"] if s["кто"])
-                znak = "◆ " if c.get("вид") == "контора" else ""
 
                 def _vyb(c=c):
-                    sost["вybrano"] = (c.get("квартал", ""), c["имя"])
+                    sost["вybrano"] = c["имя"]
                     risovat_kartu()
 
-                ui.button(f'{znak}{c["название"][:24]}  ·  мест {len(c["слоты"])}'
+                ui.button(f'{c["название"][:24]}  ·  мест {len(c["слоты"])}'
                           f'  ·  людей {kto}', on_click=_vyb).props(
                     "flat no-caps").style(
                     f"width:100%; text-align:left; font-size:0.76rem; "
@@ -305,17 +271,15 @@ def page_ceha():
 
     def risovat_kartu():
         refs["karta"].clear()
-        klyuch = sost["вybrano"]
-        # MENEDZHER_KARTRIDZHEY_V1: ключ теперь пара (квартал, имя) —
-        # «контора» есть в каждом квартале, по одному имени не найти.
-        vse = {(c.get("квартал", ""), c["имя"]): c for c in ceha()}
+        imya = sost["вybrano"]
+        vse = {c["имя"]: c for c in ceha()}
         with refs["karta"]:
-            if klyuch not in vse:
-                ui.label("Выбери картридж слева — здесь откроется карточка."
+            if imya not in vse:
+                ui.label("Выбери цех слева — здесь откроется его карточка."
                          ).style("color:rgba(255,255,255,0.4); "
                                  "font-size:0.82rem;")
                 return
-            c = vse[klyuch]
+            c = vse[imya]
             ui.html(f'<div style="font-weight:800; font-size:0.95rem;">'
                     f'{c["название"]}</div>'
                     f'<div style="color:rgba(255,255,255,0.35); '
@@ -338,16 +302,6 @@ def page_ceha():
                     f"color:{cvet}; font-size:0.78rem; "
                     f"font-family:monospace;")
 
-            # MENEDZHER_KARTRIDZHEY_V1: контора не сменная деталь —
-            # ни копий, ни вынимания. Показываем почему, а не прячем.
-            if c.get("вид") == "контора":
-                ui.html('<div class="c-podpis">картридж?</div>')
-                ui.label("Нет. Контора — часть квартала, одна и навсегда: "
-                         "вход, выход и общие журналы. Её не размножают "
-                         "и не вынимают. Сменные — цеха рядом.").style(
-                    "color:rgba(255,255,255,0.45); font-size:0.74rem;")
-                return
-
             ui.html('<div class="c-podpis">снять копию</div>')
             ui.label("Копия идёт чистой: без данных, журналов и стола. "
                      "Новый цех начинает свою жизнь.").style(
@@ -365,8 +319,7 @@ def page_ceha():
                 ui.notify(("🧩 " if ok else "⚠ ") + msg,
                           color="positive" if ok else "negative")
                 if ok:
-                    sost["вybrano"] = (c.get("квартал", ""),
-                                       _chistoe(novoe_imya.value or ""))
+                    sost["вybrano"] = _chistoe(novoe_imya.value or "")
                 risovat_spisok()
                 risovat_kartu()
 
@@ -395,10 +348,6 @@ def page_ceha():
                     "color:rgba(255,255,255,0.55); "
                     "border:1px solid rgba(255,255,255,0.18);")
 
-            # MENEDZHER_KARTRIDZHEY_V1: /torg/ — торговый кабинет, роут
-            # биржевой. У Студии кабинет свой, появится с первым цехом.
-            if c.get("квартал") != "Биржа":
-                return
             ui.html('<div class="c-podpis">кабинет</div>')
             ui.button(f'открыть /torg/{c["имя"]}',
                       on_click=lambda c=c: ui.navigate.to(
