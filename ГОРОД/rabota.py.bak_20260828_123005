@@ -342,43 +342,6 @@ def zavesti(post_id: str, polya: dict | None = None) -> tuple:
     return (True, msg) if _pisat(put, d) else (False, "не записался")
 
 
-def zavesti_mesta_kartridzhey() -> tuple:
-    """Завести должности всем слотам картриджей. MESTA_ZAVODYATSYA_SAMI_V1.
-
-    Слот в манифесте — уже решение: место есть, и всё про него написано.
-    Бланк лишь повторяет эти слова, поэтому заводим сам, а не просим
-    Шефа подтвердить написанное.
-
-    Заведённые не трогаем: zavesti() дополняет пустые поля и не
-    перетирает занятые. Никого не сажаем — посадка остаётся решением.
-    """
-    zavedeno, bylo = 0, 0
-    for k in kartridzhi():
-        m = _chitat(Path(k["папка"]) / "manifest.json") or {} \
-            if k.get("папка") else {}
-        for s in (k.get("слоты") or []):
-            slot = s.get("слот")
-            if not slot:
-                continue
-            pid = id_dlya_slota(k["цех"], slot)
-            if _chitat(put_posta(pid)) is not None:
-                bylo += 1
-                continue
-            rol = s.get("роль", "") or slot
-            ok, _ = zavesti(pid, {
-                "название": rol,
-                "чем_занят": rol,
-                "локация": k.get("здание", "") or k.get("квартал", ""),
-                "квартал": k.get("папка_квартала", ""),
-                "цех": k["цех"],
-                "слот": slot,
-                "судья": m.get("судья", ""),
-            })
-            if ok:
-                zavedeno += 1
-    return zavedeno, bylo
-
-
 def obnovit(post_id: str, polya: dict) -> tuple:
     """Переписать поля бланка. Кто сидит и историю не трогаем."""
     put = put_posta(post_id)
