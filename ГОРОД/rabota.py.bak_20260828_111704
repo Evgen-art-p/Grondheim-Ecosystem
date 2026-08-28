@@ -131,29 +131,19 @@ def kartridzhi() -> list:
     """Картриджи города с их зданием. LOKACIYA_DAYOT_MESTA_V1: манифест
     цеха сам говорит, в каком здании стоит — привязка уже была, просто
     записана со стороны цеха."""
-    # KONTORA_NE_KARTRIDZH_V1: два рода, не один. Контора квартала —
-    # постоянная служба, лежит отдельной папкой и не вынимается. Цеха —
-    # сменные картриджи на полке «цеха». Вид ставим ПО ИМЕНИ ПАПКИ, а не
-    # по месту: контора, лежащая по старому адресу, тоже зовётся конторой,
-    # и перенос её однажды ничего не сломает.
     out = []
     if not CITY.exists():
         return out
     for kv in sorted(CITY.iterdir()):
-        if not kv.is_dir():
-            continue
-        papki = []
-        kontora = kv / "контора"
-        if (kontora / "manifest.json").exists():
-            papki.append(kontora)
         ceha = kv / "цеха"
-        if ceha.is_dir():
-            papki += [c for c in sorted(ceha.iterdir())
-                      if (c / "manifest.json").exists()]
-        for cd in papki:
-            m = _chitat(cd / "manifest.json") or {}
+        if not ceha.is_dir():
+            continue
+        for cd in sorted(ceha.iterdir()):
+            mf = cd / "manifest.json"
+            if not mf.exists():
+                continue
+            m = _chitat(mf) or {}
             out.append({"цех": cd.name, "папка_квартала": kv.name,
-                        "вид": "контора" if cd.name == "контора" else "цех",
                         "здание": m.get("здание", ""),
                         "квартал": m.get("квартал", ""),
                         "слоты": m.get("слоты", []) or []})
