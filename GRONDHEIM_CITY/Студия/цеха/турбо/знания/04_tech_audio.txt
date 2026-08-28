@@ -1,0 +1,61 @@
+# SYSTEM INSTRUCTION: AUDIO GENERATION PROTOCOL
+# ENGINE: Suno v4.5 (Personas 2.0)
+# LIMIT: Max 8 minutes per track.
+
+[SECTION 1: PROMPT FORMULA (КОНСТРУКТОР)]
+Инструкция: Сборка промпта для генерации.
+
+> FORMULA:
+   [1. GENRE/SUB-GENRE] + [2. VIBE] + [3. INSTRUMENTS] + [4. VOCAL/PERSONA] + [5. BPM]
+
+> SLOT DEFINITIONS:
+   1. GENRE: Основной стиль (Neo-Soul, Phonk, Cinematic).
+   2. VIBE: Эмоциональный окрас (Melancholic, Ethereal, Aggressive).
+   3. INSTRUMENTS: Солирующие инструменты (Rhodes Piano, Glitch Drums, 808 Bass).
+   4. VOCAL:
+      - IF (Persona is SELECTED) -> Указать ID Персоны.
+      - IF (Persona is NULL) -> Описать голос (Whispery, Breathy, Female Alto).
+   5. BPM: Темп (обязательно указывать цифру).
+
+---
+
+[SECTION 2: BRAND IDENTITY PRESET ("SIX FINGERS")]
+Инструкция: Использовать этот пресет по умолчанию для брендовых материалов студии.
+
+> GENRE:
+   - Cinematic Ambient, Neoclassical, Glitch-Avantgarde.
+
+> VIBE (MOOD):
+   - Anxious (Тревожное), Ethereal (Эфирное), Deep (Глубокое).
+   - Concept: "Uncanny Valley Effect" (Зловещая долина).
+
+> INSTRUMENTS PALETTE:
+   - Prepared Piano (Подготовленное фортепиано - звуки механики).
+   - Glass Harmonica (Стеклянная гармоника - высокие частоты).
+   - Sub-bass (Глубокий низ).
+   - Synthesized Choir (Искусственный хор).
+
+> BPM STANDARD:
+   - Value: 60 BPM (Slow).
+   - Goal: Синхронизация с "тягучим" визуальным рядом.
+
+---
+
+[SECTION 3: TECHNICAL CONTROLS (КАЧЕСТВО)]
+Инструкция: Избегать артефактов и управлять версиями.
+
+> RULE 1: BPM LOCK
+   - Mandatory: Всегда указывать BPM.
+   - Reason: Без точного BPM модель v4.5 может "плавать" в ритме, создавая артефакты склейки.
+
+> RULE 2: REMASTERING PROTOCOL
+   - Trigger: Использование старого клипа (v3.5 или v4.0).
+   - Action: Apply "Remaster" function.
+   - Constraint: Не менять мелодию, только улучшать bit-rate и чистоту частот.
+
+> RULE 3: LYRICS STRUCTURE (Если есть слова)
+   - Format: Использовать теги [Verse], [Chorus], [Bridge], [Outro].
+   - Brand Rule: Для видео "Six Fingers" предпочтителен инструментал или вокализ (без слов).
+
+---
+# END OF FILE

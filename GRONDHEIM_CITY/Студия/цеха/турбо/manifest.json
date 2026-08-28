@@ -21,7 +21,24 @@
       "даёт": [
         "задумка"
       ],
-      "_ремесло": "тренд, хук, структура ролика"
+      "_ремесло": "тренд, хук, структура ролика",
+      "знания": [
+        "00_Constructor.txt",
+        "01_story_engine.txt",
+        "13_Sales_Mechanics.txt",
+        "14_Market_Intelligence.txt",
+        "16b social platform specs.txt",
+        "17_Copywriting_Punchlines.txt",
+        "19_Sensory_Marketing.txt",
+        "20b shorts dynamics.txt",
+        "21_SocialMix_Main.txt",
+        "22_Social_Forbidden_And_Safety.txt",
+        "23_VK_Guide.txt",
+        "24_Instagram_Guide.txt",
+        "25_Telegram_Guide.txt",
+        "99_Self_Correction.txt",
+        "assets_catalog_knowledge.md"
+      ]
     },
     {
       "слот": "A02",
@@ -36,7 +53,15 @@
         "дорожка"
       ],
       "смотрит_своё": "слухом",
-      "_ремесло": "музыка, шумы, голос"
+      "_ремесло": "музыка, шумы, голос",
+      "знания": [
+        "00_Constructor.txt",
+        "01_story_engine.txt",
+        "04_tech_audio.txt",
+        "19_Sensory_Marketing.txt",
+        "20b shorts dynamics.txt",
+        "99_Self_Correction.txt"
+      ]
     },
     {
       "слот": "A03",
@@ -51,7 +76,20 @@
         "кадры"
       ],
       "смотрит_своё": "глазом",
-      "_ремесло": "кадр, свет, цвет, промпты; ключевые кадры и клипы"
+      "_ремесло": "кадр, свет, цвет, промпты; ключевые кадры и клипы",
+      "знания": [
+        "00_Constructor.txt",
+        "03_tech_banana.txt",
+        "05_visual_arts.txt",
+        "06_vfx_montage.txt",
+        "07_style_catalog.txt",
+        "09_Design_Science.txt",
+        "10_Style_Matrix.txt",
+        "16b social platform specs.txt",
+        "19_Sensory_Marketing.txt",
+        "20b shorts dynamics.txt",
+        "99_Self_Correction.txt"
+      ]
     },
     {
       "слот": "A04",
@@ -66,7 +104,19 @@
       "даёт": [
         "свод"
       ],
-      "_ремесло": "сводит картинку со звуком: ритм, петля, субтитры. Не монтирует — монтаж в конторе."
+      "_ремесло": "сводит картинку со звуком: ритм, петля, субтитры. Не монтирует — монтаж в конторе.",
+      "знания": [
+        "00_Constructor.txt",
+        "01_story_engine.txt",
+        "06_vfx_montage.txt",
+        "07_style_catalog.txt",
+        "09_Design_Science.txt",
+        "16b social platform specs.txt",
+        "17_Copywriting_Punchlines.txt",
+        "20b shorts dynamics.txt",
+        "22_Social_Forbidden_And_Safety.txt",
+        "99_Self_Correction.txt"
+      ]
     },
     {
       "слот": "A05",
@@ -81,7 +131,19 @@
         "черновик",
         "допуск"
       ],
-      "_ремесло": "обложка и приёмка цеха. Сверяет, что каждый посмотрел на свою работу и одобрил её. Не одобрил кто-то — допуска нет, монтажёр не зовётся."
+      "_ремесло": "обложка и приёмка цеха. Сверяет, что каждый посмотрел на свою работу и одобрил её. Не одобрил кто-то — допуска нет, монтажёр не зовётся.",
+      "знания": [
+        "00_Constructor.txt",
+        "03_tech_banana.txt",
+        "05_visual_arts.txt",
+        "09_Design_Science.txt",
+        "10_Style_Matrix.txt",
+        "13_Sales_Mechanics.txt",
+        "15_Visual_Conversion.txt",
+        "16b social platform specs.txt",
+        "17_Copywriting_Punchlines.txt",
+        "99_Self_Correction.txt"
+      ]
     }
   ],
   "_note_смотрит_своё": "чем показать работнику его собственную работу — глазом или слухом. Читает движок цеха. Шасси этого поля не видит: сколько раз позвать место, решает цех, а не общий движок. Обязанность смотреть написана работнику в бумаге — это ремесло, не механика.",
@@ -89,5 +151,7 @@
     "_note": "появятся с первым прогоном — пустышек не плодим",
     "прогоны": "журналы/прогоны.jsonl"
   },
-  "_чего_тут_нет_нарочно": "run_type, phases, turbo_workers, turbo_parallel, qa_agent, checkpoint_after, conflict_mode, hard_stop с именем резидента, generation с провайдером на номере места, turbo_calls. Порядок и параллель следуют из стыков берёт/даёт; финализатор — тот, чей ключ берёт только контора. Появится боль — появится поле."
+  "_чего_тут_нет_нарочно": "run_type, phases, turbo_workers, turbo_parallel, qa_agent, checkpoint_after, conflict_mode, hard_stop с именем резидента, generation с провайдером на номере места, turbo_calls. Порядок и параллель следуют из стыков берёт/даёт; финализатор — тот, чей ключ берёт только контора. Появится боль — появится поле.",
+  "_маркер_знаний": "SKLAD_ZNANIY_CEHA_V1",
+  "_note_знания": "склад цеха — знания/, один файл одна копия. У места свой формуляр: в голову идёт не весь склад, а только список. Правишь файл один раз — видят все, кто его просит."
 }
