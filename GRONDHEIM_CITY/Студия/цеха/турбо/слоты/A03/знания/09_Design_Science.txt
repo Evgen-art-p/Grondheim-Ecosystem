@@ -1,0 +1,103 @@
+# SYSTEM INSTRUCTION: BRAND IDENTITY & DESIGN SCIENCE
+# ЦЕЛЬ: Синхронизация визуального языка с психологией бренда.
+
+[SECTION 1: ARCHETYPE MAPPING (ПСИХОЛОГИЯ -> СТИЛЬ)]
+Инструкция: Определить архетип бренда -> Применить жесткий визуальный код.
+
+> TYPE: THE INNOCENT (Простота / Счастье)
+   - Style: Soft, Organic, Pastel colors.
+   - Example: Baby products, Bio-food.
+
+> TYPE: THE SAGE (Мудрость / Аналитика)
+   - Style: Minimalist, Structured, Serif fonts, Newspapers aesthetic.
+   - Example: Consulting, Universities, News media.
+
+> TYPE: THE EXPLORER (Свобода)
+   - Style: Rough textures, Grunge, Earth tones, Wide landscapes.
+   - Example: Jeep, North Face.
+
+> TYPE: THE OUTLAW (Бунт / Революция)
+   - Style: Brutalism, Chaos, Trash-style, Red & Black.
+   - Example: Harley Davidson, Punk brands.
+
+> TYPE: THE MAGICIAN (Визионер / Трансформация)
+   - Style: Glassmorphism, Gradients, Abstract 3D, Holographic.
+   - Example: Dyson, Apple (partially), AI startups.
+
+> TYPE: THE HERO (Сила / Победа)
+   - Style: Solid shapes, Angular, High Contrast, Bold typography.
+   - Example: Nike, FedEx.
+
+> TYPE: THE RULER (Контроль / Премиум)
+   - Style: Classic, Symmetrical, Gold/Marble, Monograms.
+   - Example: Mercedes, Rolex.
+
+> TYPE: THE CREATOR (Инновации)
+   - Style: Artistic, Complex, Vibrant colors, "Broken" grid.
+   - Example: Lego, Adobe.
+
+---
+
+[SECTION 2: SEMIOTICS & SHAPE LANGUAGE (ЯЗЫК ФОРМ)]
+Инструкция: Выбор примитивов для логотипа и паттернов.
+
+> IF (Goal = COMMUNITY / CARE / FEMININITY)
+   - USE SHAPE: Circle / Oval.
+   - Meaning: Нет углов = нет опасности. Защита, бесконечность.
+
+> IF (Goal = STABILITY / TRUST / LOGIC)
+   - USE SHAPE: Square / Rectangle.
+   - Meaning: Фундамент, порядок, технологии.
+
+> IF (Goal = ENERGY / AGGRESSION / DIRECTION)
+   - USE SHAPE: Triangle.
+   - Meaning: Динамика, острие, рост (если вершина вверх), угроза (если вершина вниз).
+
+> IF (Goal = POWER / AMBITION)
+   - USE SHAPE: Vertical Lines.
+   - Meaning: Рост, величие, колонны.
+
+> IF (Goal = CALM / PEACE)
+   - USE SHAPE: Horizontal Lines.
+   - Meaning: Горизонт, земля, отдых.
+
+
+
+---
+
+[SECTION 3: GESTALT PRINCIPLES (ВИЗУАЛЬНЫЕ ТРЮКИ)]
+Инструкция: Использовать принципы восприятия для создания "умного" дизайна.
+
+> PRINCIPLE: CLOSURE (Замыкание)
+   - Action: Не рисуй контур целиком. Разомкни линию.
+   - Effect: Мозг зрителя сам дорисует форму. Это вовлекает в процесс.
+   - Example: Логотип WWF (Панда — это просто пятна, контура нет).
+
+> PRINCIPLE: FIGURE / GROUND (Фигура и Фон)
+   - Action: Используй Negative Space (негативное пространство).
+   - Effect: Спрятать один символ внутри другого.
+   - Example: Стрелка внутри букв "Ex" в логотипе FedEx.
+
+
+
+---
+
+[SECTION 4: TECHNICAL VALIDATION (ЛОГОТИПЫ)]
+Инструкция: Чек-лист перед сдачей вектора.
+
+> TEST 1: SILHOUETTE RULE (Силуэт)
+   - Action: Залить весь логотип черным цветом (Black 100%).
+   - Pass: Форма остается узнаваемой и читаемой.
+   - Fail: Логотип превратился в бесформенное пятно.
+
+> TEST 2: SCALABILITY (Масштабируемость)
+   - Action: Уменьшить логотип до 16x16 px (фавикон).
+   - Pass: Все элементы видны.
+   - Fail: Тонкие линии исчезли или слиплись.
+
+> TEST 3: STYLE RESTRICTION
+   - Default: FLAT / VECTOR (Без теней и градиентов).
+   - Exception: Только если архетип = MAGICIAN (см. Section 1).
+
+---
+# END OF FILE

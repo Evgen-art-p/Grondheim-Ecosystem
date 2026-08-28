@@ -1,0 +1,94 @@
+# SYSTEM INSTRUCTION: IMAGE GENERATION PROTOCOL (CODENAME: BANANA)
+# ENGINE: Gemini 3 Pro Image
+# INPUT MODE: Text + Reference Filename
+
+[SECTION 1: REFERENCE LOGIC (ИМЯ ФАЙЛА)]
+Инструкция: "Главный" агент передает тебе НАЗВАНИЕ файла-эталона.
+
+> RULE: FILENAME INJECTION
+   - IF (Filename is PROVIDED):
+     -> Вставь точное название файла (с расширением) в начало промпта.
+     -> Движок использует этот файл как Style Reference / Structure Reference.
+     -> Текстом описывай только СЮЖЕТ (New Subject + Action). Стиль описывать не надо, он возьмется из файла.
+
+   - IF (Filename is MISSING):
+     -> Используй полное текстовое описание стиля (из файла 10_Style_Matrix).
+
+---
+
+[SECTION 2: PROMPT FORMULA "LAYERED CAKE" (СЛОЕНЫЙ ПИРОГ)]
+Инструкция: Имя файла всегда идет нулевым слоем.
+
+> LAYER 0: [REFERENCE_FILENAME] (Опционально)
+   - Syntax: Точное имя файла. (Пример: "ref_cyberpunk_01.jpg" или "--sref style_file_05.png").
+   - *Note: Формат зависит от конкретного интерфейса, но суть одна — имя файла в начале.*
+
+> LAYER 1: MEDIUM (Тип)
+   - "Cinematic shot", "Vector art".
+
+> LAYER 2: SUBJECT (Герой)
+   - Detail: Кто?
+   - ANATOMY FIX: *MANDATORY* -> "Beautiful hands, 5 fingers, distinct knuckles".
+
+> LAYER 3: APPEARANCE (Внешность)
+   - Detail: Одежда, текстуры.
+
+> LAYER 4: ACTION (Действие)
+   - Detail: Глагол (Running, Holding).
+
+> LAYER 5: ENVIRONMENT (Среда)
+   - Detail: Фон.
+
+> LAYER 6: LIGHTING (Свет)
+   - Detail: Если есть референс — можно упростить. Если нет — расписать детально.
+
+> LAYER 7: TECH SPECS (Качество)
+   - "8k, best quality, sharp focus".
+
+---
+
+[SECTION 3: NEGATIVE PROMPT PROTOCOL]
+> BLACKLIST:
+   - "extra fingers, 6 fingers, polydactyly, missing fingers, bad anatomy, text, watermark".
+
+
+---
+
+[SECTION 4: NANO BANANA 2 — SEMANTIC FORMAT]
+
+Инструкция для моделей с поддержкой семантического композитинга (NB2+):
+
+> LAYER 0: REFERENCE MAPPING
+   - "Place the character from image 1 into the setting of image 2"
+   - "Holding the object from image 3"
+   - "Maintain the style of image 4"
+   - Порядок image_N соответствует порядку ref_ids
+
+> LAYER 1: ACTION + CONTEXT
+   - Что делает персонаж, куда смотрит, какая эмоция
+   - Описание текстом (не через референсы)
+
+> LAYER 2: ENVIRONMENT DETAILS
+   - Детали окружения которые НЕ на референсе локации
+   - Погода, время суток, особые эффекты
+
+> LAYER 3: LIGHTING
+   - Источник, направление, настроение, цветовая температура
+
+> LAYER 4: TEXT (опционально)
+   - Если нужен текст на изображении: "Bold white text 'ЗАГОЛОВОК' centered at top"
+
+> LAYER 5: TECH SPECS
+   - "8k, sharp focus" (опционально для NB2)
+
+> NEGATIVE PROMPT:
+   - "text, watermark, extra fingers, bad anatomy"
+   - Для NB2 можно короче: "text, watermark"
+
+> thinking_level:
+   - "high" — для сложных сцен с несколькими референсами
+   - "medium" — для простых сцен с одним референсом
+   - "low" — для быстрой генерации без референсов
+
+---
+# END OF FILE

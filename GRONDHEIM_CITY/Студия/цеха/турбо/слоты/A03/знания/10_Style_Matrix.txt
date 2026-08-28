@@ -1,0 +1,68 @@
+# SYSTEM INSTRUCTION: VISUAL STYLE MATRIX (PROMPTING DATABASE)
+# VERSION: 2026_V1
+# ЦЕЛЬ: Точный подбор ключевых слов (Tokens) для генерации изображений.
+
+[SECTION 1: CLASSIC & MODERNIST (ORDER)]
+> STYLE: SWISS STYLE
+   - Vibe: Corporate, Objective, Trustworthy.
+   - Prompt Tags: International Typographic Style, grid system, asymmetrical layout, helvetica font, clean negative space.
+   - Palette: Black, White, Red (Accent).
+
+> STYLE: BAUHAUS
+   - Vibe: Architectural, Educational, Structural.
+   - Prompt Tags: Geometric primitive shapes, form follows function, circle triangle square composition, diagonal lines.
+   - Palette: Primary Colors (Red, Yellow, Blue), Beige background.
+
+> STYLE: MINIMALISM
+   - Vibe: Luxury, High-Tech, Clean.
+   - Prompt Tags: Less is more, essentialism, vast whitespace, reductionist, thin lines, high contrast simple shapes.
+   - Palette: Monochrome, Grey scale.
+
+
+
+[SECTION 2: EXPRESSIVE & REBELLIOUS (CHAOS)]
+> STYLE: GRUNGE
+   - Vibe: Street, Music, Protest.
+   - Prompt Tags: Distressed texture, dirty noise overlay, grunge aesthetic, torn paper edges, eroded typography, raw scan.
+   - Palette: Muddy Brown, Rust, Olive Green, Charcoal.
+
+> STYLE: BRUTALISM (NEO-BRUTALISM)
+   - Vibe: Gen Z, Art, Anti-trend.
+   - Prompt Tags: Raw unpolished, default system fonts, high contrast, acid visuals, anti-design, ugly-cool.
+   - Palette: Acid Green, Electric Purple, Hot Pink.
+
+[SECTION 3: RETRO & VINTAGE (NOSTALGIA)]
+> STYLE: ART DECO
+   - Vibe: Wealth, Jazz Age, Premium.
+   - Prompt Tags: Sunburst motifs, luxury gold texture, symmetrical composition, streamline moderne, Great Gatsby style.
+   - Palette: Gold, Matte Black, Emerald Green.
+
+> STYLE: RETRO 80s (SYNTHWAVE)
+   - Vibe: Gaming, Night, Digital.
+   - Prompt Tags: Retrowave, neon glow, laser grid landscape, chrome reflection, analog film grain, VHS glitch.
+   - Palette: Neon Pink, Cyan, Deep Violet.
+
+[SECTION 4: DIGITAL & CONTEMPORARY (SCREEN)]
+> STYLE: FLAT DESIGN
+   - Vibe: UI/UX, Explainer, Friendly.
+   - Prompt Tags: 2D vector art, no shadows, solid colors, clean hard edges, simple geometry, illustration.
+   - Palette: Pastel, High Saturation Solids.
+
+> STYLE: GLASSMORPHISM
+   - Vibe: Crypto, Fintech, Future.
+   - Prompt Tags: Translucent frosted glass, background blur, layered transparency, light refraction, ethereal depth, bokeh.
+   - Palette: White, Light Blue, Iridescent.
+
+[SECTION 5: ARTISTIC (CULTURE)]
+> STYLE: POP ART
+   - Vibe: Sales, Loud, Comic.
+   - Prompt Tags: Halftone dots pattern, comic book style, thick black outlines, repetitive collage, Andy Warhol style.
+   - Palette: CMYK (Cyan, Magenta, Yellow, Key).
+
+> STYLE: GOTHIC
+   - Vibe: Dark, History, Subculture.
+   - Prompt Tags: Blackletter calligraphy, sharp spikes, medieval atmosphere, intricate dark details, engraving style.
+   - Palette: Black, Dark Red, Silver.
+
+---
+# END OF FILE

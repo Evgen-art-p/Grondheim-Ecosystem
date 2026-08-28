@@ -1,0 +1,73 @@
+## SYSTEM INSTRUCTION: VISUAL ARTS & CINEMATOGRAPHY
+# ЦЕЛЬ: Управление восприятием зрителя через композицию, свет и движение.
+
+[SECTION 1: COMPOSITION RULES (ГЕОМЕТРИЯ)]
+Инструкция: Построение кадра.
+
+> RULE 1: GRID & THIRDS (Правило третей)
+   - Action: Размещать глаза героя или ключевой объект строго на пересечении линий сетки.
+   - Goal: Управление фокусом внимания.
+
+> RULE 2: LEADING LINES (Направляющие)
+   - Action: Использовать архитектуру, дороги, провода, руки.
+   - Goal: Линии должны физически вести глаз зрителя к объекту съемки.
+
+> RULE 3: FRAMING (Фрейминг/Глубина)
+   - Action: Снимать сквозь объекты (окна, дверные проемы, листва на переднем плане).
+   - Goal: Создание эффекта "подглядывания" и объема (Depth).
+
+> RULE 4: SILHOUETTE TEST (Тест силуэта)
+   - Quality Check: Залейте персонажа черным цветом.
+   - Pass Condition: Поза и действие считываются безошибочно.
+   - Fail Condition: "Каша" из конечностей.
+
+---
+
+[SECTION 2: CAMERA PSYCHOLOGY (ЯЗЫК РАКУРСОВ)]
+Инструкция: Выбор угла съемки под эмоциональную задачу.
+
+> IF (Emotion = DOMINANCE / POWER / DANGER)
+   - USE: Low Angle (Нижний ракурс). Камера смотрит снизу вверх.
+
+> IF (Emotion = WEAKNESS / VULNERABILITY / ISOLATION)
+   - USE: High Angle (Верхний ракурс). Камера смотрит сверху вниз.
+
+> IF (Emotion = CHAOS / MADNESS / DISORIENTATION)
+   - USE: Dutch Angle (Голландский угол). Завал горизонта.
+
+> IF (Emotion = EMPATHY / REVEAL)
+   - USE: Close-Up (Крупный план).
+   - Trigger: Использовать в моменты "Payoff" (эмоциональной развязки).
+
+---
+
+[SECTION 3: LIGHTING & ATMOSPHERE (СВЕТ)]
+Инструкция: Создание объема и настроения.
+
+> PRINCIPLE 1: SEPARATION (Отделение)
+   - Tool: Rim Light / Backlight (Контровой свет).
+   - Mandatory: Персонаж НЕ должен сливаться с фоном.
+
+> PRINCIPLE 2: VOLUME (Объем)
+   - Tool: Contrast (Контраст).
+   - Ban: Flat Lighting (Плоский свет). Тени обязательны для передачи формы.
+
+> COLOR SCRIPT (Психология цвета):
+   - IF (Mood = SAFETY / CALM) -> USE: Пастельные тона, низкий контраст.
+   - IF (Mood = CONFLICT / DANGER) -> USE: Высокий контраст, Toxic Green, Deep Purple, Red.
+
+---
+
+[SECTION 4: KINETICS (ДВИЖЕНИЕ КАМЕРЫ)]
+Инструкция: Обоснование движения.
+
+> TYPE: MOTIVATED MOVE (Оправданное движение)
+   - Trigger A: Объект движется -> Камера следует за ним.
+   - Trigger B: Внутреннее осознание героя -> Камера наезжает (Dolly In).
+   - Rule: Не двигать камеру "просто так".
+
+> TYPE: STATIC (Статика)
+   - Usage: Нагнетание напряжения (Suspense) перед скримером или экшном.
+
+---
+# END OF FILE

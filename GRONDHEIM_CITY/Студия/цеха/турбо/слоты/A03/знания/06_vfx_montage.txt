@@ -1,0 +1,73 @@
+# SYSTEM INSTRUCTION: VFX & EDITING PROTOCOL
+# ЦЕЛЬ: Обеспечить бесшовность повествования и физическую корректность переходов.
+
+[SECTION 1: SOKOLOV EDITING RULES (ПРАВИЛА СКЛЕЙКИ)]
+Инструкция: Валидация перехода между кадром А и кадром Б.
+
+> RULE 1: SCALE JUMP (Скачок крупности)
+   - Logic: IF (Shot_A == Medium) AND (Shot_B == Medium_Close) -> ERROR.
+   - Action: Склеивать только "через план". Общий -> Крупный. Средний -> Деталь.
+   - Goal: Избежать эффекта "дергания" (Jump cut).
+
+> RULE 2: 180 DEGREE LINE (Ось взаимодействия)
+   - Logic: Линия действия проходит между персонажами. Камера НЕ должна пересекать эту линию.
+   - Check: Если в кадре А герой смотрит ВПРАВО, то в кадре Б он должен смотреть ВПРАВО (или на партнера ВЛЕВО).
+   - Error: Если направление взгляда меняется зеркально без показа перемещения камеры -> DISORIENTING.
+
+> RULE 3: PACING (Ритм)
+   - IF (Genre = ACTION / FIGHT / CHASE):
+     -> Cut_Length: 0.5 - 2.0 sec. (Клиповый монтаж).
+   - IF (Genre = DRAMA / EMOTION / DIALOGUE):
+     -> Cut_Length: 3.0 - 7.0 sec. (Дать зрителю считать эмоцию).
+
+---
+
+[SECTION 2: AI TRANSITION TECHNIQUES (ТЕХНИКИ ПЕРЕХОДА)]
+Инструкция: Выбор метода морфинга для генеративных нейросетей.
+
+> TECHNIQUE 1: ELEMENTAL BRIDGE (Элементарный мост) - *BEST FOR AI*
+   - Use Case: Смена локации или объекта.
+   - Method: Использование хаотичных частиц для маскировки склейки.
+   - Prompts: "Dissolves into sand", "Explodes into smoke", "Underwater bubbles transition", "Fire wipe".
+   - Logic: Object_A -> Particles -> Object_B.
+
+> TECHNIQUE 2: GEOMETRIC MATCH (Геометрия)
+   - Use Case: Визуальная рифма.
+   - Method: Совпадение форм.
+   - Example: Колесо авто (Круг) -> Глаз человека (Круг) -> Часы (Круг).
+   - Transition: Zoom In / Zoom Out.
+
+> TECHNIQUE 3: TEXTURE PASS (Текстура)
+   - Use Case: Сюрреализм, сны.
+   - Method: Перекрытие экрана текстурой.
+   - Prompts: "Camera enters red silk fabric", "Screen covered by ink spill".
+
+---
+
+[SECTION 3: PROMPT FORMULA (КОНСТРУКТОР ЗАПРОСА)]
+Инструкция: Синтаксис для Video-to-Video или Text-to-Video генерации переходов.
+
+> FORMULA:
+   [START_ACTION] + [BRIDGE_ELEMENT] + [END_ACTION]
+
+> EXAMPLE SCRIPT (10 sec):
+   - [00-04s]: "Woman running towards a vintage mirror in a dark room." (Action A)
+   - [04-06s]: "Camera moves INTO the mirror glass, glass turns into liquid mercury ripples." (Bridge)
+   - [06-10s]: "Camera emerges from a calm blue lake surface into a sunny forest." (Action B)
+
+---
+
+[SECTION 4: PHYSICS QC (ФИЗИКА)]
+Инструкция: Проверка реализма движения.
+
+> CHECK 1: MOMENTUM (Инерция)
+   - Rule: Объекты имеют вес.
+   - Error: Мгновенная остановка или старт с максимальной скоростью.
+   - Fix: Добавить Ease-In (разгон) и Ease-Out (торможение).
+
+> CHECK 2: ANCHOR POINTS (Стабильность)
+   - Rule: При морфинге фона передний план должен быть стабилен (или наоборот).
+   - Error: Весь кадр "плывет" как желе.
+
+---
+# END OF FILE

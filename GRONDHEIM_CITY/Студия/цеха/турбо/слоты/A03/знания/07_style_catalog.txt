@@ -1,0 +1,85 @@
+# SYSTEM INSTRUCTION: VISUAL STYLE & TYPOGRAPHY CATALOG
+# ЦЕЛЬ: Выбор визуального языка (Vibe) и шрифтового оформления (Typeface).
+
+[SECTION 1: AESTHETIC STYLES DATABASE (ВИЗУАЛ)]
+Инструкция: Выбери стиль на основе ТЗ или настроения бренда.
+
+> GROUP: CLASSIC & MINIMAL (Чистота / Функция)
+   - STYLE: SWISS / MINIMALISM. Keywords: Grid system, Negative space, Clean lines, Helvetica.
+   - STYLE: BAUHAUS. Keywords: Geometric shapes, Primary colors (Red/Blue/Yellow), Diagonal composition.
+   - STYLE: SCANDINAVIAN. Keywords: Natural light, Organic textures (wood/linen), Muted/Pastel colors.
+
+> GROUP: EXPRESSIVE & REBELLIOUS (Эмоция / Протест)
+   - STYLE: GRUNGE / PUNK. Keywords: Dirty textures, Torn paper, Distressed fonts, High contrast, Ransom note.
+   - STYLE: BRUTALISM. Keywords: Raw unpolished, HTML default aesthetics, Acid colors, Anti-design.
+   - STYLE: KITCH. Keywords: Exaggerated decor, Clashing colors, Ironic bad taste.
+
+> GROUP: RETRO & NOSTALGIA (История)
+   - STYLE: ART DECO (1920s). Keywords: Luxury, Gold, Symmetry, Geometric ornamentation, Great Gatsby.
+   - STYLE: SYNTHWAVE (80s). Keywords: Neon grid, Purple & Teal, Chrome text, VHS grain.
+   - STYLE: VICTORIAN. Keywords: Complex ornaments, Engravings, High density details.
+
+> GROUP: DIGITAL & CONTEMPORARY (Современность)
+   - STYLE: GLASSMORPHISM. Keywords: Frosted glass, Blur, Transparency, 3D floating elements.
+   - STYLE: FLAT. Keywords: 2D, No shadows, Bright solid colors, Simple vectors.
+   - STYLE: CYBERPUNK. Keywords: Night city, Rain, Neon light, Holograms, Glitch effect.
+
+---
+
+[SECTION 2: TYPOGRAPHY & LAYOUT PRESETS (ВЕРСТКА)]
+Инструкция: Применять шрифты и сетку строго по выбранному пресету.
+
+> PRESET: CINEMATIC (Кино / Драма / Эпос)
+   - Headline Font: "Trajan Pro", "Cinzel", "Bodoni".
+   - Body Font: "Lato Light", "Montserrat" (Wide Tracking +200).
+   - Layout Rule: Central Axis (Центральная симметрия). Заголовок часто снизу.
+   - Color Grade: Gold on Black / Silver on Dark Blue.
+
+> PRESET: TECH / SCI-FI (IT / AI / Будущее)
+   - Headline Font: "Orbitron", "Russo One", "Monospace".
+   - Body Font: "Courier New", "Roboto Mono".
+   - Layout Rule: Data Corners (Текст по углам). Технические рамки, штрих-коды.
+   - Color Grade: Neon Cyan, Hot Pink, Acid Green on Black.
+
+> PRESET: LUXURY / FASHION (Мода / Косметика)
+   - Headline Font: "Didot", "Futura Bold", "Helvetica Now".
+   - Body Font: "Inter", "Open Sans".
+   - Layout Rule: Modular Grid + Negative Space (Много "воздуха").
+   - Color Grade: B&W (Black on White), White on Dark Grey.
+
+> PRESET: ACTION / GRUNGE (Спорт / Триллер)
+   - Headline Font: "Impact", "Brush Script", "Double Bass".
+   - Body Font: "Typewriter", "Handwritten".
+   - Layout Rule: Diagonal / Chaos (Наклонный текст).
+   - Color Grade: Blood Red, Rusty Orange, Dirty Yellow.
+
+> PRESET: CORPORATE (Бизнес / Банки)
+   - Headline Font: "Roboto Slab", "Arial Bold".
+   - Body Font: "Open Sans", "PT Sans".
+   - Layout Rule: Left Align (Выравнивание по левому краю). Четкая иерархия.
+   - Color Grade: Navy Blue, Forest Green, Dark Grey.
+
+---
+
+[SECTION 3: COMPOSITION LOGIC (КОМПОЗИЦИЯ)]
+Инструкция: Куда ставить камеру и где писать текст.
+
+> RULE: THIRDS (Правило третей)
+   - Focus: Главный объект на пересечении линий сетки.
+   - Text Zone: В пустой трети кадра.
+
+> RULE: CENTRAL SYMMETRY (Уэс Андерсон)
+   - Focus: Объект строго по центру.
+   - Text Zone: Строго над или под объектом.
+   - Best For: Логотипы, Эпичные постеры, Art Deco.
+
+> RULE: DYNAMIC DIAGONAL
+   - Focus: Линии ведут взгляд из угла в угол.
+   - Best For: Спорт, Авто, Экшн.
+
+> RULE: NEGATIVE SPACE (Воздух)
+   - Requirement: Оставить минимум 40% кадра пустым (небо, стена, тень).
+   - WARNING: Текст поверх лица/глаз запрещен.
+
+---
+# END OF FILE

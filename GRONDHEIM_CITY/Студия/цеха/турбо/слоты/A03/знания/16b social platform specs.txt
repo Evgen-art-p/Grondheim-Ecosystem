@@ -1,0 +1,105 @@
+# SYSTEM INSTRUCTION: SOCIAL PLATFORM TECHNICAL SPECS (SHORTS)
+# VERSION: 2026_V1
+# SCOPE: TikTok, Instagram Reels, YouTube Shorts, VK Клипы
+# ЦЕЛЬ: Технические требования для коротких вертикальных видео.
+
+[SECTION 1: PLATFORM SPECS (РАЗМЕРЫ И ФОРМАТЫ)]
+
+> PLATFORM: TIKTOK
+   - Aspect Ratio: 9:16 (Вертикаль).
+   - Resolution: 1080x1920 px (оптимум). Min: 720x1280.
+   - FPS: 30 (стандарт) или 60 (для экшна).
+   - Duration: 15 / 30 / 60 секунд. Max: 10 минут (но шортсы = до 60 сек).
+   - Codec: H.264.
+   - Max Size: 287 MB (iOS), 72 MB (Android). Рекомендуем: до 50 MB.
+   - Thumbnail: Автоматически из видео. Можно выбрать кадр. 1080x1920.
+   - Safe Zone Top: ~15% (статус-бар, поиск).
+   - Safe Zone Bottom: ~20% (описание, кнопки, username).
+   - Safe Zone Right: ~10% (иконки лайк/коммент/шэр).
+   - Caption Max: 2200 символов. Оптимум: 100-150 символов.
+   - Hashtags: До 30. Оптимум: 5-8 (микс нишевых + средних).
+
+> PLATFORM: INSTAGRAM REELS
+   - Aspect Ratio: 9:16 (Вертикаль).
+   - Resolution: 1080x1920 px.
+   - FPS: 30.
+   - Duration: 15 / 30 / 60 / 90 секунд.
+   - Codec: H.264.
+   - Max Size: 250 MB.
+   - Thumbnail: 1080x1920. Можно загрузить кастомный.
+   - Safe Zone Top: ~15% (username, камера).
+   - Safe Zone Bottom: ~25% (описание, CTA, музыка, username).
+   - Safe Zone Right: ~12% (иконки).
+   - Caption Max: 2200 символов. Оптимум: 50-100 символов + CTA.
+   - Hashtags: До 30. Оптимум: 5-10.
+
+> PLATFORM: YOUTUBE SHORTS
+   - Aspect Ratio: 9:16 (Вертикаль).
+   - Resolution: 1080x1920 px.
+   - FPS: 30 или 60.
+   - Duration: Max 60 секунд (СТРОГО).
+   - Codec: H.264 / H.265.
+   - Max Size: 256 MB.
+   - Thumbnail: Автоматически. Кастомный доступен если канал верифицирован.
+   - Safe Zone Top: ~10%.
+   - Safe Zone Bottom: ~20% (подписка, описание).
+   - Safe Zone Right: ~10% (лайк/дизлайк/коммент).
+   - Description Max: 100 символов видимых (до раскрытия).
+   - Hashtags: В описании, 3-5 штук. #Shorts обязателен для попадания в ленту Shorts.
+
+> PLATFORM: VK КЛИПЫ
+   - Aspect Ratio: 9:16 (Вертикаль).
+   - Resolution: 1080x1920 px.
+   - FPS: 30.
+   - Duration: Max 180 секунд. Оптимум: 15-60 сек.
+   - Codec: H.264.
+   - Max Size: 2 GB (но рекомендуем до 100 MB).
+   - Safe Zone Top: ~10%.
+   - Safe Zone Bottom: ~20%.
+   - Safe Zone Right: ~10%.
+   - Description: До 2000 символов.
+   - Hashtags: 5-10 штук.
+
+---
+
+[SECTION 2: UNIVERSAL SAFE ZONE MAP (9:16)]
+Инструкция: Единая карта безопасных зон для всех платформ.
+
+> CRITICAL SAFE ZONE (Текст и ключевые элементы):
+   - X: от 10% до 85% ширины (отступ от правого края — иконки).
+   - Y: от 15% до 75% высоты (отступ сверху и снизу).
+   - В пикселях (1080x1920): X: 108-918 px, Y: 288-1440 px.
+
+> SUBTITLE SAFE ZONE:
+   - Позиция: Центр по X, Y = 60-70% от верха (нижняя треть рабочей зоны).
+   - Не ниже: 75% высоты (съедается UI).
+   - В пикселях: Y = 1152-1344 px (оптимум для субтитров).
+
+> THUMBNAIL TEXT ZONE:
+   - Крупный текст: центр кадра.
+   - Max 4 слова на обложке.
+   - Контраст к фону ≥ 4.5:1.
+
+---
+
+[SECTION 3: CROSS-PLATFORM PUBLISHING NOTES]
+Инструкция: Что учитывать при публикации на разных платформах.
+
+> UNIVERSAL FILE:
+   - 1080x1920, 30fps, H.264, до 50 MB — подходит для ВСЕХ платформ.
+
+> PLATFORM-SPECIFIC:
+   - TikTok: Trending sounds повышают reach. Описание короткое.
+   - Reels: Качество картинки важнее. Instagram снижает ранг "визуально некачественного" контента.
+   - Shorts: #Shorts в описании обязателен. Первые 3 секунды = критичны для удержания.
+   - VK: Субтитры ОБЯЗАТЕЛЬНЫ (75%+ смотрят без звука). Поддержка длинных описаний.
+
+> POSTING TIME (Общие рекомендации, MSK):
+   - TikTok: 18:00-21:00 будни, 12:00-15:00 выходные.
+   - Reels: 19:00-22:00 будни, 11:00-14:00 выходные.
+   - Shorts: 16:00-20:00 будни.
+   - VK: 19:00-22:00 будни, 12:00-16:00 выходные.
+   - ⚠️ Это базовые рекомендации. Точное время определяется аналитикой конкретного аккаунта.
+
+---
+# END OF FILE
