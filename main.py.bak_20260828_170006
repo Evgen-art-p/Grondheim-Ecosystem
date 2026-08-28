@@ -144,9 +144,9 @@ def _priyomnaya():
 
 from ui_studia import page_studia
 
-@ui.page("/studia/{ceh}")   # ODIN_V_ODIN_V1
-def _studia(ceh: str = "", naryad: str = ""):
-    page_studia(ceh, naryad)
+@ui.page("/studia/{ceh}")
+def _studia(ceh: str = "турбо"):
+    page_studia(ceh)
 
 @ui.page("/studia")
 def _studia0():

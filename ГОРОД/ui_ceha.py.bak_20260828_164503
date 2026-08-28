@@ -421,18 +421,11 @@ def page_ceha():
                     "color:rgba(255,255,255,0.55); "
                     "border:1px solid rgba(255,255,255,0.18);")
 
-            # STRANICA_STUDII_V1: у каждого квартала свой кабинет.
-            # Появился цех Студии — появилась и кнопка к нему.
-            ui.html('<div class="c-podpis">кабинет</div>')
-            if c.get("квартал") == "Студия":
-                ui.button(f'открыть /studia/{c["имя"]}',
-                          on_click=lambda c=c: ui.navigate.to(
-                              f'/studia/{c["имя"]}', new_tab=True)).props(
-                    "flat no-caps").style(
-                    "font-size:0.76rem; color:rgba(139,233,253,0.85);")
-                return
+            # MENEDZHER_KARTRIDZHEY_V1: /torg/ — торговый кабинет, роут
+            # биржевой. У Студии кабинет свой, появится с первым цехом.
             if c.get("квартал") != "Биржа":
                 return
+            ui.html('<div class="c-podpis">кабинет</div>')
             ui.button(f'открыть /torg/{c["имя"]}',
                       on_click=lambda c=c: ui.navigate.to(
                           f'/torg/{c["имя"]}', new_tab=True)).props(

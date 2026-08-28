@@ -8270,3 +8270,5 @@
 {"ts": "2026-08-27T20:34:44.477984", "agent_id": "A06_BRUT", "slot_id": "trading", "model": "google/gemini-2.5-flash", "prompt_tokens": 20232, "completion_tokens": 432, "call_type": "chat_with_images_and_tools", "knowledge_source": "internal"}
 {"ts": "2026-08-27T20:35:15.182578", "agent_id": "A09_ISPOLNITEL", "slot_id": "trading", "model": "google/gemini-2.5-flash", "prompt_tokens": 3405, "completion_tokens": 546, "call_type": "chat_with_tools", "knowledge_source": "internal"}
 {"ts": "2026-08-27T20:35:28.083523", "agent_id": "A05_ARKHIV", "slot_id": "trading", "model": "google/gemini-2.5-flash", "prompt_tokens": 3106, "completion_tokens": 154, "call_type": "chat_with_tools", "knowledge_source": "internal"}
+{"ts": "2026-08-28T17:06:52.904019", "agent_id": "unknown", "slot_id": "unknown", "model": "deepseek/deepseek-v4-pro", "prompt_tokens": 7199, "completion_tokens": 447, "call_type": "chat", "knowledge_source": "internal"}
+{"ts": "2026-08-28T17:07:30.759676", "agent_id": "unknown", "slot_id": "unknown", "model": "deepseek/deepseek-v4-pro", "prompt_tokens": 11104, "completion_tokens": 1308, "call_type": "chat", "knowledge_source": "internal"}

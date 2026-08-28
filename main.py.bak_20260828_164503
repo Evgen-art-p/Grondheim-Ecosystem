@@ -131,27 +131,6 @@ from ui_ceha import page_ceha
 def _ceha():
     page_ceha()
 
-# ── СТУДИЯ — рабочая страница цеха (STRANICA_STUDII_V1) ──
-# Наряд, пуск, волны, приёмка. Имени цеха не знает: берёт из адреса,
-# устройство — из манифеста.
-# ── ПРИЁМНАЯ СТУДИИ (PRIYOMNAYA_STUDII_V1) ──
-# Вход в здание с карты. Угадывает цех по сказанному и отправляет туда.
-from ui_priyomnaya import page_priyomnaya
-
-@ui.page("/priyomnaya")
-def _priyomnaya():
-    page_priyomnaya()
-
-from ui_studia import page_studia
-
-@ui.page("/studia/{ceh}")   # ODIN_V_ODIN_V1
-def _studia(ceh: str = "", naryad: str = ""):
-    page_studia(ceh, naryad)
-
-@ui.page("/studia")
-def _studia0():
-    page_studia()
-
 # ── КАБИНЕТ ЖИТЕЛЯ — единое окно в любого жителя ──
 # Путь: запустил Брата → ГРОНДХЕЙМ (карта) → клик «открыть →» на жителе → сюда.
 # /zhitel/{id} открывает конкретного жителя по ID_Object (напр. 0001_Liya_Heat).

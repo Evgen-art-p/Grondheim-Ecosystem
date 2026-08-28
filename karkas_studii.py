@@ -1,0 +1,681 @@
+# -*- coding: utf-8 -*-
+# KARKAS_STUDII_V1
+"""
+ПАТЧ · Каркас рабочей страницы Студии.
+
+Заменяет тряпку, которую я выдал прошлым патчем (STRANICA_STUDII_V1),
+на настоящий каркас — по планировке старой страницы.
+
+СЕТКА — как в старой (studio/workshop/styles.py)
+    300px │ 1fr │ 260px        строки: 80px │ 1fr
+    header header header
+    left   stage  right
+
+ЧТО ЖИВОЕ В ЭТОМ КАМНЕ
+    · шапка с местами цеха: клик — переключить активного,
+      состояния active / working / done, как было
+    · аватар места — ЖИТЕЛЬ НА ПОСТУ, картинка из ковчега.
+      Страница аватаров не держит: спрашивает rezidenty.
+      Пост пуст — заглушка с буквой роли
+    · разговор с местом: его бумага, его знания, своя история на
+      каждое место (для якоря)
+    · три пуска: весь цех · с текущего места · с места с разговором
+    · труба волнами с живым состоянием
+    · прогоны из журнала цеха, клик — открыть в вьюере
+    · вьюер: что дало каждое место
+
+ЧТО ЖДЁТ СЛЕДУЮЩИХ КАМНЕЙ
+    наряд (клиент, ассеты, настройки, BRIEF)  — второй
+    CONTINUE, WORD/PDF, кабинет конторы        — третий
+    Кнопки стоят серыми с подписью, чтобы место было видно, а не
+    появилось потом ниоткуда.
+
+КАРКАС ЕДИНЫЙ
+    Ни одного имени цеха. Мест столько, сколько в манифесте; роли
+    оттуда же; есть «режимы» — будет переключатель, нет — не будет.
+    Копия Студии на острове откроется этим же файлом.
+
+    шесть·проверено·до·корня
+"""
+from __future__ import annotations
+
+import shutil
+import sys
+from datetime import datetime
+from pathlib import Path
+
+MARKER = "KARKAS_STUDII_V1"
+
+STRANICA = r'''# -*- coding: utf-8 -*-
+# KARKAS_STUDII_V1
+"""
+СТУДИЯ · рабочая страница цеха. Каркас.
+
+Планировка старой студии, устройство — новое: страница читает манифест
+и не знает ни одного имени цеха. Аватары не держит — спрашивает город,
+кто сидит на посту.
+
+    /studia/{цех}
+
+    шесть·проверено·до·корня
+"""
+from __future__ import annotations
+
+import asyncio
+import importlib.util
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from nicegui import ui, app
+
+KOREN = Path(__file__).resolve().parent.parent
+STUDIYA = KOREN / "GRONDHEIM_CITY" / "Студия"
+KOVCHEG = KOREN / "GRONDHEIM_CITY" / "жители" / "ковчег"
+
+try:
+    app.add_static_files("/kovcheg", str(KOVCHEG))
+except Exception:
+    pass
+
+CSS = """
+<style>
+.k-wrap { position:fixed; inset:0; display:grid;
+  grid-template-columns:300px 1fr 260px; grid-template-rows:80px 1fr;
+  grid-template-areas:"head head head" "left stage right";
+  gap:14px; padding:14px; box-sizing:border-box;
+  background:#0b0f14; color:#e6edf3;
+  font-family:'Inter',system-ui,sans-serif; }
+.k-head{grid-area:head;} .k-left{grid-area:left; min-height:0;}
+.k-stage{grid-area:stage; min-height:0; overflow:hidden;}
+.k-right{grid-area:right; min-height:0;}
+.glass{ background:rgba(255,255,255,0.03); border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08); }
+.k-col{ display:flex; flex-direction:column; gap:12px; height:100%;
+  min-height:0; }
+.k-pan{ padding:12px; overflow-y:auto; min-height:0; }
+.k-pod{ color:rgba(255,255,255,0.42); font-size:0.63rem;
+  letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px; }
+.k-deck{ display:flex; align-items:center; gap:8px; height:100%;
+  padding:0 14px; overflow-x:auto; }
+.k-av{ width:52px; height:52px; border-radius:12px; flex-shrink:0;
+  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; cursor:pointer; transition:all .2s;
+  position:relative; overflow:hidden; }
+.k-av:hover{ border-color:rgba(139,233,253,0.5); }
+.k-av.active{ border-color:rgba(139,233,253,0.9);
+  box-shadow:0 0 14px rgba(139,233,253,0.25); }
+.k-av.working{ border-color:rgba(255,220,120,0.9);
+  animation:kpulse 1.2s ease-in-out infinite; }
+.k-av.done{ border-color:rgba(80,250,123,0.8); }
+@keyframes kpulse{50%{box-shadow:0 0 16px rgba(255,220,120,0.45);}}
+.k-av img{ position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; opacity:0.75; }
+.k-av span{ position:relative; font-size:0.62rem; font-weight:700;
+  text-shadow:0 1px 3px #000; }
+.k-stagebox{ display:flex; flex-direction:column; height:100%;
+  min-height:0; }
+.k-tool{ display:flex; gap:6px; align-items:center; padding:9px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.07); flex-shrink:0;
+  flex-wrap:wrap; }
+.k-split{ flex:1; display:flex; min-height:0; }
+.k-chat,.k-view{ flex:1; min-height:0; overflow-y:auto; padding:12px;
+  font-size:0.8rem; }
+.k-chat{ border-right:1px solid rgba(255,255,255,0.07); }
+.k-msg-u{ background:rgba(139,233,253,0.08); border-radius:10px;
+  padding:8px 10px; margin:6px 0; }
+.k-msg-a{ background:rgba(255,255,255,0.04); border-radius:10px;
+  padding:8px 10px; margin:6px 0; white-space:pre-wrap; }
+.k-msg-s{ color:rgba(255,255,255,0.35); font-size:0.72rem; margin:6px 0; }
+.k-cons{ display:flex; gap:6px; align-items:center; padding:8px 10px;
+  border-top:1px solid rgba(255,255,255,0.07); flex-shrink:0; }
+.k-volna{ border-left:2px solid rgba(139,233,253,0.2); padding-left:10px;
+  margin-bottom:8px; }
+.k-run{ padding:6px 8px; border-radius:8px; cursor:pointer;
+  background:rgba(255,255,255,0.03); margin-bottom:5px;
+  font-size:0.7rem; color:rgba(255,255,255,0.6); }
+.k-run:hover{ background:rgba(255,255,255,0.07); }
+.k-face{ height:190px; border-radius:12px; overflow:hidden;
+  position:relative; flex-shrink:0;
+  background:rgba(255,255,255,0.04); }
+.k-face img{ width:100%; height:100%; object-fit:cover; opacity:0.85; }
+.k-face .cap{ position:absolute; left:0; right:0; bottom:0; padding:12px;
+  background:linear-gradient(transparent,rgba(0,0,0,0.85)); }
+</style>
+"""
+
+_KNOPKA = ("padding:7px 13px; border-radius:8px; font-size:0.72rem; "
+           "font-weight:700; color:#fff; ")
+_ZELENAYA = (_KNOPKA + "background:linear-gradient(135deg,"
+             "rgba(80,250,123,0.28),rgba(80,250,123,0.14)); "
+             "border:1px solid rgba(80,250,123,0.5);")
+_SINYAYA = (_KNOPKA + "background:linear-gradient(135deg,"
+            "rgba(120,168,201,0.28),rgba(120,168,201,0.14)); "
+            "border:1px solid rgba(120,168,201,0.5);")
+_FIOLET = (_KNOPKA + "background:linear-gradient(135deg,"
+           "rgba(160,120,255,0.26),rgba(160,120,255,0.13)); "
+           "border:1px solid rgba(160,120,255,0.5);")
+_SERAYA = (_KNOPKA + "background:rgba(255,255,255,0.03); "
+           "border:1px solid rgba(255,255,255,0.10); "
+           "color:rgba(255,255,255,0.32);")
+
+
+# ── город ────────────────────────────────────────────────────
+
+def _shassi():
+    put = STUDIYA / "конвейер.py"
+    if not put.exists():
+        return None
+    spec = importlib.util.spec_from_file_location("_konveyer", put)
+    if spec is None or spec.loader is None:
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _zhitel_na_meste(ceh: str, slot: str) -> dict:
+    """Кто сидит на посту. Страница аватаров не держит — спрашивает город.
+    Пусто — значит место вакантно, и это законно."""
+    try:
+        import rabota
+        import rezidenty
+        pid = rabota.id_dlya_slota(ceh, slot)
+        pasport, dom = rezidenty.lichnost_na_postu(pid)
+        if not pasport:
+            return {}
+        imya = pasport.get("Official_Name", "")
+        kartinka = ""
+        if dom is not None:
+            for f in ("avatar.png", "image.png", "image.jpeg", "avatar.jpg"):
+                if (dom / f).exists():
+                    kartinka = f"/kovcheg/{dom.name}/{f}"
+                    break
+        return {"имя": imya, "картинка": kartinka, "паспорт": pasport}
+    except Exception:
+        return {}
+
+
+def _zhurnal(m: dict, skolko: int = 12) -> list:
+    put = Path(m["_папка"]) / "журналы" / "прогоны.jsonl"
+    if not put.exists():
+        return []
+    out = []
+    for s in put.read_text(encoding="utf-8").splitlines()[-skolko:]:
+        try:
+            out.append(json.loads(s))
+        except Exception:
+            pass
+    return list(reversed(out))
+
+
+# ── страница ─────────────────────────────────────────────────
+
+def page_studia(ceh_imya: str = "турбо"):
+    ui.add_head_html(CSS)
+
+    K = _shassi()
+    if K is None:
+        ui.label("Шасси не найдено: GRONDHEIM_CITY/Студия/конвейер.py")
+        return
+    try:
+        m = K.ceh("Студия", ceh_imya)
+        volny = K.truba(m)
+    except SystemExit as e:
+        ui.label(f"Цех не собрался: {e}").style("color:#ff8080;")
+        return
+
+    mesta = [s for v in volny for s in v]
+    po_slotu = {s["слот"]: s for s in mesta}
+
+    sost: dict[str, Any] = {
+        "активное": mesta[0]["слот"] if mesta else "",
+        "идёт": False,
+        "стол": {},
+        "состояния": {},          # слот → идёт/готово/беда
+        "разговоры": {},          # слот → [{роль, текст}]
+        "вьюер": "Пусто. Поговори с местом или пусти цех.",
+    }
+    refs: dict[str, Any] = {}
+
+    with ui.element("div").classes("k-wrap"):
+
+        # ── ШАПКА: места цеха ────────────────────────────────
+        with ui.element("div").classes("k-head glass"):
+            with ui.element("div").classes("k-deck"):
+                ui.html(f'<div style="flex-shrink:0; margin-right:10px;">'
+                        f'<div style="font-weight:800; font-size:0.8rem; '
+                        f'letter-spacing:0.1em;">'
+                        f'{m.get("название", ceh_imya)}</div>'
+                        f'<div style="color:rgba(139,233,253,0.7); '
+                        f'font-size:0.64rem;">судья {m.get("судья","—")} · '
+                        f'проб {m.get("проб","—")}</div></div>')
+                for s in mesta:
+                    zh = _zhitel_na_meste(ceh_imya, s["слот"])
+                    el = ui.element("div").classes("k-av")
+                    el.on("click", lambda e, w=s["слот"]: vybrat(w))
+                    with el:
+                        if zh.get("картинка"):
+                            ui.html(f'<img src="{zh["картинка"]}">')
+                        ui.html(f'<span>{s["слот"]}</span>')
+                    el.tooltip(f'{s["слот"]} · {s.get("роль","")}'
+                               + (f' · {zh["имя"]}' if zh.get("имя")
+                                  else " · вакантно"))
+                    refs.setdefault("авы", {})[s["слот"]] = el
+                ui.element("div").style("flex:1")
+                ui.button("← КАРТРИДЖИ",
+                          on_click=lambda: ui.navigate.to("/ceha")).props(
+                    "flat no-caps").style(
+                    "font-size:0.7rem; color:rgba(139,233,253,0.8);")
+
+        # ── ЛЕВО: труба ──────────────────────────────────────
+        with ui.element("div").classes("k-left"):
+            with ui.element("div").classes("k-col"):
+                with ui.element("div").classes("glass k-pan").style("flex:1"):
+                    ui.html('<div class="k-pod">труба</div>')
+                    refs["труба"] = ui.element("div")
+                with ui.element("div").classes("glass k-pan").style(
+                        "flex-shrink:0"):
+                    ui.html('<div class="k-pod">наряд · второй камень</div>')
+                    ui.label("Клиент, материалы, настройки и БРИФ встанут "
+                             "сюда.").style(
+                        "color:rgba(255,255,255,0.3); font-size:0.7rem;")
+
+        # ── ЦЕНТР: сцена ─────────────────────────────────────
+        with ui.element("div").classes("k-stage"):
+            with ui.element("div").classes("glass k-stagebox"):
+                with ui.element("div").classes("k-tool"):
+                    for nadpis, podskazka in (
+                            ("📋 БРИФ", "второй камень"),
+                            ("📂 ЗАГРУЗИТЬ", "второй камень"),
+                            ("🗂 АССЕТЫ", "второй камень"),
+                            ("▶ ПРОДОЛЖИТЬ", "третий камень")):
+                        ui.button(nadpis).props("flat no-caps").style(
+                            _SERAYA).tooltip(podskazka)
+                    ui.button("🔌", on_click=lambda: ui.navigate.to(
+                        "/ceha", new_tab=True)).props("flat").style(
+                        _SINYAYA).tooltip("менеджер картриджей")
+                    ui.button("🏭").props("flat").style(_SERAYA).tooltip(
+                        "контора: монтаж — третий камень")
+                    ui.element("div").style("flex:1")
+                    refs["ктоговорит"] = ui.html("")
+
+                with ui.element("div").classes("k-split"):
+                    refs["чат"] = ui.element("div").classes("k-chat")
+                    refs["вьюер"] = ui.element("div").classes("k-view")
+
+                with ui.element("div").classes("k-cons"):
+                    ui.button("🗑", on_click=lambda: ochistit_chat()).props(
+                        "flat dense").style("color:rgba(255,255,255,0.4);")
+                    refs["поле"] = ui.input(
+                        placeholder="Сказать месту…").props(
+                        "borderless dark").style("flex:1; font-size:0.8rem;")
+                    refs["поле"].on("keydown.enter", lambda: skazat())
+                    ui.button("SEND", on_click=lambda: skazat()).props(
+                        "flat no-caps").style(_SINYAYA)
+
+        # ── ПРАВО: лицо, прогоны, пуск ───────────────────────
+        with ui.element("div").classes("k-right"):
+            with ui.element("div").classes("k-col"):
+                refs["лицо"] = ui.element("div").classes("k-face")
+                with ui.element("div").classes("glass k-pan").style("flex:1"):
+                    ui.html('<div class="k-pod">прогоны</div>')
+                    refs["прогоны"] = ui.element("div")
+                refs["пуск"] = ui.button("⚡ ПУСТИТЬ ЦЕХ").props(
+                    "flat no-caps").style(_ZELENAYA + "width:100%;")
+                refs["сместа"] = ui.button("▶ С ЭТОГО МЕСТА").props(
+                    "flat no-caps").style(_SINYAYA + "width:100%;")
+                refs["якорь"] = ui.button("⚓ С МЕСТА + РАЗГОВОР").props(
+                    "flat no-caps").style(_FIOLET + "width:100%;")
+
+    # ── рисование ────────────────────────────────────────────
+
+    def risovat_trubu():
+        refs["труба"].clear()
+        with refs["труба"]:
+            for i, volna in enumerate(volny, 1):
+                with ui.element("div").classes("k-volna"):
+                    ui.label(f"волна {i}"
+                             + ("  ∥" if len(volna) > 1 else "")).style(
+                        "color:rgba(255,255,255,0.3); font-size:0.62rem; "
+                        "text-transform:uppercase; letter-spacing:0.1em;")
+                    for s in volna:
+                        st = sost["состояния"].get(s["слот"], {})
+                        cvet = {"идёт": "rgba(255,220,120,0.9)",
+                                "готово": "rgba(80,250,123,0.9)",
+                                "беда": "rgba(255,120,120,0.9)"}.get(
+                            st.get("что"), "rgba(255,255,255,0.5)")
+                        hvost = ""
+                        if st.get("что") == "готово":
+                            hvost = f'  {st.get("сек",0):.0f}с'
+                            if st.get("не_дал"):
+                                hvost += "  НЕ ДАЛ"
+                        elif st.get("что") == "идёт":
+                            hvost = "  думает…"
+                        elif st.get("что") == "беда":
+                            hvost = "  беда"
+                        el = ui.label(f'{s["слот"]} · {s.get("роль","")}'
+                                      f'{hvost}')
+                        el.style(f"color:{cvet}; font-size:0.72rem; "
+                                 f"font-family:monospace; display:block; "
+                                 f"margin:2px 0; cursor:pointer;")
+                        el.on("click", lambda e, w=s["слот"]: vybrat(w))
+
+    def risovat_lico():
+        refs["лицо"].clear()
+        slot = sost["активное"]
+        s = po_slotu.get(slot, {})
+        zh = _zhitel_na_meste(ceh_imya, slot)
+        with refs["лицо"]:
+            if zh.get("картинка"):
+                ui.html(f'<img src="{zh["картинка"]}">')
+            ui.html(
+                f'<div class="cap">'
+                f'<div style="font-size:0.6rem; color:rgba(255,255,255,0.5); '
+                f'letter-spacing:0.14em;">НА МЕСТЕ</div>'
+                f'<div style="font-size:1.15rem; font-weight:700; '
+                f'color:#50fa7b;">{slot}</div>'
+                f'<div style="font-size:0.75rem; '
+                f'color:rgba(255,255,255,0.8);">{s.get("роль","")}</div>'
+                f'<div style="font-size:0.7rem; '
+                f'color:rgba(139,233,253,0.75);">'
+                f'{zh.get("имя") or "вакантно"}</div></div>')
+
+    def risovat_avy():
+        for slot, el in (refs.get("авы") or {}).items():
+            el.classes(remove="active working done")
+            st = sost["состояния"].get(slot, {}).get("что")
+            if st == "идёт":
+                el.classes(add="working")
+            elif st == "готово":
+                el.classes(add="done")
+            if slot == sost["активное"]:
+                el.classes(add="active")
+
+    def risovat_chat():
+        refs["чат"].clear()
+        istoriya = sost["разговоры"].get(sost["активное"], [])
+        with refs["чат"]:
+            if not istoriya:
+                ui.html('<div class="k-msg-s">Разговор пуст. '
+                        'Спроси место о работе.</div>')
+            for msg in istoriya:
+                klass = "k-msg-u" if msg["роль"] == "шеф" else "k-msg-a"
+                kto = "ШЕФ" if msg["роль"] == "шеф" else sost["активное"]
+                ui.html(f'<div class="{klass}"><b style="font-size:0.66rem; '
+                        f'opacity:0.6;">{kto}</b><br>{msg["текст"]}</div>')
+
+    def risovat_vyuer():
+        refs["вьюер"].clear()
+        with refs["вьюер"]:
+            v = sost["вьюер"]
+            if isinstance(v, str):
+                ui.html(f'<div style="white-space:pre-wrap; '
+                        f'color:rgba(255,255,255,0.7);">{v}</div>')
+            else:
+                ui.code(json.dumps(v, ensure_ascii=False, indent=2)[:12000]
+                        ).style("font-size:0.68rem;")
+
+    def risovat_progony():
+        refs["прогоны"].clear()
+        with refs["прогоны"]:
+            zapisi = _zhurnal(m)
+            if not zapisi:
+                ui.label("прогонов не было").style(
+                    "color:rgba(255,255,255,0.28); font-size:0.7rem;")
+                return
+            for z in zapisi:
+                tema = (z.get("наряд") or {}).get("тема", "—")
+                sek = sum(x.get("секунд", 0) for x in z.get("места", []))
+                el = ui.element("div").classes("k-run")
+                with el:
+                    ui.html(f'{z.get("ts","")[5:16]} · {sek:.0f}с<br>'
+                            f'<span style="opacity:0.7;">{tema[:34]}</span>')
+                el.on("click", lambda e, zz=z: pokazat_progon(zz))
+
+    def pokazat_progon(z: dict):
+        sost["вьюер"] = z
+        risovat_vyuer()
+
+    def obnovit_shapku():
+        refs["ктоговорит"].content = (
+            f'<span style="font-size:0.68rem; '
+            f'color:rgba(255,255,255,0.45);">говоришь с '
+            f'<b style="color:#8be9fd;">{sost["активное"]}</b></span>')
+
+    # ── действия ─────────────────────────────────────────────
+
+    def vybrat(slot: str):
+        sost["активное"] = slot
+        risovat_avy()
+        risovat_lico()
+        risovat_chat()
+        obnovit_shapku()
+        gotovoe = sost["состояния"].get(slot, {}).get("выход")
+        if gotovoe is not None:
+            sost["вьюер"] = gotovoe
+            risovat_vyuer()
+
+    def ochistit_chat():
+        sost["разговоры"][sost["активное"]] = []
+        risovat_chat()
+
+    async def skazat():
+        tekst = (refs["поле"].value or "").strip()
+        if not tekst:
+            return
+        refs["поле"].value = ""
+        slot = sost["активное"]
+        s = po_slotu[slot]
+        sost["разговоры"].setdefault(slot, []).append(
+            {"роль": "шеф", "текст": tekst})
+        risovat_chat()
+
+        from llm import chat
+        try:
+            sistema = K.bumaga(m, s)
+            znanie = K.znaniya(m, s)
+            istoriya = [{"role": "user" if x["роль"] == "шеф" else "assistant",
+                         "content": x["текст"]}
+                        for x in sost["разговоры"][slot][:-1]]
+            otvet = await asyncio.to_thread(
+                chat, system=sistema, user=tekst, knowledge=znanie,
+                history=istoriya)
+        except Exception as e:
+            otvet = f"беда: {e}"
+        sost["разговоры"][slot].append({"роль": "место", "текст": otvet})
+        risovat_chat()
+
+    async def gnat(s_mesta: str = "", s_razgovorom: bool = False):
+        if sost["идёт"]:
+            ui.notify("уже идёт", color="warning")
+            return
+        sost["идёт"] = True
+        for b in ("пуск", "сместа", "якорь"):
+            refs[b].disable()
+
+        nachalnaya = 0
+        if s_mesta:
+            for i, volna in enumerate(volny):
+                if any(x["слот"] == s_mesta for x in volna):
+                    nachalnaya = i
+                    break
+            if not sost["стол"]:
+                ui.notify("стол пуст — сперва пусти цех целиком",
+                          color="warning")
+                sost["идёт"] = False
+                for b in ("пуск", "сместа", "якорь"):
+                    refs[b].enable()
+                return
+            stol = dict(sost["стол"])
+        else:
+            stol = {"наряд": {"тема": "проба каркаса",
+                              "площадка": "YouTube Shorts",
+                              "цель": "охват"}}
+            sost["состояния"] = {}
+
+        from llm import chat
+        zhurnal = []
+        for nomer in range(nachalnaya, len(volny)):
+            for s in volny[nomer]:
+                sost["состояния"][s["слот"]] = {"что": "идёт"}
+                risovat_trubu(); risovat_avy()
+                t0 = datetime.now()
+                try:
+                    sistema = K.bumaga(m, s)
+                    znanie = K.znaniya(m, s)
+                    vhod = {k: stol.get(k) for k in s.get("берёт", [])}
+                    user = ("Вот что тебе пришло:\n\n"
+                            + json.dumps(vhod, ensure_ascii=False, indent=2))
+                    if s_razgovorom and s["слот"] == s_mesta:
+                        razgovor = sost["разговоры"].get(s["слот"], [])
+                        if razgovor:
+                            user += ("\n\nИ вот о чём мы только что "
+                                     "говорили с Шефом:\n"
+                                     + "\n".join(f'{x["роль"]}: {x["текст"]}'
+                                                 for x in razgovor))
+                    otvet = await asyncio.to_thread(
+                        chat, system=sistema, user=user, knowledge=znanie)
+                    d = K.razobrat(otvet)
+                    moyo = d.get("моё", {}) or {}
+                    dal, ne_dal = [], []
+                    for k in s.get("даёт", []):
+                        if k in moyo:
+                            stol[k] = moyo[k]
+                            dal.append(k)
+                        else:
+                            ne_dal.append(k)
+                    sek = (datetime.now() - t0).total_seconds()
+                    sost["состояния"][s["слот"]] = {
+                        "что": "готово", "сек": sek, "дал": dal,
+                        "не_дал": ne_dal, "выход": moyo or otvet[:3000]}
+                    zhurnal.append({"слот": s["слот"],
+                                    "роль": s.get("роль", ""),
+                                    "волна": nomer + 1,
+                                    "секунд": round(sek, 1),
+                                    "дал": dal, "не_дал": ne_dal,
+                                    "знаний": len(s.get("знания", []))})
+                    if s["слот"] == sost["активное"]:
+                        sost["вьюер"] = moyo or otvet
+                        risovat_vyuer()
+                except Exception as e:
+                    sost["состояния"][s["слот"]] = {"что": "беда",
+                                                    "беда": str(e)[:200]}
+                    zhurnal.append({"слот": s["слот"], "беда": str(e)[:200]})
+                risovat_trubu(); risovat_avy()
+
+        sost["стол"] = stol
+        try:
+            K.zapisat(m, stol.get("наряд", {}), stol, zhurnal, False)
+        except Exception:
+            pass
+        dopusk = stol.get("допуск") or {}
+        status = dopusk.get("статус")
+        if status:
+            ui.notify(f"приёмка: {status}",
+                      color="positive" if status == "APPROVED" else "warning")
+        else:
+            ui.notify("прогон закончен", color="positive")
+        risovat_progony()
+        sost["идёт"] = False
+        for b in ("пуск", "сместа", "якорь"):
+            refs[b].enable()
+
+    refs["пуск"].on_click(lambda: gnat())
+    refs["сместа"].on_click(lambda: gnat(sost["активное"]))
+    refs["якорь"].on_click(lambda: gnat(sost["активное"], True))
+
+    risovat_trubu()
+    risovat_avy()
+    risovat_lico()
+    risovat_chat()
+    risovat_vyuer()
+    risovat_progony()
+    obnovit_shapku()
+'''
+
+
+def _teper() -> str:
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
+def naiti_koren() -> Path:
+    starty = [Path(__file__).resolve().parent, Path.cwd().resolve()]
+    for start in starty:
+        for kand in [start, *start.parents]:
+            if (kand / "GRONDHEIM_CITY" / "локации").is_dir() \
+                    and (kand / "ГОРОД" / "rabota.py").is_file():
+                return kand
+    raise SystemExit("Не нашёл корень репо. Запусти из корня "
+                     "Grondheim-Ecosystem.")
+
+
+def main() -> None:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+    except Exception:
+        pass
+
+    koren = naiti_koren()
+    print(f"Корень: {koren}\n")
+
+    put = koren / "ГОРОД" / "ui_studia.py"
+    glavny = koren / "main.py"
+    if not glavny.exists() or "ui_studia" not in glavny.read_text(
+            encoding="utf-8"):
+        raise SystemExit("Роута /studia нет — сперва накати "
+                         "stranica_studii.py")
+
+    if put.exists():
+        staroe = put.read_text(encoding="utf-8")
+        if staroe == STRANICA:
+            print("Каркас: уже стоит, не трогал")
+        else:
+            bak = put.with_suffix(f".py.bak_{_teper()}")
+            shutil.copyfile(put, bak)
+            put.write_text(STRANICA, encoding="utf-8")
+            print(f"Каркас: положен вместо прежней страницы "
+                  f"({len(STRANICA.splitlines())} строк), "
+                  f"старая в {bak.name}")
+    else:
+        put.write_text(STRANICA, encoding="utf-8")
+        print(f"Каркас: положен ({len(STRANICA.splitlines())} строк)")
+
+    import py_compile
+    try:
+        py_compile.compile(str(put), doraise=True)
+        print("Компилируется: да")
+    except Exception as e:
+        print(f"НЕ КОМПИЛИРУЕТСЯ: {e}")
+        return
+
+    # что увидит страница
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_k", koren / "GRONDHEIM_CITY" / "Студия" / "конвейер.py")
+    k = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    spec.loader.exec_module(k)  # type: ignore[union-attr]
+    m = k.ceh("Студия", "турбо")
+    sys.path.insert(0, str(koren / "ГОРОД"))
+    print("\nМеста в шапке — и кто на них сидит:")
+    try:
+        import rabota
+        import rezidenty
+        for v in k.truba(m):
+            for s in v:
+                pid = rabota.id_dlya_slota("турбо", s["слот"])
+                kto = rezidenty.kto_na_postu(pid) or "вакантно"
+                print(f"  {s['слот']} · {s.get('роль'):<14} {kto}")
+    except Exception as e:
+        print(f"  не спросил город: {e}")
+
+    print("\nГотово. Перезапусти приложение, открой /studia/турбо\n"
+          "  клик по месту в шапке — переключить · говорить внизу\n"
+          "  ⚡ ПУСТИТЬ ЦЕХ — полный прогон, места загораются по ходу\n"
+          "шесть·проверено·до·корня")
+
+
+if __name__ == "__main__":
+    main()

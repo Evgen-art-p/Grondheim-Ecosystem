@@ -394,9 +394,6 @@ LOCATION_GATES = {
     "0014_EXCHANGE": "/torg",       # Биржа -> стол Совета (ui_torg.py)
     "0008_OWL_CASTLE": "/akademia", # Замок Сов -> кабинет Академии (ui_akademia.py)
     "0015_GRONDHEIM_ARCHIVE": "/arkhiv",  # Архив -> кабинет Хранителя (ui_arkhiv.py)
-    # PRIYOMNAYA_STUDII_V1: с карты входим в ЗДАНИЕ, а не за станок.
-    # В здании встречает приёмщик — он и решит, в какой цех.
-    "0001_STUDIO_SIX_FINGERS": "/priyomnaya",
 }
 
 
