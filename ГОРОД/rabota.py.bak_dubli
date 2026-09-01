@@ -353,20 +353,6 @@ def zavesti_mesta_kartridzhey() -> tuple:
     перетирает занятые. Никого не сажаем — посадка остаётся решением.
     """
     zavedeno, bylo = 0, 0
-
-    # SLOT_NE_DVAZHDY_V1: проверка «место уже заведено?» смотрела на
-    # ИМЯ ФАЙЛА (id_dlya_slota), а не на то, что реально записано в
-    # должностях. Три места (треугольник Биржи) были заведены давно
-    # под старыми именами — их эта проверка не видела и заводила рядом
-    # пустого близнеца. Теперь смотрим по факту: цех+слот среди ВСЕХ
-    # заведённых должностей, каким бы файлом они ни лежали.
-    _zanyatye_slota = set()
-    if POSTY.exists():
-        for _d in POSTY.iterdir():
-            _p = _chitat(_d / "пост.json")
-            if _p and _p.get("цех") and _p.get("слот"):
-                _zanyatye_slota.add((_p["цех"], _p["слот"]))
-
     for k in kartridzhi():
         m = _chitat(Path(k["папка"]) / "manifest.json") or {} \
             if k.get("папка") else {}
@@ -374,10 +360,10 @@ def zavesti_mesta_kartridzhey() -> tuple:
             slot = s.get("слот")
             if not slot:
                 continue
-            if (k["цех"], slot) in _zanyatye_slota:
+            pid = id_dlya_slota(k["цех"], slot)
+            if _chitat(put_posta(pid)) is not None:
                 bylo += 1
                 continue
-            pid = id_dlya_slota(k["цех"], slot)
             rol = s.get("роль", "") or slot
             ok, _ = zavesti(pid, {
                 "название": rol,
@@ -566,5 +552,3 @@ def magic_dlya_slota(slot: str) -> int:
 
 
 # MAGIC_PRI_MESTE_V2 - marker
-
-# SLOT_NE_DVAZHDY_V1 - marker
