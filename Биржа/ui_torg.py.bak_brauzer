@@ -2984,41 +2984,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
         # PUZYR_NE_OBRYVAETSYA_V3: одна строка на клик — видно сразу,
         # дошла подсветка или нет, и к скольким пузырькам.
-        # PUZYR_PRYAMO_V_BRAUZER_V5: приказываем браузеру напрямую.
-        # Обновление элементов где-то теряется (см. докстроку патча),
-        # а команда из обработчика клика уходит в ТО окно, где кликнули.
-        try:
-            _kuski = []
-            for _aid, _el in avatars_ref["elements"].items():
-                if _aid == state["active_agent"]:
-                    _bc, _bs = ("rgba(0,204,255,0.95)",
-                                "0 0 0 2px rgba(0,204,255,0.30) inset, "
-                                "0 0 30px rgba(0,204,255,0.45)")
-                elif _aid in state["reports"]:
-                    _bc, _bs = ("rgba(0,255,136,0.95)",
-                                "0 0 0 2px rgba(0,255,136,0.30) inset, "
-                                "0 0 30px rgba(0,255,136,0.45)")
-                else:
-                    _bc, _bs = ("rgba(255,255,255,0.14)", "none")
-                # PUZYR_BEZ_GETHTMLELEMENT_V6: getHtmlElement есть
-                # только с NiceGUI 2.9 — на здешней версии команда
-                # падала целиком (ReferenceError в консоли). Берём
-                # самый обычный способ: браузер сам находит пузырьки
-                # по их оформлению, в порядке отрисовки.
-                _kuski.append("['%s','%s']" % (_bc, _bs))
-            if _kuski:
-                _js = ("(()=>{const st=[" + ",".join(_kuski) + "];"
-                       "const els=document.querySelectorAll('.avatar');"
-                       "els.forEach((e,i)=>{if(st[i]){"
-                       "e.style.setProperty('border-color',st[i][0],'important');"
-                       "e.style.setProperty('box-shadow',st[i][1],'important');"
-                       "}});})();")
-                ui.run_javascript(_js)
-                print(f"[ПУЗЫРЬ] команда в браузер: {len(_kuski)} пузырьков")
-        except Exception as _e_js:
-            # фоновый вызов без окна — это нормально, не шумим лишнего
-            print(f"[ПУЗЫРЬ] команда в браузер не ушла: {_e_js}")
-
         if _vidno:
             print("[ПУЗЫРЬ] подсветка: " + " ".join(_vidno))
             print(f"[ПУЗЫРЬ] стиль применён: {_stil_leg} из {len(_vidno)}")
@@ -4073,7 +4038,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # RAZGOVOR_PRO_SVOY_INSTRUMENT_V1 - marker
 
 # PUZYR_STILEM_I_UPDATE_V4 - marker
-
-# PUZYR_PRYAMO_V_BRAUZER_V5 - marker
-
-# PUZYR_BEZ_GETHTMLELEMENT_V6 - marker
