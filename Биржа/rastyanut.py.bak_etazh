@@ -57,75 +57,6 @@ def podobrat_etazh(minut_v_kuske: float) -> str:
     return luchshiy
 
 
-
-# ═══ ETAZH_V_BARAH_V1 ═══
-# Календарь врёт: между двумя датами лежат выходные и праздники, а
-# рынок в них стоит. Считаем бары краном — единственная честная мера.
-
-def _barov_v_okne(symbol: str, etazh: str, t1, t2):
-    """Сколько баров этажа РЕАЛЬНО легло между t1 и t2. None — не дали."""
-    import masshtab
-    from feed_source import bars as _bars
-    m = masshtab.minut(etazh) or 60
-    kalendar = max(1.0, (t2 - t1).total_seconds() / 60.0)
-    # глубина запроса — по календарю С ЗАПАСОМ: реальных баров всегда
-    # МЕНЬШЕ календарных, так что промахнуться можно только в плюс.
-    glubina = int(kalendar / m) + 200
-    try:
-        _probniki, _ = _bars(symbol, etazh, 5)
-        if _probniki:
-            _posledniy = _vremya(_probniki[-1].get("date", ""))
-            if _posledniy and _posledniy > t2:
-                glubina += int((_posledniy - t2).total_seconds() / 60 / m)
-    except Exception:
-        pass
-    glubina = max(300, min(glubina, 20000))
-    try:
-        bs, _ = _bars(symbol, etazh, glubina)
-    except Exception:
-        return None
-    if not bs:
-        return None
-    n = 0
-    for b in bs:
-        t = _vremya(b.get("date", ""))
-        if t and t1 <= t <= t2:
-            n += 1
-    return n
-
-
-def podobrat_etazh_po_baram(symbol: str, t1, t2, nachalnyy: str = ""):
-    """Этаж, на котором кусок ЛЯЖЕТ в окно 100-140 баров, и сколько их.
-
-    Возвращает (этаж, баров). Баров None — кран промолчал, тогда
-    этаж выбран по старой календарной прикидке, и это честно видно.
-    """
-    import masshtab
-    kalendar = max(1.0, (t2 - t1).total_seconds() / 60.0)
-    etazh = (nachalnyy or "").strip().upper()
-    if not masshtab.est(etazh):
-        etazh = podobrat_etazh(kalendar)   # только первая прикидка
-    nizhe, verhe = masshtab.OKNO
-    videnye, barov = set(), None
-    for _ in range(4):
-        if etazh in videnye:
-            break
-        videnye.add(etazh)
-        n = _barov_v_okne(symbol, etazh, t1, t2)
-        if not n:
-            break
-        barov = n
-        if nizhe <= n <= verhe:
-            break
-        # настоящее ТОРГОВОЕ время куска — из настоящих баров
-        torgovye = n * (masshtab.minut(etazh) or 60)
-        sled = podobrat_etazh(torgovye)
-        if not masshtab.est(sled) or sled == etazh:
-            break
-        etazh = sled
-    return etazh, barov
-
-
 def rastyanut(symbol: str, s_kogda: str, po_kogda: str = "",
               etazh_podskazka: str = "") -> dict:
     """Растянуть кусок и нарисовать его.
@@ -150,13 +81,12 @@ def rastyanut(symbol: str, s_kogda: str, po_kogda: str = "",
 
     minut = max(1.0, (t2 - t1).total_seconds() / 60.0)
     etazh = (etazh_podskazka or "").strip().upper()
-    # ETAZH_V_BARAH_V1: этаж и длина куска — СЧИТАННЫЕ бары, не календарь.
-    # Подсказка трейдера уважается: он говорит, на каком этаже смотреть,
-    # мы только меряем, сколько там баров вышло.
-    etazh, v_kuske = podobrat_etazh_po_baram(symbol, t1, t2, etazh)
+    if not masshtab.est(etazh):
+        etazh = podobrat_etazh(minut)
+
+    # сколько баров этого этажа ляжет в кусок и сколько взять с полем
     m = masshtab.minut(etazh) or 60
-    if not v_kuske:                      # кран промолчал — старая прикидка
-        v_kuske = int(minut / m)
+    v_kuske = int(minut / m)
     barov = max(60, int(v_kuske * (1 + 2 * POLE)))
 
     # Сколько баров назад лежит конец куска. Без этого счёта мы
@@ -206,5 +136,3 @@ def rastyanut(symbol: str, s_kogda: str, po_kogda: str = "",
 
 
 # RASTYAZHKA_V1 - marker
-
-# ETAZH_V_BARAH_V1 - marker
