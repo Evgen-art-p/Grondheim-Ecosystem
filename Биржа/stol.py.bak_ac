@@ -343,7 +343,12 @@ def nakryt(symbol: str, timeframe: str,
         # Зелёная — оба растут, красная — оба падают, серая — спорят.
         # TOCHKA_ROZHDAETSYA_V1: начало, которое живёт дольше свечи
         "точка_ноль": _tochka_nol(md, symbol, timeframe),
-        # AC_VON_V1: AC и ЗОНА (AO+AC) убраны — скорость городу не нужна
+        "зона": _zona(md),
+        "ac": {
+            "значение": (md.get("ac") or {}).get("value"),
+            "прошлое": (md.get("ac") or {}).get("prev_value"),
+            "растёт": (md.get("ac") or {}).get("direction"),
+        },
         "дивергенция_ao": md.get("divergence_ao"),
         "приседающий_бар": bool((md.get("squat") or {}).get("last_squat")),
     }
@@ -351,10 +356,23 @@ def nakryt(symbol: str, timeframe: str,
     return stol
 
 
-# AC_VON_V1: функция зоны убрана вместе с AC. Зона по определению
-# считалась из AO+AC (iZone.mq4): оба растут — зелёная, оба падают —
-# красная. Без AC её посчитать нечем, а показывать цвет, собранный
-# из половины прибора, — врать трейдеру.
+def _zona(md: dict) -> str:
+    """ЗЕЛЁНАЯ / КРАСНАЯ / СЕРАЯ — и ни слова о том, что с этим делать.
+
+    PRIBORY_NA_STOL_V1, по iZone.mq4 из Profitunity_MT4:
+        AO растёт И AC растёт  → зелёная
+        AO падает И AC падает  → красная
+        иначе                  → серая
+    """
+    ao_d = ((md or {}).get("ao") or {}).get("direction")
+    ac_d = ((md or {}).get("ac") or {}).get("direction")
+    if not ao_d or not ac_d:
+        return "—"
+    if ao_d == "UP" and ac_d == "UP":
+        return "ЗЕЛЁНАЯ"
+    if ao_d == "DOWN" and ac_d == "DOWN":
+        return "КРАСНАЯ"
+    return "СЕРАЯ"
 
 
 def slovami(stol: dict) -> str:
@@ -497,6 +515,9 @@ def slovami(stol: dict) -> str:
             if _o.get("кончилась") else "ОТКАТ: идёт"))(
                 (p.get("точка_ноль") or {}).get("волна_2") or {},
                 p.get("точка_ноль") or {}),
+        f"зона (AO+AC): {p.get('зона') or '—'}   "
+        f"AC: {(p.get('ac') or {}).get('значение')} "
+        f"({(p.get('ac') or {}).get('растёт') or '—'})",
         f"дивергенция AO: {p.get('дивергенция_ao')}   "
         f"приседающий бар: {p.get('приседающий_бар')}",
         f"цена: O={c.get('open')} H={c.get('high')} L={c.get('low')} "
@@ -769,5 +790,3 @@ if __name__ == "__main__":
     print(slovami(nakryt(s, tf)))
 
 # ZAPUSK_V_KONEC_V1 - marker
-
-# AC_VON_V1 - marker

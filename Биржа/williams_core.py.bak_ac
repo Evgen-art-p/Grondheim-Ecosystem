@@ -178,11 +178,24 @@ def compute_ao_series(highs: list[float], lows: list[float]) -> list[Optional[fl
     return result
 
 
-# AC_VON_V1: Accelerator Oscillator убран по слову Шефа (27.08):
-# «в современных рынках скорость не нужна, его вычищай». Формула была
-# AC = AO - SMA(AO,5); считался верно, но городу больше не нужен.
-# Вместе с ним ушла ЗОНА (AO+AC) — без AC её не существует.
-# AO остался целиком и работает как прежде.
+def compute_ac_series(ao_series: list[Optional[float]]) -> list[Optional[float]]:
+    """
+    Accelerator Oscillator:
+      AC[i] = AO[i] - SMA(AO, 5)[i]
+    """
+    result: list[Optional[float]] = [None] * len(ao_series)
+    for i in range(len(ao_series)):
+        window = ao_series[max(0, i-4):i+1]
+        valid  = [v for v in window if v is not None]
+        if len(valid) < 5:
+            continue
+        cur = ao_series[i]
+        if cur is None:
+            continue  # WILLIAMS_CORE_TYPING_V2: структурно недостижимо
+            # (window включает cur; valid==5 доказывает cur не None) —
+            # запись существующего инварианта, не новая ветка поведения
+        result[i] = cur - sum(valid[-5:]) / 5
+    return result
 
 
 def detect_fractals(bars: list[dict], lookback: int = 2) -> dict:
@@ -1125,6 +1138,7 @@ def build_market_data(
     _point     = point
     alligator  = compute_alligator(highs, lows, point=_point)
     ao_series  = compute_ao_series(highs, lows)
+    ac_series  = compute_ac_series(ao_series)
     fractals   = detect_fractals(bars)
     squat      = detect_squat_bars(bars, point=_point)
     mfi        = compute_mfi(bars[-1], bars[-2], point=_point)
@@ -1191,6 +1205,8 @@ def build_market_data(
     # Текущие и предыдущие AO / AC
     ao_cur  = ao_series[-1]
     ao_prev = next((v for v in reversed(ao_series[:-1]) if v is not None), None)
+    ac_cur  = ac_series[-1]
+    ac_prev = next((v for v in reversed(ac_series[:-1]) if v is not None), None)
 
     # Пересечение нуля AO
     ao_crossed_zero = False
@@ -1205,6 +1221,9 @@ def build_market_data(
     if ao_cur is not None and ao_prev is not None:
         ao_direction = "UP" if ao_cur > ao_prev else "DOWN"
 
+    ac_direction = None
+    if ac_cur is not None and ac_prev is not None:
+        ac_direction = "UP" if ac_cur > ac_prev else "DOWN"
 
     last_bar = bars[-1]
 
@@ -1233,6 +1252,12 @@ def build_market_data(
             "direction":    ao_direction,
             # Последние 6 пивотов AO — Искре нужно 2 пары для дивергенции
             "pivots":       _find_ao_pivots(ao_series, bars)[-6:],
+        },
+
+        "ac": {
+            "value":      round(ac_cur,  8) if ac_cur  is not None else None,
+            "prev_value": round(ac_prev, 8) if ac_prev is not None else None,
+            "direction":  ac_direction,
         },
 
         "mfi": {
@@ -1311,5 +1336,3 @@ if __name__ == "__main__":
 # ISKATEL_SVOY_ETAZH_V1 - marker
 
 # REZINKA_CHESTNAYA_V1 - marker
-
-# AC_VON_V1 - marker

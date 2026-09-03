@@ -1941,7 +1941,8 @@ def _print_market_summary(md: dict):
     ao = md["ao"]
     print(f"  AO:       {ao['value']} (prev={ao['prev_value']}) "
           f"dir={ao['direction']} zero={ao['crossed_zero']}")
-    # AC_VON_V1: AC убран из города — печатать нечего
+    ac = md["ac"]
+    print(f"  AC:       {ac['value']} dir={ac['direction']}")
     print(f"  MFI:      {md['mfi']['type']} vol={md['mfi']['volume']}")
     print(f"  Фракталы: ▲{md['fractals']['count_up']} ▼{md['fractals']['count_down']}")
     if md["divergence_ao"]: print("  ⚡ ДИВЕРГЕНЦИЯ AO (бычья) — Точка Ноль!")
@@ -3064,5 +3065,3 @@ def _slot_sushchestvuet(ceh: str):
 # NOGI_SCHYOTNYE_V1 - marker
 
 # VERSHINA_NE_NIZHE_KRAYA_V1 - marker
-
-# AC_VON_V1 - marker
