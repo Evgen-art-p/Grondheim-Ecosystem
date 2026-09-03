@@ -1004,6 +1004,33 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
                 f"  (сейчас {_db.get('distance_now')} point, "
                 f"пик был {_db.get('distance_max')} point)")
 
+
+    # ═══ VEDENIE_NE_VHOD_V1 ═══
+    # Позиция открыта — значит спрашивать надо про НЕЁ. Раньше весь
+    # запрос был про поиск входа, и человек честно отвечал «сигнала
+    # для входа нет, НАБЛЮДАЮ» — про собственную сделку.
+    _vedenie_blok = ""
+    _poz = (table_for_cons.get("position") or None)
+    if _poz:
+        _r = _poz.get("floating_r")
+        _r_slovami = (f"{_r}R" if _r is not None else "R пока не считается")
+        _vedenie_blok = (
+            "=== У ТЕБЯ ОТКРЫТА ПОЗИЦИЯ. СЕЙЧАС ВОПРОС ПРО НЕЁ ===\n"
+            f"{_poz.get('direction')} от {_poz.get('entry')}, "
+            f"стоп {_poz.get('stop')}, лот {_poz.get('lot')}, "
+            f"открыта {_poz.get('opened_at')}.\n"
+            f"Сейчас {_poz.get('current_price')} — это {_r_slovami}.\n\n"
+            "Вход уже сделан, и сделал его ТЫ. Не ищи его заново и не "
+            "суди, годится ли это место: поздно, ты уже в рынке.\n"
+            "Посмотри на кадр и реши, что делать со сделкой: держать "
+            "как есть, подтянуть стоп, долить или закрыть. Стоп по "
+            "фракталам ведёт код — трогай его, только если видишь "
+            "причину.\n"
+            "Всё, что написано НИЖЕ про поиск входа и три места, — "
+            "справка об устройстве, а не задание на сейчас.\n"
+            "Отвечай ключами cons_action (HOLD / MOVE_STOP / ADD / "
+            "CLOSE) и cons_reason.\n\n")
+
     user_msg = (
         # DISCIPLINA_PYRAMIDY_V1: если по прошлому ведению был укол — показать
         # его трейдеру ОТДЕЛЬНОЙ строкой (fix: без ведущего + — первый операнд).
@@ -1011,6 +1038,7 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
             f"{table.get('self', {}).get('vedenie_feedback')}\n"
             f"Учти это сейчас — дисциплина пирамиды железная.\n\n")
            if table.get('self', {}).get('vedenie_feedback') else "")
+        + _vedenie_blok
         + _instr_blok
         + _lesenka_slovami()
         # PERVYY_VZGLYAD_V1: раскладка момента ушла в руку
@@ -1248,3 +1276,5 @@ def _kto_ya() -> str:
 # NE_TERYAT_RESHENIE_V1 - marker
 
 # PERVYY_VZGLYAD_V1 - marker
+
+# VEDENIE_NE_VHOD_V1 - marker
