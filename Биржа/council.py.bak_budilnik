@@ -412,47 +412,6 @@ def _uslyshat_nablyudenie(slot: str, symbol: str, timeframe: str,
         print(f"[НАБЛЮДЕНИЕ] слово не разобрано ({e}) — работаем дальше")
 
 
-
-# ═══ NEKRON_BUDIT_V1 ═══
-# Два повода ВЗГЛЯНУТЬ. Ни один ничего не судит: некрон говорит
-# КОГДА (приходит на самом баре), излом ур.2 говорит ГДЕ (дозревает
-# позже). Годится место или нет — решает тот, кто смотрит.
-
-def _povod_vzglyada(symbol: str, timeframe: str) -> str:
-    """Строка-причина, если на этом баре есть на что взглянуть."""
-    try:
-        from feed_source import bars as _bars
-        from williams_core import compute_alligator, detect_necron_bar
-        import izlomy as _izl
-        bs, point = _bars(symbol, timeframe, 300)
-        try:
-            import hooks as _h
-            bs = _h._tolko_zakrytye(bs)
-        except Exception:
-            pass
-        if not bs or len(bs) < 60:
-            return ""
-        _h_ = [b["high"] for b in bs]
-        _l_ = [b["low"] for b in bs]
-        al = compute_alligator(_h_, _l_, point=point)
-        povody = []
-        rb = detect_necron_bar(bs, al.get("jaw_series"),
-                               al.get("teeth_series"), al.get("lips_series"))
-        if rb.get("direction"):
-            povody.append(f"разворотный бар {rb['direction']} @ {rb['price']}")
-        iz = _izl.dozrel(bs)
-        if iz:
-            povody.append(f"излом {iz['тип']} @ {iz['цена']} "
-                          f"({iz['баров_назад']} бар назад) стал виден")
-        return "; ".join(povody)
-    except Exception as _e:
-        # Сбой прибора — НЕ повод будить на каждом баре: остальные
-        # ключи (заявка, вход, закрытие, события структуры) на месте
-        # и сработают сами.
-        print(f"[КЛЮЧ] повод взгляда не посчитался: {_e}")
-        return ""
-
-
 def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
                           slot: str = "") -> dict:
     """Есть ли повод звать того, кто работает этой парой."""
@@ -467,14 +426,6 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
         tch = hooks._blok_tochki(t, hooks._para_tochki(symbol, timeframe))
         bar_goroda = str(((t.get("рынок") or {}).get("бар")) or "")
         _ = slot   # KONEC_VOLNY_1_V1: наблюдение больше не ключ
-
-        # NEKRON_BUDIT_V1: сперва — есть ли на что ВЗГЛЯНУТЬ. Раньше
-        # первым стояло рождение точки ноль, то есть наша разметка
-        # решала, откроет ли человек график. Отбор числами закрыт
-        # шестью замерами — ворот здесь больше нет.
-        _vz = _povod_vzglyada(symbol, timeframe)
-        if _vz:
-            return {"будим": True, "почему": _vz}
         rodilas = str(tch.get("rodilas_na_bare") or "")
         if tch.get("alive") and bar_goroda and rodilas == bar_goroda                 and not tch.get("barov_s_tochki"):
             return {"будим": True,
@@ -759,5 +710,3 @@ def wake_council(symbol: str = "", timeframe: str = "",
 # SOVET_CHEREZ_KRAN_V1 - marker
 
 # PEREEZD_VERSHINY_TIKHIY_V1 - marker
-
-# NEKRON_BUDIT_V1 - marker
