@@ -853,28 +853,27 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
     _RABOCHIE_ETAZHI = (timeframe,)
 
     def _lesenka_slovami() -> str:
-        try:
-            import stol as _s2
-        except Exception:
-            return ""
-        L = ["=== ЛЕСЕНКА · три рабочих этажа этого инструмента ===",
-             f"Инструмент {symbol} назначен Шефом. Этажи — твои."]
-        for _tf in _RABOCHIE_ETAZHI:
-            try:
-                _t2 = _s2.nakryt(symbol, _tf, self_key=_SELF_KEY)
-                _tekst = _s2.slovami(_t2)
-            except Exception as _e2:
-                _tekst = f"этаж не накрылся: {_e2}"
-            _metka = "   ← на нём кадр перед тобой" if _tf == timeframe else ""
-            L.append(f"\n-- {_tf}{_metka} --\n{_tekst}")
-        L.append(
-            "\nСтарший этаж говорит о направлении, рабочий — о входе, "
-            "младший — о точности. Спускаться или нет, и на каком "
-            "работать сегодня — решаешь ты. Скажи это в narrative "
-            "прямо: «работаю по H4», «спускаюсь на H1, там видно "
-            "приседающий». Кадр нарисован по этажу с полки; если "
-            "смотришь на другой — суди по числам, они честные.\n")
-        return "\n".join(L) + "\n"
+        # PERVYY_VZGLYAD_V1: здесь выкладывался ВЕСЬ стол числами —
+        # тридцать строк рядом с одной картинкой. Глаз в такой стопке
+        # не первый. Теперь тут только правда о том, что перед тобой,
+        # и напоминание, что числа можно ПОПРОСИТЬ.
+        return (
+            "=== ГДЕ ТЫ СТОИШЬ ===\n"
+            f"Инструмент {symbol}, рабочий этаж {timeframe}. Кадр перед "
+            f"тобой нарисован по нему.\n"
+            "Чисел рядом нет НАРОЧНО: сперва глаз, приборы потом. Если "
+            "после взгляда они тебе нужны — попроси рукой, это твоё "
+            "право:\n"
+            "  · stol_na_etazhe — показания этажа: Аллигатор, AO, "
+            "фракталы, разворотный бар, натяжение, точка, волна, откат;\n"
+            "  · pokazat_etazh — КАРТИНКА другого этажа: посмотреть "
+            "старший (куда идёт рынок вообще) или нырнуть ниже;\n"
+            "  · rastyanut_volnu — растянуть кусок так, чтобы он занял "
+            "100-140 баров, и разглядеть его целиком;\n"
+            "  · izmerit_volnu, krayniye_tochki, moya_kartina, "
+            "moy_dnevnik, uchebnik.\n"
+            "Смотри столько кадров, сколько нужно, чтобы понять, что "
+            "происходит. Не понял — это законный ответ: не работаешь.\n\n")
 
     # TREYDER_ZHIV_V1: бары берём ОБЩИМ источником, а не из терминала
     # напрямую. Тогда трейдер живёт по тому же крану РЕАЛ/ТЕСТЕР, что и
@@ -967,8 +966,14 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
            if table.get('self', {}).get('vedenie_feedback') else "")
         + _instr_blok
         + _lesenka_slovami()
-        + "=== НАКРЫТЫЙ СТОЛ (раскладка момента) ===\n"
-        f"{json.dumps(table_for_avan, ensure_ascii=False, indent=2)}\n\n"
+        # PERVYY_VZGLYAD_V1: раскладка момента ушла в руку
+        # stol_na_etazhe. Здесь остаётся только то, без чего
+        # нельзя НАЗВАТЬ цену: своя позиция и текущий бар.
+        + "=== ЧТО У ТЕБЯ НА РУКАХ ===\n"
+        f"{json.dumps({'position': table_for_avan.get('position'),
+                       'бар': (table_for_avan.get('market') or {}).get('price'),
+                       'тик': (table_for_avan.get('market') or {}).get('point')},
+                     ensure_ascii=False, indent=2)}\n\n"
         "=== ТВОИ СОБЫТИЯ (входы и чем кончились — что помнишь сам) ===\n"
         f"{json.dumps(recent, ensure_ascii=False, indent=2) if recent else '(пусто — первое решение)'}\n\n"
         "Перед тобой стол и ты сам. Канон у тебя на полке (книга Котина), "
@@ -1014,7 +1019,9 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
         # Пустота между Губами (зелёная) и экстремумом цены. Чем больше
         # оторвалась цена — тем сильнее натянута резинка → тем неизбежнее
         # возвратный удар. Это ЧИСЛО, не приказ: СУДИ ХАРАКТЕРОМ.
-        f"РЕЗИНКА (натяжение от Губ): {_rez}\n"
+        # PERVYY_VZGLYAD_V1: резинка — число, а не картина.
+        # Она есть в руке stol_na_etazhe, если понадобится.
+        + ""
         # YAZYK_DOLIVA_V1: дописаны action/new_stop/add_lot — раньше
         # эта, самая СВЕЖАЯ строка промта молчала про ведение позиции.
         "Выдай строго JSON {narrative, signal, diary_entry}.\n"
@@ -1200,3 +1207,5 @@ def _kto_ya() -> str:
 # YASHCHIK_STOLA_V1 - marker
 
 # NE_TERYAT_RESHENIE_V1 - marker
+
+# PERVYY_VZGLYAD_V1 - marker
