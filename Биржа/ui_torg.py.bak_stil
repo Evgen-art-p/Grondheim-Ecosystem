@@ -2924,7 +2924,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
     def update_avatar_states():
         _vidno = []   # PUZYR_NE_OBRYVAETSYA_V3
-        _stil_leg = 0   # PUZYR_STILEM_I_UPDATE_V4
         for aid, el in avatars_ref["elements"].items():
             row = _agent_row(roster, aid)
             base = "avatar vacant" if (row and not row["resident"]) else "avatar"
@@ -2939,35 +2938,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                                        else "done" if aid in state["reports"]
                                        else "vacant" if "vacant" in base
                                        else "—"))
-
-            # PUZYR_STILEM_I_UPDATE_V4: кольцо — inline-стилем, с
-            # !important. Классов оказалось мало: сервер их менял
-            # (видно строкой выше), а на экране кольцо не переезжало.
-            # Inline сильнее классов и стилей Quasar; плюс явная
-            # команда обновиться — на случай, если автописьмо в
-            # браузер не уходит.
-            try:
-                if not hasattr(el, "_baz_style_puzyrya"):
-                    el._baz_style_puzyrya = "; ".join(
-                        f"{_k}: {_v}" for _k, _v in
-                        getattr(el, "_style", {}).items()) or ""
-                if aid == state["active_agent"]:
-                    _hvost = ("border-color: rgba(0,204,255,0.95) !important; "
-                              "box-shadow: 0 0 0 2px rgba(0,204,255,0.30) inset, "
-                              "0 0 30px rgba(0,204,255,0.45) !important;")
-                elif aid in state["reports"]:
-                    _hvost = ("border-color: rgba(0,255,136,0.95) !important; "
-                              "box-shadow: 0 0 0 2px rgba(0,255,136,0.30) inset, "
-                              "0 0 30px rgba(0,255,136,0.45) !important;")
-                else:
-                    _hvost = ("border-color: rgba(255,255,255,0.14) !important; "
-                              "box-shadow: none !important;")
-                _baz = el._baz_style_puzyrya
-                el.style(replace=(_baz + "; " if _baz else "") + _hvost)
-                el.update()
-                _stil_leg += 1
-            except Exception as _e_st:
-                print(f"[ПУЗЫРЬ] ⚠ стиль {aid} не лёг: {_e_st}")
 
             # активный важнее «отчёт готов»: смотрим-то мы на него
             if aid == state["active_agent"]:
@@ -2986,7 +2956,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         # дошла подсветка или нет, и к скольким пузырькам.
         if _vidno:
             print("[ПУЗЫРЬ] подсветка: " + " ".join(_vidno))
-            print(f"[ПУЗЫРЬ] стиль применён: {_stil_leg} из {len(_vidno)}")
         else:
             print("[ПУЗЫРЬ] ⚠ подсветка: пузырьков в avatars_ref НЕТ")
 
@@ -4036,5 +4005,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PUZYR_NE_OBRYVAETSYA_V3 - marker
 
 # RAZGOVOR_PRO_SVOY_INSTRUMENT_V1 - marker
-
-# PUZYR_STILEM_I_UPDATE_V4 - marker

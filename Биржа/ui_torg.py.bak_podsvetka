@@ -2909,22 +2909,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         except Exception:
             pass
 
-    # PUZYR_PODSVETKA_V2: кольцо рисуем ПРЯМО В style, с !important.
-    # Классы .active/.done оставляем — они не мешают, но у QBtn свои
-    # стили на border-color/box-shadow, и класс снаружи им проигрывает.
-    # Inline-стиль сильнее — спорить больше не с чем.
-    _PODSVETKA = {
-        "active": ("border-color: rgba(0,204,255,0.75) !important; "
-                   "box-shadow: 0 0 0 2px rgba(0,204,255,0.25) inset, "
-                   "0 0 30px rgba(0,204,255,0.35) !important;"),
-        "done":   ("border-color: rgba(0,255,136,0.75) !important; "
-                   "box-shadow: 0 0 0 2px rgba(0,255,136,0.25) inset, "
-                   "0 0 30px rgba(0,255,136,0.35) !important;"),
-    }
-
     def update_avatar_states():
-        _vidno = []   # PUZYR_NE_OBRYVAETSYA_V3
-        _stil_leg = 0   # PUZYR_STILEM_I_UPDATE_V4
         for aid, el in avatars_ref["elements"].items():
             row = _agent_row(roster, aid)
             base = "avatar vacant" if (row and not row["resident"]) else "avatar"
@@ -2933,80 +2918,16 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 el.classes(add="active")
             if aid in state["reports"]:
                 el.classes(add="done")
-            # PUZYR_NE_OBRYVAETSYA_V3: собираем, что применилось —
-            # печать одной строкой ниже, после обхода всех.
-            _vidno.append(f"{aid}=" + ("active" if aid == state["active_agent"]
-                                       else "done" if aid in state["reports"]
-                                       else "vacant" if "vacant" in base
-                                       else "—"))
-
-            # PUZYR_STILEM_I_UPDATE_V4: кольцо — inline-стилем, с
-            # !important. Классов оказалось мало: сервер их менял
-            # (видно строкой выше), а на экране кольцо не переезжало.
-            # Inline сильнее классов и стилей Quasar; плюс явная
-            # команда обновиться — на случай, если автописьмо в
-            # браузер не уходит.
-            try:
-                if not hasattr(el, "_baz_style_puzyrya"):
-                    el._baz_style_puzyrya = "; ".join(
-                        f"{_k}: {_v}" for _k, _v in
-                        getattr(el, "_style", {}).items()) or ""
-                if aid == state["active_agent"]:
-                    _hvost = ("border-color: rgba(0,204,255,0.95) !important; "
-                              "box-shadow: 0 0 0 2px rgba(0,204,255,0.30) inset, "
-                              "0 0 30px rgba(0,204,255,0.45) !important;")
-                elif aid in state["reports"]:
-                    _hvost = ("border-color: rgba(0,255,136,0.95) !important; "
-                              "box-shadow: 0 0 0 2px rgba(0,255,136,0.30) inset, "
-                              "0 0 30px rgba(0,255,136,0.45) !important;")
-                else:
-                    _hvost = ("border-color: rgba(255,255,255,0.14) !important; "
-                              "box-shadow: none !important;")
-                _baz = el._baz_style_puzyrya
-                el.style(replace=(_baz + "; " if _baz else "") + _hvost)
-                el.update()
-                _stil_leg += 1
-            except Exception as _e_st:
-                print(f"[ПУЗЫРЬ] ⚠ стиль {aid} не лёг: {_e_st}")
-
-            # активный важнее «отчёт готов»: смотрим-то мы на него
-            if aid == state["active_agent"]:
-                hvost = _PODSVETKA["active"]
-            elif aid in state["reports"]:
-                hvost = _PODSVETKA["done"]
-            else:
-                hvost = ""
-            try:
-                bazovyy = getattr(el, "_bazovyy_style", "") or ""
-                el.style(replace=bazovyy + hvost)
-            except Exception:
-                pass
-
-        # PUZYR_NE_OBRYVAETSYA_V3: одна строка на клик — видно сразу,
-        # дошла подсветка или нет, и к скольким пузырькам.
-        if _vidno:
-            print("[ПУЗЫРЬ] подсветка: " + " ".join(_vidno))
-            print(f"[ПУЗЫРЬ] стиль применён: {_stil_leg} из {len(_vidno)}")
-        else:
-            print("[ПУЗЫРЬ] ⚠ подсветка: пузырьков в avatars_ref НЕТ")
 
     def switch_agent(agent_id: str):
         row = _agent_row(roster, agent_id)
         if row and not row["resident"]:
             ui.notify("Вакансия — сюда ещё никого не наняли", type="warning")
         state["active_agent"] = agent_id
-        # PUZYR_NE_OBRYVAETSYA_V3: раньше эти четыре шли подряд и без
-        # защиты — споткнулся первый, и подсветка (третья в очереди)
-        # не наступала вовсе. Снаружи выглядело как мёртвый пузырёк.
-        # Теперь подсветка первая, и каждый шаг сам за себя.
-        for _imya_shaga, _shag in (("update_avatar_states", update_avatar_states),
-                                   ("update_avatar", update_avatar),
-                                   ("update_vitals", update_vitals),
-                                   ("update_stats_panel", update_stats_panel)):
-            try:
-                _shag()
-            except Exception as _e_shag:
-                print(f"[ПУЗЫРЬ] ⚠ {_imya_shaga} сорвалась: {_e_shag}")
+        update_avatar()
+        update_vitals()
+        update_avatar_states()
+        update_stats_panel()
         # NAZNACHENIYA_PROCH_V1: было уведомление про инструмент —
         # мелькало и пропадало. Теперь всё в строке состава.
         try:
@@ -3482,20 +3403,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 # на то же, что и Шеф. Кто ещё не умеет принимать
                 # рынок (морж, паникёр, ганс, архивариус, исполнитель)
                 # — спрашиваем по-старому.
-                # RAZGOVOR_PRO_SVOY_INSTRUMENT_V1: берём ту же пару,
-                # что и кадр справа — у трейдера СВОЙ инструмент и
-                # свой этаж. Раньше здесь была полка загрузчика, и
-                # Илья на GBPUSD отвечал про EURUSD, потому что евро
-                # было выбрано слева. Для не-трейдеров
-                # _para_aktivnogo сама вернёт полку — им как было.
-                try:
-                    _s_sv, _t_sv, _chey_sv, _net_sv = _para_aktivnogo()
-                    _rynok_seychas = ((_s_sv, _t_sv) if (_s_sv and _t_sv)
-                                      else _aktivnyy_rynok())
-                except Exception as _e_sv:
-                    print(f"[РЫНОК] пара трейдера не прочиталась "
-                          f"({_e_sv}) — беру полку")
-                    _rynok_seychas = _aktivnyy_rynok()
+                _rynok_seychas = _aktivnyy_rynok()
                 try:
                     reply = await asyncio.get_event_loop().run_in_executor(
                         None, lambda: _chat(msg, state.get(_last_key), dialog,
@@ -3573,12 +3481,12 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             print(f"[ПУЗЫРЬ] нажали: {w}")
                             switch_agent(w)
 
-                        avatar = ui.button(on_click=_nazhali).classes(cls)
-                        avatar.props("flat dense no-caps").style(style)
-                        # PUZYR_PODSVETKA_V2: базовый style (аватарка
-                        # фоном) запоминаем — подсветка будет дописываться
-                        # к нему, а не затирать его.
-                        avatar._bazovyy_style = style
+                        # PUZYR_KAK_V_AKADEMII_V1: div, не ui.button —
+                        # у кнопки Quasar своя разметка, синее кольцо
+                        # активного агента под ней не загоралось.
+                        avatar = ui.element("div").classes(cls)
+                        avatar.on("click", _nazhali)
+                        avatar.style(style)
                         with avatar:
                             if not occupied:
                                 ui.label(old_id).style("font-size: 9px")
@@ -4030,11 +3938,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # POLKA_NE_DUSHIT_SVYAZ_V1 - marker
 
 # PUZYR_KAK_V_AKADEMII_V1 - marker
-
-# PUZYR_PODSVETKA_V2 - marker
-
-# PUZYR_NE_OBRYVAETSYA_V3 - marker
-
-# RAZGOVOR_PRO_SVOY_INSTRUMENT_V1 - marker
-
-# PUZYR_STILEM_I_UPDATE_V4 - marker

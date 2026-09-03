@@ -743,11 +743,7 @@ def chat_with_images_and_tools(
                 args = json.loads(tc["function"].get("arguments", "{}"))
             except json.JSONDecodeError:
                 args = {}
-            # RUKA_PO_SMYSLU_V1: прощаем кириллические двойники и
-            # мелкие опечатки в имени руки — см. _nayti_ruku ниже.
-            ruka, imya_tochno = _nayti_ruku(ruki, imya)
-            if imya_tochno and imya_tochno != imya:
-                imya = imya_tochno
+            ruka = ruki.get(imya)
             zvali_ruki.append(imya)
             # RUKI_NE_TERYAT_SLOVO_V1: заход считаем ВСЕГДА. Раньше
             # счётчик рос только на найденной руке — и звонок в пустоту
@@ -820,67 +816,3 @@ def chat_with_images_and_tools(
 # KRAYNIYE_TOCHKI_V1 - marker
 
 # RUKI_NE_TERYAT_SLOVO_V1 - marker
-
-
-# ═══════════════════════════════════════════════════════════════
-# RUKA_PO_SMYSLU_V1 — имя руки ищем по смыслу, а не по точной букве
-# ═══════════════════════════════════════════════════════════════
-# Модель говорит по-русски и иногда соскальзывает на кириллицу внутри
-# латинского имени: `stol_nсetazhe` вместо `stol_na_etazhe` (шестой
-# символ — кириллическая «с», глазом неотличима). Строгий ruki.get()
-# на этом ронял вызов, и трейдер честно отвечал «такой руки нет».
-# Здесь три шага: точно → нормализованно → ближайшее с высоким
-# порогом. Выдумать руку, которой нет, эти шаги не могут.
-
-_GOMOGLIFY = str.maketrans({
-    "а": "a", "в": "b", "с": "c", "е": "e", "ё": "e", "н": "h", "к": "k",
-    "м": "m", "о": "o", "р": "p", "т": "t", "у": "y", "х": "x",
-    "ѕ": "s", "і": "i", "ј": "j",
-    "А": "A", "В": "B", "С": "C", "Е": "E", "Н": "H", "К": "K", "М": "M",
-    "О": "O", "Р": "P", "Т": "T", "У": "Y", "Х": "X",
-})
-
-_PORAG_SHODSTVA = 0.82   # ниже — не подставляем
-_ZAPAS_NAD_VTOROY = 0.10  # лучшая должна заметно обойти вторую
-
-
-def _norm_imya_ruki(s: str) -> str:
-    s = (s or "").strip().strip('"').strip("'").translate(_GOMOGLIFY).lower()
-    return "".join(ch for ch in s if ch.isalnum())
-
-
-def _nayti_ruku(ruki: dict, imya: str):
-    """(рука, настоящее_имя) или (None, None). Не выдумывает."""
-    ruka = ruki.get(imya)
-    if ruka:
-        return ruka, imya
-
-    tseli = list(ruki.keys())
-    if not tseli:
-        return None, None
-
-    # шаг 2: нормализованное совпадение
-    n = _norm_imya_ruki(imya)
-    for k in tseli:
-        if _norm_imya_ruki(k) == n:
-            print(f"[РУКА] ~ {imya} → понял как {k} (двойники букв)")
-            return ruki[k], k
-
-    # шаг 3: ближайшее по написанию, с порогом и запасом над второй
-    try:
-        import difflib
-        pary = sorted(
-            ((difflib.SequenceMatcher(None, n, _norm_imya_ruki(k)).ratio(), k)
-             for k in tseli), reverse=True)
-        luchshaya, vtoraya = pary[0], (pary[1] if len(pary) > 1 else (0.0, ""))
-        if luchshaya[0] >= _PORAG_SHODSTVA and \
-                (luchshaya[0] - vtoraya[0]) >= _ZAPAS_NAD_VTOROY:
-            print(f"[РУКА] ~ {imya} → понял как {luchshaya[1]} "
-                  f"({luchshaya[0]:.2f})")
-            return ruki[luchshaya[1]], luchshaya[1]
-    except Exception as e:
-        print(f"[РУКА] поиск по смыслу сорвался: {e}")
-
-    return None, None
-
-# RUKA_PO_SMYSLU_V1 - marker

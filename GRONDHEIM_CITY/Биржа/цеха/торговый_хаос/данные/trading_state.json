@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-03T19:12:23.383008",
+  "updated": "2026-09-03T23:22:31.154359",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -137,6 +137,15 @@
           "бар": "2025.10.06 00:00"
         }
       ]
+    },
+    "GBPUSD H4": {
+      "reshali_na_bare": "2025.02.03 00:00",
+      "otvet_bara": {
+        "alive": false,
+        "reason": "точки нет",
+        "changed": false,
+        "direction": null
+      }
     }
   },
   "наблюдения": {
