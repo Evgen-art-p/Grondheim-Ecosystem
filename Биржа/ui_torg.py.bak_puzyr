@@ -3481,12 +3481,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             print(f"[ПУЗЫРЬ] нажали: {w}")
                             switch_agent(w)
 
-                        # PUZYR_KAK_V_AKADEMII_V1: div, не ui.button —
-                        # у кнопки Quasar своя разметка, синее кольцо
-                        # активного агента под ней не загоралось.
-                        avatar = ui.element("div").classes(cls)
-                        avatar.on("click", _nazhali)
-                        avatar.style(style)
+                        avatar = ui.button(on_click=_nazhali).classes(cls)
+                        avatar.props("flat dense no-caps").style(style)
                         with avatar:
                             if not occupied:
                                 ui.label(old_id).style("font-size: 9px")
@@ -3936,5 +3932,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # KABINET_ZHIVYOT_PRI_GORODE_V1 - marker
 
 # POLKA_NE_DUSHIT_SVYAZ_V1 - marker
-
-# PUZYR_KAK_V_AKADEMII_V1 - marker

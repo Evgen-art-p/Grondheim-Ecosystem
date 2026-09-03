@@ -412,61 +412,14 @@ class Dvizhok:
         """Третий этаж — черновики момента. Гаснут, не набрав повтора."""
         return self._chitat_etazh(self._mayaki_path())
 
-    YARKOE_V_STOL = 6   # ярких меток в столе — тоже не резиновый склад
-
     def _metki_v_stol(self) -> list:
-        """Свежие METKI_V_STOL меток + ЯРКИЕ (YARKOE_V1) — для промпта.
-        НЕ все: контекст Биржи уже 25к символов, а метки растут всю
-        жизнь. Маленький стол + право дотянуться (MEMORY_REQUEST) —
-        дешевле и честнее по природе: живой человек тоже не держит всю
-        жизнь в голове. Но яркое (сам житель так решил, отдельной
-        строкой в разговоре) не вымывается свежестью — держится своим
-        флагом, а не местом в очереди."""
+        """Свежие METKI_V_STOL меток — для промпта. НЕ все: контекст
+        Биржи уже 25к символов, а метки растут всю жизнь. Маленький
+        стол + право дотянуться (MEMORY_REQUEST) — дешевле и честнее
+        по природе: живой человек тоже не держит всю жизнь в голове."""
         m = self.metki()
         m.sort(key=lambda x: str(x.get("когда", "")))
-        yarkie = [x for x in m if x.get("ярко")][-self.YARKOE_V_STOL:]
-        svezhie = [x for x in m if not x.get("ярко")][-self.METKI_V_STOL:]
-        return yarkie + svezhie
-
-    # ═══════════════════════════════════════════════════════
-    # YARKOE_V1 — ЖИТЕЛЬ САМ РЕШАЕТ, ЧТО ДЕРЖИТСЯ ДОЛЬШЕ
-    # ═══════════════════════════════════════════════════════
-    # Тот же приём, что MEMORY_REQUEST, только не наружу (принести), а
-    # внутрь (сохранить). Не судья повтора (Путь Зрелости, 3 раза), не
-    # рынок (verdikt_rynka) — воля жителя, в моменте разговора. Ложится
-    # в метки СРАЗУ, минуя оба обычных порога, с флагом "ярко".
-    # ═══════════════════════════════════════════════════════
-
-    def otmetit_yarkim(self, tekst: str, otkuda: str = "") -> dict:
-        tekst = (tekst or "").strip()
-        if not tekst:
-            return {"дописано": False, "причина": "пустой текст"}
-        metki = self.metki()
-        now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        for m in metki:
-            if m.get("текст") == tekst:
-                if m.get("ярко"):
-                    return {"дописано": False, "причина": "уже отмечено ярким"}
-                m["ярко"] = True
-                self._pisat_etazh(self._metki_path(), metki)
-                return {"дописано": True, "причина": "было меткой, стало яркой"}
-        metki.append({"текст": tekst, "паттерн": None, "откуда": otkuda or "сам",
-                      "когда": now_iso, "раз": 1, "ярко": True})
-        ushlo = []
-        # яркие не подставляем под обычное вытеснение по лимиту —
-        # выселяем только НЕ-яркие, старейшие сначала
-        if len(metki) > self.METKI_CAP:
-            ne_yarkie_idx = [i for i, x in enumerate(metki) if not x.get("ярко")]
-            izbytok = len(metki) - self.METKI_CAP
-            vyselit = {id(metki[i]) for i in ne_yarkie_idx[:izbytok]}
-            if vyselit:
-                ushlo = [x for x in metki if id(x) in vyselit]
-                metki = [x for x in metki if id(x) not in vyselit]
-                for old in ushlo:
-                    self._archive_zapis(old.get("текст", ""),
-                                        "метка вытеснена (лимит нажитого)")
-        self._pisat_etazh(self._metki_path(), metki)
-        return {"дописано": True, "меток": len(metki), "вытеснено": len(ushlo)}
+        return m[-self.METKI_V_STOL:]
 
     # YAKORYA_DVA_YARUSA_V1: порог повтора для перехода черновик→устойчивый.
     # То же число, что Путь Зрелости (Чертёж §4.6.2: «3 вердикта судьи»)
@@ -1194,5 +1147,3 @@ class Dvizhok:
 # UCHYOBA_NA_STOLE_V1 - marker
 
 # SVOI_SDELKI_VIDNO_V1 - marker
-
-# YARKOE_V1 - marker

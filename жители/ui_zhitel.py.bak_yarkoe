@@ -287,20 +287,6 @@ def _ubrat_memory_request(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-# YARKOE_V1: тот же приём, что MEMORY_REQUEST/MAYAK_REQUEST — только
-# внутрь, не наружу. Житель сам решает, что держится дольше обычного.
-def _izvlech_yarkoe(text: str) -> str:
-    for line in (text or "").splitlines():
-        if "ЯРКОЕ:" in line:
-            return line.split("ЯРКОЕ:", 1)[1].strip()
-    return ""
-
-
-def _ubrat_yarkoe(text: str) -> str:
-    lines = [l for l in (text or "").splitlines() if "ЯРКОЕ:" not in l]
-    return "\n".join(lines).strip()
-
-
 # PATCH_ZHITEL_MAYAK_REQUEST_V1: тот же приём, что MEMORY_REQUEST, только
 # наружу -- к Маяку Пробуждения, не внутрь себя.
 def _izvlech_mayak_request(text: str) -> str:
@@ -1481,13 +1467,6 @@ def page_zhitel(zid: str = ""):
                 "актуальные данные) — напиши отдельной строкой "
                 "MAYAK_REQUEST: <что узнать> и Маяк Пробуждения принесёт ответ."
             )
-            # YARKOE_V1: житель сам решает, что держится дольше обычного окна
-            soul += (
-                "\nЕсли что-то из разговора кажется тебе важным настолько, что "
-                "должно остаться с тобой надолго — напиши отдельной строкой "
-                "ЯРКОЕ: <что запомнить>, и это ляжет в твою память крепче "
-                "обычного, не сотрётся со временем само."
-            )
             # PATCH_PROSEV_REQUEST_V1: строка появляется, только если движок
             # реально насчитал накопленные моменты (_prosev_dostupno выше) —
             # сигнал от движка, согласие остаётся за жителем.
@@ -1508,12 +1487,6 @@ def page_zhitel(zid: str = ""):
             _mem_q = _izvlech_memory_request(reply)
             _mayak_q = _izvlech_mayak_request(reply)  # PATCH_ZHITEL_MAYAK_REQUEST_V1
             _prosev_q = _est_prosev_request(reply) if _prosev_dostupno else False  # PATCH_PROSEV_REQUEST_V1
-            _yark_q = _izvlech_yarkoe(reply)   # YARKOE_V1
-            if _yark_q and dvizhok is not None:
-                try:
-                    dvizhok.otmetit_yarkim(_yark_q, otkuda="жизнь")
-                except Exception:
-                    pass
 
             if _mayak_q:
                 # PATCH_ZHITEL_MAYAK_REQUEST_V1: наружу, к Маяку. Приоритет
@@ -1587,7 +1560,7 @@ def page_zhitel(zid: str = ""):
                 if _res_prosev.get("ok") and _res_prosev["res"].get("дописано"):
                     state["chat"].append({"role": "zhitel",
                                           "content": f"🪞 {_res_prosev['вывод'].strip()}"})
-            reply = _ubrat_prosev_request(_ubrat_mayak_request(_ubrat_memory_request(_ubrat_yarkoe(reply)))) or reply
+            reply = _ubrat_prosev_request(_ubrat_mayak_request(_ubrat_memory_request(reply))) or reply
             # PATCH_RECAP_V1: дописываем её ответ к записи, которую этот
             # же вдох уже сделал — иначе резонанс помнит только то, что
             # ей сказали, никогда то, что она сама ответила. Один вдох
@@ -1777,5 +1750,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # CHTENIE_KNIGI_V1 - marker
 
 # RUKI_DOMA_V1 - marker
-
-# YARKOE_V1 - marker

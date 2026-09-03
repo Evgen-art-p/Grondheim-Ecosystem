@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-02T00:59:40.734227",
+  "updated": "2026-09-03T19:12:23.383008",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -79,23 +79,23 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.01.30 16:00"
+    "бар": "2025.02.03 00:00"
   },
   "точки": {
     "EURUSD H4": {
-      "reshali_na_bare": "2026.01.30 16:00",
+      "reshali_na_bare": "2025.02.03 00:00",
       "otvet_bara": {
-        "alive": true,
-        "reason": "TWR нейтрален 10 бар(а) — жива, ритм замер",
-        "changed": false,
+        "alive": false,
+        "reason": "структурный слом (close): цена закрылась за 1.14968",
+        "changed": true,
         "direction": "BULL"
       },
-      "alive": true,
+      "alive": false,
       "trend_direction": "BULL",
       "zero_point_price": 1.14968,
       "rodilas_na_bare": "2025.11.21 12:00",
       "t1_status": "DETECTED",
-      "neutral_bars_count": 10,
+      "neutral_bars_count": 0,
       "barov_s_tochki": 284,
       "kray_posle": 1.20819,
       "struktura_pozadi": 112,

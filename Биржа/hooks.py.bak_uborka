@@ -350,10 +350,82 @@ def gate_hans(chain_data: dict) -> bool:
 # ХУКИ КАРТРИДЖА
 # ════════════════════════════════════════════════════════════
 
+def on_before_run(state: dict) -> dict:
+    """
+    Вызывается перед стартом цепочки.
+    Идёт в williams_core → забирает market_data → кладёт в chain_data.
 
-# UBORKA_03_09_V1: on_before_run() убрана — старый CSV/webhook-путь,
-# ни одного вызова по репо с 14.08 (бары идут через
-# rynok_novyy_bar). # {MARKER} - marker
+    Параметры из state["settings"]:
+      csv_path:   путь к CSV файлу (ШАГ 1 — бэктест)
+      symbol:     тикер ("EURUSD", "XAUUSD", ...)
+      timeframe:  таймфрейм ("D1", "H4", "H1", ...)
+      bars_limit: сколько последних баров брать (0 = все)
+      point:      _Point override (опционально)
+    """
+    settings   = state.get("settings", {})
+    csv_path   = settings.get("csv_path", "")
+    symbol     = settings.get("symbol",    "UNKNOWN")
+    timeframe  = settings.get("timeframe", "D1")
+    bars_limit = int(settings.get("bars_limit", 0))
+    point      = float(settings["point"]) if settings.get("point") else None
+
+    print(f"\n[TRADING] ⚔️  Военный Совет запускается")
+    print(f"[TRADING]    Символ: {symbol} | ТФ: {timeframe}")
+
+    # ── Рабочая память цеха: загружаем ПЕРЕД любым режимом ──
+    tstate = load_trading_state()
+    cd = state.setdefault("chain_data", {})
+    cd["history_dna"]          = tstate["iskra"].get("history_dna", "")
+    cd["prev_t1_status"]       = tstate["iskra"].get("t1_status", "NOT_FOUND")
+    cd["prev_zero_point_price"] = tstate["iskra"].get("zero_point_price")
+    cd["open_positions"]       = tstate.get("positions", [])
+    if cd["open_positions"]:
+        print(f"[STATE] 📂 Открытых позиций: {len(cd['open_positions'])}")
+    if cd["prev_t1_status"] != "NOT_FOUND":
+        print(f"[STATE] 📂 Искра помнит: t1={cd['prev_t1_status']}, "
+              f"Точка Ноль={cd['prev_zero_point_price']}")
+
+    if csv_path:
+        bars = read_mt5_csv(csv_path)
+        if bars_limit > 0:
+            bars = bars[-bars_limit:]
+    else:
+        # market_data уже передан напрямую (webhook / MT5 polling)
+        if state.get("chain_data", {}).get("market_data"):
+            print("[TRADING] 📡 market_data получен напрямую (webhook режим)")
+            return state
+        print("[TRADING] ⚠️  csv_path не задан и market_data отсутствует")
+        return state
+
+    if not bars:
+        print("[TRADING] ❌ Нет данных — Совет не стартует")
+        return state
+
+    market_data = build_market_data(bars, symbol=symbol,
+                                    timeframe=timeframe, point=point)
+    if not market_data:
+        print("[TRADING] ❌ williams_core вернул пустой результат")
+        return state
+
+    state.setdefault("chain_data", {})["market_data"] = market_data
+    # history_dna уже загружен из trading_state.json выше
+
+    # Подушка безопасности Вильямса: экстремум второго бара назад.
+    # Кладём в chain_data, чтобы _prepare_trade_setup взял оттуда.
+    cd = state.setdefault("chain_data", {})
+    if len(bars) >= 3:
+        cd["_bar_back2_low"]  = bars[-3]["low"]
+        cd["_bar_back2_high"] = bars[-3]["high"]
+
+    _settle_positions(state)          # закрытие позиций — стоп / exit_bell
+    _print_market_summary(market_data)
+
+    # ZIGZAG_CORE_V1: наблюдатель ног — параллельно, ничего не гейтит
+    _noga_ev = proverit_nogu(market_data)
+    if _noga_ev:
+        print(f"[НОГА] {_noga_ev.get('event')}: {_noga_ev}")
+
+    return state
 
 
 def on_before_agent(state: dict, agent_id: str) -> dict:

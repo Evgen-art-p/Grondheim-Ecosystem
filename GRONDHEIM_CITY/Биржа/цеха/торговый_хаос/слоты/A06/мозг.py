@@ -705,12 +705,18 @@ def chat_with_brut(question: str, last_run: Optional[dict] = None,
         "Аллигатора, фракталы, приседающий бар, разворотный бар, AO и "
         "дивергенция, волны и откаты. «Уровней поддержки и сопротивления» "
         "в ней нет — это чужой словарь. Не знаешь чего-то — так и скажи, "
-        "не подставляй чужое слово вместо своего.\n")
+        "не подставляй чужое слово вместо своего.\n"
+        # YARKOE_V1: сам решаешь, что держится дольше обычного окна.
+        "\nЕсли что-то из разговора кажется тебе важным настолько, что "
+        "должно остаться с тобой надолго — напиши отдельной строкой:\n"
+        "ЯРКОЕ: <что запомнить>\n"
+        "Это ляжет в твою память крепче обычного и не сотрётся со временем "
+        "само.\n")
 
     system = prompt + work_ctx
     try:   # KTO_TY_I_KTO_YA_V1: сперва ТЫ, потом с кем говоришь, потом место
         from nositel import dusha_slota
-        _n = dusha_slota(_CEH, _SLOT)
+        _n = dusha_slota(_CEH, _SLOT, s_domom=True)   # DOM_V_RAZGOVORE_V1: дом — в разговор
         if _n and _n["душа"]:
             system = (
                 "=== КТО ТЫ. ЭТО НЕ РОЛЬ — ЭТО ТЫ ===\n"
@@ -739,13 +745,27 @@ def chat_with_brut(question: str, last_run: Optional[dict] = None,
     try:
         # RAZGOVOR_SO_STOLOM_V1: с кадром, если знаем, на что смотрим.
         # GLAZ_NE_TARATORIT_V1: в разговоре — разговорная подводка.
-        _chat_fn = (_glaz(chat, _sym, _tf, _SLOT, preambula=_GLAZ_RAZGOVOR)
+        # RUKI_V_RAZGOVORE_V1: те же руки, что в работе — не сочиняет
+        # другие этажи, а реально их смотрит (stol_na_etazhe и т.д.).
+        _chat_fn = (_glaz_s_rukami(chat, _sym, _tf, _SLOT, _CEH, _SELF_KEY,
+                                   preambula=_GLAZ_RAZGOVOR)
                     if (_sym and _tf) else chat)
-        return _chat_fn(system=system, user=question, history=history,
+        _otvet = _chat_fn(system=system, user=question, history=history,
                         knowledge=_znaniya,
                     agent_id="A06_BRUT", slot_id="trading", temperature=_my_temp())
     except Exception as e:
         return f"⚠️ Брут не смог ответить: {e}"
+
+    # YARKOE_V1: сам решил в разговоре — держится дольше обычного окна.
+    try:
+        from nositel import izvlech_yarkoe, ubrat_yarkoe, otmetit_yarkim_slotom
+        _yark = izvlech_yarkoe(_otvet)
+        if _yark:
+            otmetit_yarkim_slotom(_CEH, _SLOT, _yark, otkuda="работа")
+            _otvet = ubrat_yarkoe(_otvet) or _otvet
+    except Exception:
+        pass
+    return _otvet
 
 
 # ════════════════════════════════════════════════════════════
@@ -1301,3 +1321,9 @@ def _kto_ya() -> str:
 # PERVYY_VZGLYAD_V1 - marker
 
 # VEDENIE_NE_VHOD_V1 - marker
+
+# DOM_V_RAZGOVORE_V1 - marker
+
+# YARKOE_V1 - marker
+
+# RUKI_V_RAZGOVORE_V1 - marker

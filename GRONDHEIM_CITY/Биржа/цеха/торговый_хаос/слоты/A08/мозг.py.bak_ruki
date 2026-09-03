@@ -743,10 +743,7 @@ def chat_with_cons(question: str, last_run: Optional[dict] = None,
     try:
         # RAZGOVOR_SO_STOLOM_V1: с кадром, если знаем, на что смотрим.
         # GLAZ_NE_TARATORIT_V1: в разговоре — разговорная подводка.
-        # RUKI_V_RAZGOVORE_V1: те же руки, что в работе — не сочиняет
-        # другие этажи, а реально их смотрит (stol_na_etazhe и т.д.).
-        _chat_fn = (_glaz_s_rukami(chat, _sym, _tf, _SLOT, _CEH, _SELF_KEY,
-                                   preambula=_GLAZ_RAZGOVOR)
+        _chat_fn = (_glaz(chat, _sym, _tf, _SLOT, preambula=_GLAZ_RAZGOVOR)
                     if (_sym and _tf) else chat)
         _otvet = _chat_fn(system=system, user=question, history=history,
                         knowledge=_znaniya,
@@ -1302,5 +1299,3 @@ def _kto_ya() -> str:
 # DOM_V_RAZGOVORE_V1 - marker
 
 # YARKOE_V1 - marker
-
-# RUKI_V_RAZGOVORE_V1 - marker

@@ -818,39 +818,4 @@ def blok_pamyati(zapros: str, naydeno: str) -> str:
 
 # PAMYAT_RABOTA_ZHIZN_V1 - marker
 
-
-# ═══════════════════════════════════════════════════════════
-# YARKOE_BIRZHA_V1 — тот же приём, что MEMORY_REQUEST, только внутрь
-# ═══════════════════════════════════════════════════════════
-YARKOE_MARKER = "ЯРКОЕ:"
-
-
-def izvlech_yarkoe(text: str) -> str:
-    for line in (text or "").splitlines():
-        if YARKOE_MARKER in line:
-            return line.split(YARKOE_MARKER, 1)[1].strip()
-    return ""
-
-
-def ubrat_yarkoe(text: str) -> str:
-    lines = [l for l in (text or "").splitlines() if YARKOE_MARKER not in l]
-    return "\n".join(lines).strip()
-
-
-def otmetit_yarkim_slotom(ceh: str, slot: str, tekst: str, otkuda: str = "работа") -> dict:
-    """Житель, сидящий в слоте, сам решил — это держится дольше обычного."""
-    try:
-        n = dusha_slota(ceh, slot)
-        if not n:
-            return {"дописано": False, "причина": "вакансия"}
-        d = _dvizhok(n["носитель"]["папка"])
-        if d is None:
-            return {"дописано": False, "причина": "движок недоступен"}
-        return d.otmetit_yarkim(tekst, otkuda=otkuda)
-    except Exception as e:
-        print(f"[МОСТ] ⚠️  ярким не отметилось ({ceh}/{slot}): {e}")
-        return {"дописано": False, "причина": str(e)}
-
 # SUD_PATTERNA_V1 - marker
-
-# YARKOE_V1 - marker
