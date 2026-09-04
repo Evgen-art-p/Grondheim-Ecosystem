@@ -201,8 +201,8 @@ def _znaniya_roli() -> str:
                 pass
     return "".join(kuski)
 STATE_DIR    = _SLOT_DIR / "данные"
-STATS_PATH   = STATE_DIR / "stats_A07.json"
-DIARY_PATH   = STATE_DIR / "diary_A07.jsonl"
+STATS_PATH   = STATE_DIR / "avan_stats.json"
+DIARY_PATH   = STATE_DIR / "diary_avan.jsonl"
 
 
 # ════════════════════════════════════════════════════════════

@@ -1,4 +1,3 @@
-# VYREZAT_KLICHKI_V1
 # GRONDHEIM_CITY/Биржа/цеха/контора/слоты/исполнитель/мозг.py
 # ─────────────────────────────────────────────────────────────
 # ЖИВОЙ ИСПОЛНИТЕЛЬ — Казначей Биржи (штаб конторы), замыкает петлю
@@ -479,7 +478,7 @@ def _build_execution_log_facts(traders: dict) -> list:
     for key in ("brut", "avan", "cons"):
         v = traders.get(key, {})
         approved = _is_real_entry(v)
-        # VASILY_ISP_WATCH_V1: засада трейдера — своя природа.
+        # VASILY_ISP_WATCH_V1: засада Консерватора — своя природа.
         # WATCH не APPROVED и не REJECTED: трейдер назвал координаты и
         # ждёт созревания структуры. Доносим action + опору, чтобы
         # приёмник (hooks._persist_trading_state) родил WATCHING.
