@@ -1269,7 +1269,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         except Exception as e:
             print(f"[ВРЕМЯ] кадр не перерисовался: {e}")
 
-    async def pokazat_kadr(put=None):
+    def pokazat_kadr(put=None):
         """Рисует кадр АКТИВНОГО ТРЕЙДЕРА и кладёт направо.
 
         VZGLYAD_KAZHDOGO_V1: раньше брали пару с полки — и на экране
@@ -1292,16 +1292,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return None
         try:
             import grafik
-            if put:
-                p = Path(put)
-            else:
-                # POKAZAT_KADR_NE_VESHAET_SERVER_V1: тот же приём,
-                # что уже спасает progon_po_istorii — рисуем не в
-                # обработчике клика, а в фоновом потоке.
-                import asyncio
-                _loop = asyncio.get_event_loop()
-                p = await _loop.run_in_executor(
-                    None, grafik.kadr, symbol, tf)
+            p = Path(put) if put else grafik.kadr(symbol, tf)
         except Exception as e:
             ui.notify(f"⚠ кадр не нарисовался: {e}", type="negative")
             return None
@@ -2530,7 +2521,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 except Exception as _ek:
                     print(f"[ПРОГОН] кадр не нарисовался: {_ek}")
                 try:
-                    await pokazat_kadr(_kadr)
+                    pokazat_kadr(_kadr)
                 except Exception:
                     pass
                 state["chat_history"].append({
@@ -2681,7 +2672,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         # PROGON_BEZ_OKNA_V1: показать — дело окна,
                         # а его может уже не быть. Кадр всё равно
                         # сохранён и попадёт в отчёт.
-                        await pokazat_kadr(_kadr)
+                        pokazat_kadr(_kadr)
                     except Exception as _ep:
                         print(f"[ПРОГОН] кадр не показан ({_ep}) — "
                               f"он в отчёте")
@@ -3034,7 +3025,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         else:
             print("[ПУЗЫРЬ] ⚠ подсветка: пузырьков в avatars_ref НЕТ")
 
-    async def switch_agent(agent_id: str):
+    def switch_agent(agent_id: str):
         row = _agent_row(roster, agent_id)
         if row and not row["resident"]:
             ui.notify("Вакансия — сюда ещё никого не наняли", type="warning")
@@ -3067,7 +3058,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         # Кадр рисуется из готовых баров, модель не зовётся: это
         # по-прежнему бесплатный просмотр для Шефа.
         try:
-            await pokazat_kadr()
+            pokazat_kadr()
         except Exception as _e:
             print(f"[ВЗГЛЯД] кадр не показался: {_e}")
 
@@ -3613,9 +3604,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             if av:
                                 style = f"background-image:url('{av}');"
 
-                        async def _nazhali(w=old_id):
+                        def _nazhali(w=old_id):
                             print(f"[ПУЗЫРЬ] нажали: {w}")
-                            await switch_agent(w)
+                            switch_agent(w)
 
                         avatar = ui.button(on_click=_nazhali).classes(cls)
                         avatar.props("flat dense no-caps").style(style)
@@ -4086,5 +4077,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # PUZYR_PRYAMO_V_BRAUZER_V5 - marker
 
 # PUZYR_BEZ_GETHTMLELEMENT_V6 - marker
-
-# POKAZAT_KADR_NE_VESHAET_SERVER_V1 - marker
