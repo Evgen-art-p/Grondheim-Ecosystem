@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-04T01:40:08.076962",
+  "updated": "2026-09-06T01:46:25.292292",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -11,9 +11,8 @@
   },
   "positions": [],
   "feed": {
-    "mode": "tester",
-    "symbol": "EURUSD",
-    "момент": "2025.02.03 04:00"
+    "mode": "real",
+    "symbol": "EURUSD"
   },
   "brut": {
     "verdict": "REJECTED",
@@ -79,7 +78,7 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.05.25 20:00"
+    "бар": "2025.02.03 00:00"
   },
   "точки": {
     "EURUSD H4": {
@@ -139,7 +138,7 @@
       ]
     },
     "GBPUSD H4": {
-      "reshali_na_bare": "2026.05.25 20:00",
+      "reshali_na_bare": "2025.02.03 00:00",
       "otvet_bara": {
         "alive": false,
         "reason": "точки нет",
