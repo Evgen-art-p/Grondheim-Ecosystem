@@ -789,10 +789,6 @@ class Dvizhok:
             "откуда": "учитель",
             "когда": now_iso,
             "раз": 1,
-            # VSPOMNIT_METKI_POLYA_V1 (05.09): без контекста запись
-            # невидима для vspomnit(..., o_chyom="работа") — а поправка
-            # учителя трейдеру по определению рабочее знание.
-            "контекст": "работа",
         })
         if len(metki) > self.METKI_CAP:
             for old in metki[:len(metki) - self.METKI_CAP]:
@@ -960,27 +956,18 @@ class Dvizhok:
                 elif nuzhno.startswith("жизн"):
                     if k not in ZHIZNENNYE_KONTEKSTY:
                         continue
-            # VSPOMNIT_METKI_POLYA_V1 (05.09): метки/маяки хранят
-            # содержание под ключом "текст", а sensory/resonance/
-            # archive — под "факт". Без фоллбэка любая метка и маяк
-            # давали score=0 независимо от темы запроса — весь опыт
-            # (рыночный, учебный, поправки учителя) был невидим для
-            # vspomnit(), хотя реально лежал на диске.
-            fakt = str(z.get("текст") or z.get("факт") or "").lower()
+            fakt = str(z.get("факт", "")).lower()
             score = sum(1 for w in slova if w in fakt)
             if iskomyj_tonus and z.get("тонус") == iskomyj_tonus:
                 score += 2   # PAMYAT_ISKRA_V1: тон совпал — весит как два слова
             if score > 0:
-                # VSPOMNIT_METKI_POLYA_V1: та же история со временем —
-                # метки/маяки пишут "когда", не "ts".
-                naydeno.append((score, str(z.get("ts") or z.get("когда") or ""), z))
+                naydeno.append((score, str(z.get("ts", "")), z))
         if not naydeno:
             return ""
         naydeno.sort(key=lambda x: (x[0], x[1]), reverse=True)
         stroki = []
         for _, _, z in naydeno[:limit]:
-            # VSPOMNIT_METKI_POLYA_V1: тот же фоллбэк для вывода даты.
-            ts = str(z.get("ts") or z.get("когда") or "")[:10]
+            ts = str(z.get("ts", ""))[:10]
             # UCHYOBA_NA_STOLE_V1: откуда след — чтобы трейдер не
             # путал прожитое с прочитанным. «Я это ПРОБОВАЛ» и «я об
             # этом ЧИТАЛ» — разного веса, и решать ему.
@@ -990,9 +977,7 @@ class Dvizhok:
                 otkuda = " · учёба"
             elif k in PRAKTIKA_KONTEKSTY:
                 otkuda = " · практика"
-            # VSPOMNIT_METKI_POLYA_V1: и здесь тот же фоллбэк —
-            # метки/маяки хранят текст под «текст», не «факт».
-            stroki.append(f"— [{ts}{otkuda}] {z.get('текст') or z.get('факт') or ''}")
+            stroki.append(f"— [{ts}{otkuda}] {z.get('факт', '')}")
         return "\n".join(stroki)
 
     # ═══════════════════════════════════════════════════════
