@@ -215,14 +215,11 @@ def proverit_tochku(md: dict, para: str = "") -> dict:
     mfi_type = (md.get("mfi", {}) or {}).get("type")
 
     # ── 1. подпитка той же стороной — ПРОВЕРЯЕТСЯ ПЕРВОЙ ──
-    # MFI_ORIENTIR_NE_SIGNAL_V1 (05.09): было условием — новый некрон
-    # той же стороны без GREEN/SQUAT проваливался в структурный слом,
-    # хотя сам факт нового более глубокого некрона уже делает его
-    # новой версией точки (живой пример «квадрата» 17-19.08 — оба
-    # некрона честно прошли формулу, MFI при этом ни при чём). Слово
-    # Шефа: «MFI — ориентир, не сигнал». Убрано как ворота; MFI
-    # остаётся в reason фактом на столе, не условием жизни точки.
-    if wf.get("bdb_dir") == napr:
+    # Порядок важен (найдено тестом при отладке патча): пробой
+    # zero_point_price свежим баром той же стороны с GREEN/SQUAT —
+    # это НЕ слом, это новая, более глубокая версия ТОЙ ЖЕ точки.
+    # Слом — только когда пробой ничем не подтверждён.
+    if wf.get("bdb_dir") == napr and mfi_type in ("GREEN", "SQUAT"):
         novaya_zp = None
         if napr == "BULL" and low is not None:
             novaya_zp = min(zp, low)      # новое, более глубокое дно
@@ -233,7 +230,7 @@ def proverit_tochku(md: dict, para: str = "") -> dict:
             isk["rodilas_na_bare"]  = md.get("bar_time")
             save_trading_state(tstate)
             return {"alive": True,
-                    "reason": f"подпитка (MFI {mfi_type}): точка обновлена → {novaya_zp}",
+                    "reason": f"подпитка {mfi_type}: точка обновлена → {novaya_zp}",
                     "changed": True, "direction": napr}   # TOCHKA_NAPRAVLENIE_V1
 
     # ── 2. структурный слом — СТРОГО ПО CLOSE (KALIBROVKA_POROGA_V1):
