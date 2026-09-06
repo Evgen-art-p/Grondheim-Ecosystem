@@ -851,19 +851,6 @@ def page_akademia() -> None:
 
     def on_model_change(e):
         state["model"] = e.value
-        # SVOYA_MODEL_POLEM_V1: раньше здесь модель менялась только на
-        # экране, а реально звалась всегда одна и та же (глобальная
-        # _CURRENT_MODEL из llm.py, общая с Биржей).
-        try:
-            import sys as _sys
-            from pathlib import Path as _Path
-            _repo = _Path(__file__).resolve().parent.parent
-            if str(_repo / "Биржа") not in _sys.path:
-                _sys.path.insert(0, str(_repo / "Биржа"))
-            import llm as _llm
-            _llm.set_model(e.value)
-        except Exception as _ex:
-            print(f"[МОДЕЛЬ] не переключилась: {_ex}")
 
     chat_ref   = {"element": None}
     viewer_ref = {"element": None}
@@ -1896,36 +1883,6 @@ def page_akademia() -> None:
                         _opts = {m["id"]: f'{m["name"]} ({m["price"]})' for m in MODELS_CATALOG}
                         ui.select(_opts, value=state["model"], on_change=on_model_change) \
                             .props('dense borderless dark options-dense').style("min-width:180px;")
-                    svoya_model_ref: dict = {"element": None}
-
-                    def _svoya_model(_e=None):
-                        val = (svoya_model_ref["element"].value or "").strip()
-                        if not val:
-                            return
-                        state["model"] = val
-                        try:
-                            import sys as _sys
-                            from pathlib import Path as _Path
-                            _repo = _Path(__file__).resolve().parent.parent
-                            if str(_repo / "Биржа") not in _sys.path:
-                                _sys.path.insert(0, str(_repo / "Биржа"))
-                            import llm as _llm
-                            _llm.set_model(val)
-                            ui.notify(f"модель: {val}", type="info")
-                        except Exception as _ex:
-                            print(f"[МОДЕЛЬ] не переключилась: {_ex}")
-
-                    with ui.row().style("gap:2px; align-items:center; margin-right:6px;"):
-                        svoya_model_ref["element"] = ui.input(
-                            placeholder="своя модель…").props(
-                            'dense borderless dark').style(
-                            "min-width:150px; color:rgba(255,255,255,0.85); "
-                            "font-size:11px; background:rgba(255,255,255,0.06); "
-                            "border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:2px 8px;")
-                        svoya_model_ref["element"].on("keydown.enter", _svoya_model)
-                        ui.button("➜", on_click=_svoya_model).props("flat dense size=sm").style(
-                            "color:rgba(0,255,136,0.75);")
-
                     _b1 = ui.element("div").classes("akad-btn")
                     _b1.on("click", lambda: idti_v_biblioteku())
                     with _b1:
@@ -2067,5 +2024,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # CHTENIE_KNIGI_V1 - marker
 
 # UCHEBNIK_UCHENIKU_V1 - marker
-
-# SVOYA_MODEL_POLEM_V1 - marker
