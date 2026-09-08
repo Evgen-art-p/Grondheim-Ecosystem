@@ -54,37 +54,12 @@ RABOCHIE_KONTEKSTY = PRAKTIKA_KONTEKSTY + UCHEBNYE_KONTEKSTY
 SLOY_KONTEKST = {"archive": "учёба", "resonance": "общение"}
 
 
-# METKA_KAK_KLYUCH_V1: голос «откуда» → контекст.
-# У МЕТОК И МАЯКОВ НЕТ НИ «контекста», НИ «слоя» — только «откуда»
-# («рынок», «сделка», «учёба», «работа», профессия). Значит при любом
-# запросе с фильтром они давали пустой контекст и отсеивались ЦЕЛИКОМ.
-# А мост с Биржи всегда спрашивает рабочее — то есть ВЕСЬ торговый
-# опыт жителя был невидим для его же рабочего поиска. Он копил то,
-# чего потом не мог найти.
-# Чиним ЧТЕНИЕ, а не запись: голос «рынок» остаётся голосом «рынок» —
-# он нарочно отличает «что мне сказал рынок» от «что я вынес в
-# монтажной», и житель вправе их столкнуть.
-OTKUDA_KONTEKST = {
-    "рынок": "работа", "сделка": "работа", "работа": "работа",
-    "факт": "факт",
-    "учёба": "учёба", "учеба": "учёба",
-    "общение": "общение", "дом": "дом", "жизнь": "дом",
-}
-
-
 def kontekst_zapisi(z: dict) -> str:
-    """Откуда след. Нет пометки — берём по слою; потом по голосу
-    «откуда» (метки и маяки живут только им); sensory неизвестен."""
+    """Откуда след. Нет пометки — берём по слою; sensory неизвестен."""
     k = str(z.get("контекст") or "").strip()
     if k:
         return k
-    k = SLOY_KONTEKST.get(str(z.get("слой") or ""), "")
-    if k:
-        return k
-    # METKA_KAK_KLYUCH_V1: последняя опора — голос вывода. Незнакомый
-    # голос (профессия, «сам») оставляем пустым, как было: гадать не
-    # будем, лучше честное «следа нет».
-    return OTKUDA_KONTEKST.get(str(z.get("откуда") or "").strip().lower(), "")
+    return SLOY_KONTEKST.get(str(z.get("слой") or ""), "")
 
 
 # контекст входа → в какой слой осядет (Закон Слоёв)
@@ -433,67 +408,6 @@ class Dvizhok:
         """Весь второй этаж — нажитое. Список объектов."""
         return self._chitat_etazh(self._metki_path())
 
-    # ═══════════════════════════════════════════════════════
-    # METKA_KAK_KLYUCH_V1 — МЕТКА КАК ЗАКЛАДКА
-    # ═══════════════════════════════════════════════════════
-    # Ключ собирается из двух половин. ОБЩАЯ у всех одинакова — когда,
-    # откуда, от кого: по ней город может спросить поперёк жителей, и
-    # слово будет значить одно и то же для всех. ЛИЧНАЯ — ярлыки его
-    # словами и важность его глазами: тут все разные, и мы не лезем.
-    #
-    # Зачем вообще. Поиск в vspomnit буквальный, по словам: спросил
-    # «дивергенция» — нашёл только там, где так и написано; записал
-    # «диверы» — не нашёл никогда. Закладка чинит именно это: у записи
-    # появляется ИМЯ, и спрашивают по имени, а не по угаданному слову.
-    #
-    # Почему не заняли «паттерн». Он служебный: на нём висит суд рынка
-    # (подтверждений/опровержений). Трогать его — рисковать тем, что
-    # уже работает.
-    # ═══════════════════════════════════════════════════════
-
-    YARLYK_VES = 5   # совпадение по закладке весит как пять слов запроса
-
-    @staticmethod
-    def _yarlyki_spisok(x) -> list:
-        """Ярлыки в порядок: строка через запятую или список — в чистый
-        список коротких слов нижним регистром, без повторов."""
-        if not x:
-            return []
-        syrye = x.split(",") if isinstance(x, str) else list(x)
-        out = []
-        for y in syrye:
-            y = str(y).strip().lower().strip("#")
-            if y and y not in out:
-                out.append(y[:40])
-        return out[:8]
-
-    def _prishit_klyuch(self, zapis: dict, yarlyki=None, ot_kogo: str = ""):
-        """Дописать закладочную часть ключа в запись. ДОБАВЛЯЕТ ярлыки к
-        тем, что были, а не затирает: житель мог повесить одно вчера и
-        другое сегодня, и оба верны."""
-        novye = self._yarlyki_spisok(yarlyki)
-        if novye:
-            bylo = self._yarlyki_spisok(zapis.get("ярлыки"))
-            zapis["ярлыки"] = self._yarlyki_spisok(bylo + novye)
-        if (ot_kogo or "").strip():
-            zapis["от кого"] = str(ot_kogo).strip()[:40]
-        return zapis
-
-    def yarlyki(self) -> list:
-        """Его собственный словарь закладок: [(ярлык, сколько раз), ...],
-        частые первыми.
-
-        Нужно затем, что свободный ярлык через месяц расплодится в
-        двести вариантов вразнобой — «дивер», «диверы», «дивергенция».
-        Перед тем как вешать новый, житель смотрит, что у него уже
-        есть, и берёт оттуда."""
-        schyot = {}
-        for etazh in (self.metki(), self.mayaki()):
-            for z in etazh:
-                for y in self._yarlyki_spisok(z.get("ярлыки")):
-                    schyot[y] = schyot.get(y, 0) + 1
-        return sorted(schyot.items(), key=lambda kv: (-kv[1], kv[0]))
-
     def mayaki(self) -> list:
         """Третий этаж — черновики момента. Гаснут, не набрав повтора."""
         return self._chitat_etazh(self._mayaki_path())
@@ -523,11 +437,7 @@ class Dvizhok:
     # в метки СРАЗУ, минуя оба обычных порога, с флагом "ярко".
     # ═══════════════════════════════════════════════════════
 
-    def otmetit_yarkim(self, tekst: str, otkuda: str = "",
-                       yarlyki=None, ot_kogo: str = "") -> dict:
-        # METKA_KAK_KLYUCH_V1: сюда же вешается закладочная часть ключа.
-        # Даже если метка уже была яркой — ярлык и имя дописываем: это
-        # не повтор знания, это уточнение ключа к нему.
+    def otmetit_yarkim(self, tekst: str, otkuda: str = "") -> dict:
         tekst = (tekst or "").strip()
         if not tekst:
             return {"дописано": False, "причина": "пустой текст"}
@@ -535,20 +445,13 @@ class Dvizhok:
         now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
         for m in metki:
             if m.get("текст") == tekst:
-                _bylo_yarkim = bool(m.get("ярко"))
-                self._prishit_klyuch(m, yarlyki, ot_kogo)
-                if _bylo_yarkim:
-                    if yarlyki or ot_kogo:
-                        self._pisat_etazh(self._metki_path(), metki)
-                        return {"дописано": True, "причина": "ключ уточнён"}
+                if m.get("ярко"):
                     return {"дописано": False, "причина": "уже отмечено ярким"}
                 m["ярко"] = True
                 self._pisat_etazh(self._metki_path(), metki)
                 return {"дописано": True, "причина": "было меткой, стало яркой"}
-        _novaya = {"текст": tekst, "паттерн": None, "откуда": otkuda or "сам",
-                   "когда": now_iso, "раз": 1, "ярко": True}
-        self._prishit_klyuch(_novaya, yarlyki, ot_kogo)
-        metki.append(_novaya)
+        metki.append({"текст": tekst, "паттерн": None, "откуда": otkuda or "сам",
+                      "когда": now_iso, "раз": 1, "ярко": True})
         ushlo = []
         # яркие не подставляем под обычное вытеснение по лимиту —
         # выселяем только НЕ-яркие, старейшие сначала
@@ -600,11 +503,7 @@ class Dvizhok:
 
     def dopisat_vyvod(self, vyvod: str, limit: int = 10,
                       pattern: Optional[str] = None,   # PYLANCE_GIGIENA_V1
-                      otkuda: str = "рынок",
-                      yarlyki=None, ot_kogo: str = "") -> dict:
-        # METKA_KAK_KLYUCH_V1: yarlyki — свои слова жителя (закладка),
-        # ot_kogo — ИМЯ того, от кого знание. Оба необязательны: не
-        # передали — всё как было.
+                      otkuda: str = "рынок") -> dict:
         """Дописывает ВЫВОД — нога Опыта. TRI_ETAZHA_V1.
 
         ⚠ ПИШЕТ В МЕТКИ (2_метки/metki.json), НЕ в Anchor_Points.
@@ -652,10 +551,8 @@ class Dvizhok:
                     "причина": "это его род (Anchor_Points), не нажитое"}
 
         def _lech_metkoy(txt, patt, raz):
-            _m = {"текст": txt, "паттерн": patt, "откуда": otkuda,
-                  "когда": now_iso, "раз": raz}
-            self._prishit_klyuch(_m, yarlyki, ot_kogo)   # METKA_KAK_KLYUCH_V1
-            metki.append(_m)
+            metki.append({"текст": txt, "паттерн": patt, "откуда": otkuda,
+                          "когда": now_iso, "раз": raz})
             ushlo = []
             if len(metki) > self.METKI_CAP:
                 ushlo = metki[:len(metki) - self.METKI_CAP]
@@ -685,12 +582,10 @@ class Dvizhok:
             found["текст"] = vyvod
             found["последний_раз"] = now_iso
             found["откуда"] = otkuda
-            self._prishit_klyuch(found, yarlyki, ot_kogo)  # METKA_KAK_KLYUCH_V1
             raz = found["раз"]
         else:
             found = {"текст": vyvod, "паттерн": pattern, "откуда": otkuda,
                      "раз": 1, "первый_раз": now_iso, "последний_раз": now_iso}
-            self._prishit_klyuch(found, yarlyki, ot_kogo)  # METKA_KAK_KLYUCH_V1
             mayaki.append(found)
             raz = 1
 
@@ -1073,22 +968,6 @@ class Dvizhok:
             # vspomnit(), хотя реально лежал на диске.
             fakt = str(z.get("текст") or z.get("факт") or "").lower()
             score = sum(1 for w in slova if w in fakt)
-            # METKA_KAK_KLYUCH_V1: попадание по ЗАКЛАДКЕ весит как пять
-            # слов. Поиск тут буквальный, по словам, и потому слепой к
-            # синонимам: «дивергенция» не находит «диверы». Ярлык — это
-            # имя, которое житель дал сам; спрос по имени должен бить
-            # словесную кашу, иначе закладка бесполезна.
-            _yarl = self._yarlyki_spisok(z.get("ярлыки"))
-            if _yarl:
-                for _y in _yarl:
-                    if _y in low_zapros or any(_y == w for w in slova):
-                        score += self.YARLYK_VES
-                        break
-            # и по ИМЕНИ источника: «что мне говорил Шеф» — законный
-            # вопрос к своей памяти.
-            _ot = str(z.get("от кого") or "").lower()
-            if _ot and _ot in low_zapros:
-                score += self.YARLYK_VES
             if iskomyj_tonus and z.get("тонус") == iskomyj_tonus:
                 score += 2   # PAMYAT_ISKRA_V1: тон совпал — весит как два слова
             if score > 0:
@@ -1113,19 +992,7 @@ class Dvizhok:
                 otkuda = " · практика"
             # VSPOMNIT_METKI_POLYA_V1: и здесь тот же фоллбэк —
             # метки/маяки хранят текст под «текст», не «факт».
-            # METKA_KAK_KLYUCH_V1: закладка и имя — в выдачу. Знание
-            # одно, а вес источника разный, и решает этот вес сам
-            # житель. Значит он должен ВИДЕТЬ, от кого след.
-            _yarl = self._yarlyki_spisok(z.get("ярлыки"))
-            _hvost = ""
-            if _yarl:
-                _hvost += " ⟨" + ", ".join(_yarl) + "⟩"
-            _ot = str(z.get("от кого") or "").strip()
-            if _ot:
-                _hvost += f" · от: {_ot}"
-            stroki.append(
-                f"— [{ts}{otkuda}] "
-                f"{z.get('текст') or z.get('факт') or ''}{_hvost}")
+            stroki.append(f"— [{ts}{otkuda}] {z.get('текст') or z.get('факт') or ''}")
         return "\n".join(stroki)
 
     # ═══════════════════════════════════════════════════════
@@ -1344,5 +1211,3 @@ class Dvizhok:
 # SVOI_SDELKI_VIDNO_V1 - marker
 
 # YARKOE_V1 - marker
-
-# METKA_KAK_KLYUCH_V1 - marker

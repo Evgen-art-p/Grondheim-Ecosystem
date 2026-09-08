@@ -31,12 +31,7 @@ from datetime import datetime
 from pathlib import Path
 
 _KOREN = Path(__file__).resolve().parent.parent
-# KARTINA_HOD_V1: «попыток» — сколько раз подряд не взяло на ЭТОМ ходе.
-# Правило трёх («три раза не вышло — подумай, тот ли ход видишь») в
-# бумаге было, а считать было нечем: трейдер каждый раз начинал с
-# чистого листа. Новый ход обнуляет счётчик сам.
-PUSTO = {"точка_ноль": None, "волна": None, "откат": None, "заметки": [],
-         "попыток": 0}
+PUSTO = {"точка_ноль": None, "волна": None, "откат": None, "заметки": []}
 
 
 def _put(ceh: str, slot: str) -> Path:
@@ -69,16 +64,8 @@ def chitat(ceh: str, slot: str, symbol: str) -> dict:
 
 
 def obyavit(ceh: str, slot: str, symbol: str, chto: str, kto: str = "",
-            cena=None, bar: str = "", pochemu: str = "",
-            napravlenie: str = "", etazh: str = "") -> tuple:
-    """Записать в СВОЮ картину. Ничего ни у кого не спрашиваем.
-
-    KARTINA_HOD_V1: napravlenie и etazh — куда идёт ход и на каком
-    этаже трейдер его обвёл. Второе важнее, чем кажется: конец хода
-    ищут на ТОМ ЖЕ этаже, где сам ход и обвели, а раньше это нигде не
-    хранилось — через несколько баров трейдер уже не знал, откуда
-    смотрел.
-    """
+            cena=None, bar: str = "", pochemu: str = "") -> tuple:
+    """Записать в СВОЮ картину. Ничего ни у кого не спрашиваем."""
     s = (symbol or "").strip().upper()
     if not s:
         return False, "не сказано, по какому инструменту"
@@ -88,14 +75,6 @@ def obyavit(ceh: str, slot: str, symbol: str, chto: str, kto: str = "",
     seychas = datetime.now().isoformat(timespec="seconds")
     zapis = {"кто": kto or slot, "почему": (pochemu or "").strip()[:500],
              "когда": seychas}
-    # KARTINA_HOD_V1: куда идёт и откуда смотрим.
-    _napr = (napravlenie or "").strip().upper()
-    if _napr in ("LONG", "ВВЕРХ", "ВВЕРX", "UP"):
-        zapis["направление"] = "LONG"
-    elif _napr in ("SHORT", "ВНИЗ", "DOWN"):
-        zapis["направление"] = "SHORT"
-    if (etazh or "").strip():
-        zapis["этаж"] = str(etazh).strip().upper()[:6]
     if cena is not None:
         try:
             zapis["цена"] = float(cena)
@@ -104,20 +83,11 @@ def obyavit(ceh: str, slot: str, symbol: str, chto: str, kto: str = "",
     if bar:
         zapis["бар"] = bar
 
-    if chto in ("точка_ноль", "точка ноль", "ноль", "ход"):
-        # KARTINA_HOD_V1: «ход» — то же самое на языке новой задачи.
-        # Начало хода И ЕСТЬ точка ноль, отдельно её искать не надо.
-        # Новый ход — значит и волна, и откат другие, И СЧЁТЧИК
-        # ПОПЫТОК С НУЛЯ: три неудачи считаются по одному ходу, а не
-        # копятся через всю жизнь.
+    if chto in ("точка_ноль", "точка ноль", "ноль"):
+        # новая точка ноль — значит и волна, и откат другие
         moya = json.loads(json.dumps(PUSTO))
         moya["точка_ноль"] = zapis
-        _hvost = ""
-        if zapis.get("направление"):
-            _hvost += f" {zapis['направление']}"
-        if zapis.get("этаж"):
-            _hvost += f" на {zapis['этаж']}"
-        itog = f"твой ход {s}{_hvost}: от {zapis.get('цена')} ({bar})"
+        itog = f"твоя точка ноль {s}: {zapis.get('цена')} ({bar})"
     elif chto in ("волна", "первая_волна", "первая волна"):
         if not moya.get("точка_ноль"):
             return False, ("в твоей картине нет точки ноль — от чего "
@@ -129,25 +99,6 @@ def obyavit(ceh: str, slot: str, symbol: str, chto: str, kto: str = "",
             return False, "в твоей картине нет волны — откатывать нечему"
         moya["откат"] = zapis
         itog = f"ты видишь откат к своей волне {s}"
-    elif chto in ("попытка", "не_взяло", "не взяло"):
-        # KARTINA_HOD_V1: не взяло — засчитали. Это НЕ ошибка и не
-        # приговор: значит ход ещё не кончился. Но три подряд — уже
-        # вопрос не к рынку, а к себе: тот ли ход я обвёл, на том ли
-        # этаже смотрю.
-        if not moya.get("точка_ноль"):
-            return False, ("в твоей картине нет хода — что пробовал-то? "
-                           "назови сперва ход")
-        moya["попыток"] = int(moya.get("попыток") or 0) + 1
-        moya.setdefault("заметки", []).append(zapis)
-        moya["заметки"] = moya["заметки"][-10:]
-        _n = moya["попыток"]
-        if _n >= 3:
-            itog = (f"попытка {_n} по этому ходу. Три подряд — "
-                    "остановись и подумай: тот ли ход ты видишь и на "
-                    "том ли этаже смотришь.")
-        else:
-            itog = (f"попытка {_n} по этому ходу. Не взяло — значит ход "
-                    "ещё не кончился, жди следующего места.")
     elif chto in ("заметка", "мысль"):
         moya.setdefault("заметки", []).append(zapis)
         moya["заметки"] = moya["заметки"][-10:]
@@ -156,8 +107,8 @@ def obyavit(ceh: str, slot: str, symbol: str, chto: str, kto: str = "",
         moya = json.loads(json.dumps(PUSTO))
         itog = f"твоя картина {s} чистая"
     else:
-        return False, (f"не понял «{chto}». Можно: ход (он же точка_ноль), "
-                       f"волна, откат, попытка, заметка, стереть")
+        return False, (f"не понял «{chto}». Можно: точка_ноль, волна, "
+                       f"откат, заметка, стереть")
 
     vsya[s] = moya
     _sohranit(ceh, slot, vsya)
@@ -173,15 +124,7 @@ def slovami(ceh: str, slot: str, symbol: str) -> str:
         L.append("Пусто. Ты ещё не называл(а) свою точку ноль —")
         L.append("посмотри и назови, если видишь конец коррекции.")
     else:
-        # KARTINA_HOD_V1: сперва сам ход — куда идёт и откуда смотрим.
-        _shapka = "ТВОЙ ХОД:"
-        if tn.get("направление"):
-            _shapka += f" {tn['направление']}"
-        if tn.get("этаж"):
-            _shapka += f" · обвёл на {tn['этаж']} (там же и конец ищи)"
-        L.append(_shapka)
-        L.append(f"НАЧАЛО ХОДА (точка ноль): {tn.get('цена')} "
-                 f"на баре {tn.get('бар')}")
+        L.append(f"ТОЧКА НОЛЬ: {tn.get('цена')} на баре {tn.get('бар')}")
         if tn.get("почему"):
             L.append(f"   ты сказал(а): {tn['почему']}")
         v = d.get("волна")
@@ -192,13 +135,6 @@ def slovami(ceh: str, slot: str, symbol: str) -> str:
         L.append("ОТКАТ: видишь" if o else "ОТКАТ: не назван")
         if o and o.get("почему"):
             L.append(f"   ты сказал(а): {o['почему']}")
-    # KARTINA_HOD_V1: попытки по этому ходу — вслух, а на третьей прямо.
-    _pop = int(d.get("попыток") or 0)
-    if _pop:
-        L.append(f"ПОПЫТОК ПО ЭТОМУ ХОДУ: {_pop}")
-        if _pop >= 3:
-            L.append("   Три подряд не взяло. Остановись и проверь: "
-                     "тот ли ход ты видишь и на том ли этаже смотришь.")
     zam = d.get("заметки") or []
     if zam:
         L.append("ТВОИ ЗАМЕТКИ:")
@@ -208,5 +144,3 @@ def slovami(ceh: str, slot: str, symbol: str) -> str:
 
 
 # KARTINA_SVOYA_V1 - marker
-
-# KARTINA_HOD_V1 - marker

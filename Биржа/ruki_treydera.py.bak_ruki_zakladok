@@ -128,25 +128,18 @@ def shema(rabochiy_etazh: str = "") -> list:
             "name": "zapisat_v_kartinu",
             "description": (
                 "Записать в СВОЮ картину то, что ты увидел(а). "
-                "«ход» — вот это движение я работаю, началось здесь "
-                "(скажи направление и этаж, на котором обвёл: конец "
-                "будешь искать там же). «попытка» — не взяло; это не "
-                "ошибка, но три подряд — повод проверить, тот ли ход. "
-                "«волна» — от начала пошло движение и дошло досюда. "
+                "«точка_ноль» — здесь, по-твоему, кончилась коррекция. "
+                "«волна» — от неё пошло движение и дошло досюда. "
                 "«откат» — к своей волне видишь откат. "
                 "«заметка» — мысль на память. «стереть» — твоя структура "
                 "сломалась. Это ТВОЁ чтение: сосед может видеть иначе, и "
                 "это нормально."),
             "parameters": {"type": "object", "properties": {
                 "что": {"type": "string",
-                        "description": "ход | попытка | волна | откат | заметка | стереть"},
+                        "description": "точка_ноль | волна | откат | заметка | стереть"},
                 "цена": {"type": "number", "description": "если есть"},
                 "бар": {"type": "string",
                         "description": "дата бара, вид 2025.05.05 20:00"},
-                "направление": {"type": "string",
-                                "description": "для хода: LONG или SHORT"},
-                "этаж": {"type": "string",
-                         "description": "для хода: на каком этаже ты его обвёл, например H1"},
                 "почему": {"type": "string",
                            "description": "что именно ты увидел(а) — своими словами"}},
                 "required": ["что"]}}},
@@ -184,47 +177,6 @@ def shema(rabochiy_etazh: str = "") -> list:
                 "сколько": {"type": "integer",
                             "description": "по умолчанию 5"}},
                 "required": []}}},
-        # ── RUKI_ZAKLADOK_V1: метка как закладка ────────────────
-        {"type": "function", "function": {
-            "name": "moi_yarlyki",
-            "description": (
-                "ТВОЙ СЛОВАРЬ ЗАКЛАДОК: какие ярлыки ты уже вешал и "
-                "сколько раз. Смотри ПЕРЕД тем, как вешать новый, и "
-                "бери из этого списка: иначе через месяц у тебя будет "
-                "и «дивер», и «диверы», и «дивергенция» — и ты сам не "
-                "вспомнишь, под каким что лежит."),
-            "parameters": {"type": "object", "properties": {},
-                           "required": []}}},
-        {"type": "function", "function": {
-            "name": "zapomnit_s_yarlykom",
-            "description": (
-                "Запомнить что-то надолго и повесить на это ЗАКЛАДКУ — "
-                "чтобы потом достать по имени, а не угадывать слова. "
-                "Вешай, когда сам считаешь важным: держится дольше "
-                "обычного. Ярлыки — твои слова, сперва глянь "
-                "moi_yarlyki. «От кого» — имя, если знание пришло от "
-                "человека: знание одно, а чьё оно, решать тебе."),
-            "parameters": {"type": "object", "properties": {
-                "что": {"type": "string",
-                        "description": "сам вывод, одно-два предложения"},
-                "ярлыки": {"type": "string",
-                           "description": "через запятую, например «дивер, ao»"},
-                "от_кого": {"type": "string",
-                            "description": "необязательно: имя, например «Шеф»"}},
-                "required": ["что"]}}},
-        {"type": "function", "function": {
-            "name": "vspomnit_po_yarlyku",
-            "description": (
-                "Достать из своей памяти по закладке. Один ярлык даёт "
-                "широко, два сужают, три бьют в точку. Можно спросить и "
-                "по имени — «что мне говорил Шеф». Пусто — значит следа "
-                "нет, и это честный ответ."),
-            "parameters": {"type": "object", "properties": {
-                "по": {"type": "string",
-                       "description": "ярлык, несколько ярлыков или имя"},
-                "сколько": {"type": "integer",
-                            "description": "по умолчанию 6"}},
-                "required": ["по"]}}},
     ]
 
 
@@ -409,9 +361,7 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
                 ceh, slot, symbol, str(args.get("что", "")),
                 kto=(imya_zhitelya or slot), cena=args.get("цена"),
                 bar=str(args.get("бар", "")),
-                pochemu=str(args.get("почему", "")),
-                napravlenie=str(args.get("направление", "")),   # KARTINA_HOD_V1
-                etazh=str(args.get("этаж", "")))
+                pochemu=str(args.get("почему", "")))
         except Exception as e:
             return f"записать не вышло: {e}"
         print(f"[КАРТИНА] {'✓' if ok else '✗'} {imya_zhitelya or slot}: {m}")
@@ -451,76 +401,7 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
         except Exception as e:
             return f"дисциплины не прочитались: {e}"
 
-    # ── RUKI_ZAKLADOK_V1: закладки ──────────────────────────
-    # Ключ метки: ОБЩЕЕ (когда, откуда, от кого) + ЛИЧНОЕ (ярлыки
-    # своими словами, важность своими глазами). Общее нужно, чтобы
-    # город понимал всех одинаково; личное — чтобы жители отличались.
-    def _dusha():
-        """Движок памяти того, кто сидит в этом слоте."""
-        from nositel import dusha_slota, _dvizhok
-        n = dusha_slota(ceh, slot)
-        if not n:
-            return None
-        return _dvizhok(n["носитель"]["папка"])
-
-    def _moi_yarlyki(args: dict) -> str:
-        try:
-            d = _dusha()
-            if d is None:
-                return "память недоступна"
-            spisok = d.yarlyki()
-        except Exception as e:
-            return f"словарь не прочитался: {e}"
-        if not spisok:
-            return ("Закладок пока нет. Первую заведёшь сам — "
-                    "zapomnit_s_yarlykom.")
-        return ("=== ТВОИ ЗАКЛАДКИ ===\n"
-                + "\n".join(f"  {y} · {n}" for y, n in spisok[:40])
-                + "\nБери отсюда, новый заводи только если правда новый.")
-
-    def _zapomnit_s_yarlykom(args: dict) -> str:
-        chto = str(args.get("что") or "").strip()
-        if not chto:
-            return "нечего запоминать: пусто"
-        try:
-            d = _dusha()
-            if d is None:
-                return "память недоступна"
-            res = d.otmetit_yarkim(
-                chto[:600], otkuda="работа",
-                yarlyki=args.get("ярлыки"),
-                ot_kogo=str(args.get("от_кого") or "").strip())
-        except TypeError:
-            return ("движок ещё не знает закладок — нужен "
-                    "postavit_metku_klyuchom.py")
-        except Exception as e:
-            return f"не запомнилось: {e}"
-        if res.get("дописано"):
-            _y = str(args.get("ярлыки") or "").strip()
-            return "Запомнил." + (f" Закладка: {_y}." if _y else "")
-        return "Не записано: " + str(res.get("причина", "—"))
-
-    def _vspomnit_po_yarlyku(args: dict) -> str:
-        po = str(args.get("по") or "").strip()
-        if not po:
-            return "по чему вспоминать не сказано"
-        try:
-            d = _dusha()
-            if d is None:
-                return "память недоступна"
-            n = int(args.get("сколько") or 6)
-            nayd = d.vspomnit(po, limit=n, o_chyom="работа") or ""
-        except Exception as e:
-            return f"вспомнить не вышло: {e}"
-        if not nayd:
-            return (f"По «{po}» следа нет. Такого с тобой не было — или "
-                    "ты не повесил закладку. Решай без этого.")
-        return f"=== ПО ЗАКЛАДКЕ «{po}» ===\n{nayd}"
-
-    itog = {"moi_yarlyki": _moi_yarlyki,                # RUKI_ZAKLADOK_V1
-            "zapomnit_s_yarlykom": _zapomnit_s_yarlykom,
-            "vspomnit_po_yarlyku": _vspomnit_po_yarlyku,
-            "stol_na_etazhe": _stol,
+    itog = {"stol_na_etazhe": _stol,
             "izmerit_volnu": _volna,
             "moy_dnevnik": _dnevnik,
             "uchebnik": _uchebnik,          # UCHEBNIK_DISCIPLINY_V1
@@ -578,7 +459,3 @@ def _ruka_mayaka_ruki(kto: str) -> dict:
 # UCHEBNIK_DISCIPLINY_V1 - marker
 
 # YASHCHIK_STOLA_V1 - marker
-
-# RUKI_ZAKLADOK_V1 - marker
-
-# KARTINA_HOD_V1 - marker

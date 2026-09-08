@@ -128,25 +128,18 @@ def shema(rabochiy_etazh: str = "") -> list:
             "name": "zapisat_v_kartinu",
             "description": (
                 "Записать в СВОЮ картину то, что ты увидел(а). "
-                "«ход» — вот это движение я работаю, началось здесь "
-                "(скажи направление и этаж, на котором обвёл: конец "
-                "будешь искать там же). «попытка» — не взяло; это не "
-                "ошибка, но три подряд — повод проверить, тот ли ход. "
-                "«волна» — от начала пошло движение и дошло досюда. "
+                "«точка_ноль» — здесь, по-твоему, кончилась коррекция. "
+                "«волна» — от неё пошло движение и дошло досюда. "
                 "«откат» — к своей волне видишь откат. "
                 "«заметка» — мысль на память. «стереть» — твоя структура "
                 "сломалась. Это ТВОЁ чтение: сосед может видеть иначе, и "
                 "это нормально."),
             "parameters": {"type": "object", "properties": {
                 "что": {"type": "string",
-                        "description": "ход | попытка | волна | откат | заметка | стереть"},
+                        "description": "точка_ноль | волна | откат | заметка | стереть"},
                 "цена": {"type": "number", "description": "если есть"},
                 "бар": {"type": "string",
                         "description": "дата бара, вид 2025.05.05 20:00"},
-                "направление": {"type": "string",
-                                "description": "для хода: LONG или SHORT"},
-                "этаж": {"type": "string",
-                         "description": "для хода: на каком этаже ты его обвёл, например H1"},
                 "почему": {"type": "string",
                            "description": "что именно ты увидел(а) — своими словами"}},
                 "required": ["что"]}}},
@@ -409,9 +402,7 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
                 ceh, slot, symbol, str(args.get("что", "")),
                 kto=(imya_zhitelya or slot), cena=args.get("цена"),
                 bar=str(args.get("бар", "")),
-                pochemu=str(args.get("почему", "")),
-                napravlenie=str(args.get("направление", "")),   # KARTINA_HOD_V1
-                etazh=str(args.get("этаж", "")))
+                pochemu=str(args.get("почему", "")))
         except Exception as e:
             return f"записать не вышло: {e}"
         print(f"[КАРТИНА] {'✓' if ok else '✗'} {imya_zhitelya or slot}: {m}")
@@ -580,5 +571,3 @@ def _ruka_mayaka_ruki(kto: str) -> dict:
 # YASHCHIK_STOLA_V1 - marker
 
 # RUKI_ZAKLADOK_V1 - marker
-
-# KARTINA_HOD_V1 - marker
