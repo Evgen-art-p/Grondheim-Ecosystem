@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-08T03:51:17.177362",
+  "updated": "2026-09-08T13:53:24.259504",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -209,11 +209,5 @@
     "выход": 1.17192,
     "pnl": -2e-05
   },
-  "zhivoy_kadr": {
-    "put": "C:\\Users\\Евгений\\Desktop\\Grondheim-Ecosystem\\Биржа\\кадры\\GBPUSD_H1_20260908_035116_552338.png",
-    "podpis": "GBPUSD H1, последние 140 баров",
-    "chey": "Илья",
-    "slot": "A06",
-    "ruka": "pokazat_etazh"
-  }
+  "zhivoy_kadr": {}
 }

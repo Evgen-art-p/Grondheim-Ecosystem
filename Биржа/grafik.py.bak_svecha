@@ -44,35 +44,17 @@ BAROV_V_KADRE = 140
 SDVIG_JAW, SDVIG_TEETH, SDVIG_LIPS = 8, 5, 3
 
 # ── Цвета. Аллигатор канонический: челюсть синяя, зубы красные,
-# губы зелёные.
-#
-# SVECHA_VIDNA_V1 — БЫЛО СЛОМАНО, И ЭТО ЛОМАЛО ВСЁ ОСТАЛЬНОЕ.
-# Фон был #fdf6e3 (кремовый), растущая свеча #f2f2f2 (почти
-# белая). Контраст растущей к фону — 1.04 к 1, то есть
-# НЕОТЛИЧИМО; падающей — 10.5 к 1. Растущую свечу держал только
-# волосяной контур, а провайдеры уменьшают кадр перед показом
-# модели, и контур смазывался. Модель видела тёмную массу на
-# падениях и пустоту на росте — и путала направление. Так было
-# у ВСЕХ моделей сразу: Haiku, Gemini, Sonnet.
-#
-# Почему именно тёмный фон. Одна свеча обязана быть светлой,
-# другая тёмной — иначе не отличить рост от падения. Светлая
-# свеча требует тёмного фона. Это ровно то, как устроен
-# терминал Шефа, который он читает без труда.
-#   растущая к фону 17.2:1 · падающая 3.9:1 · между собой 4.5:1
-C_UP = "#f5f5f5"      # растущая — светлая
-C_DOWN = "#cf3b2c"    # падающая — красная
-C_KRAY = "#0a0d11"    # контур: тёмный, отделяет свечу от свечи
-C_JAW = "#4d9bff"     # челюсть синяя — светлее под тёмный фон
-C_TEETH = "#ff5c5c"   # зубы красные
-C_LIPS = "#3ddc6b"    # губы зелёные
-C_FON = "#0e1218"     # было #fdf6e3 — см. выше
-C_AO_UP = "#3ddc6b"
-C_AO_DOWN = "#ff5c5c"
-# SVECHA_VIDNA_V1: сетка, подписи и рамки — под тёмный фон.
-C_SETKA = "#ffffff1f"
-C_TEKST = "#e6edf3"
-C_RAMKA = "#ffffff40"
+# губы зелёные. Свечи — не «красное/зелёное» в тон линиям, иначе
+# сливается: тёмная и светлая.
+C_UP = "#f2f2f2"
+C_DOWN = "#3a3a3a"
+C_KRAY = "#1a1a1a"
+C_JAW = "#1f6feb"
+C_TEETH = "#d92626"
+C_LIPS = "#2ea043"
+C_FON = "#fdf6e3"
+C_AO_UP = "#2ea043"
+C_AO_DOWN = "#d92626"
 # PRISEDAYUSHCHIE_NA_KADRE_V1: строчка приседающих внизу кадра.
 # Красный — как в терминале Шефа (BW MFI, красный столбик).
 C_SQUAT = "#d92626"
@@ -136,24 +118,17 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
         o, h, l, c = bar["open"], bar["high"], bar["low"], bar["close"]
         rastet = c >= o
         # тень
-        # SVECHA_VIDNA_V1: тень светлая — на тёмном фоне тёмная
-        # тень пропадала вместе с размахом бара.
-        ax.plot([i, i], [l, h], color="#9fb0c0", linewidth=1.3,
-                zorder=2)
+        ax.plot([i, i], [l, h], color=C_KRAY, linewidth=1.1, zorder=2)
         # тело; доджи рисуем полоской, иначе бар пропадает
         telo = abs(c - o)
-        # SVECHA_VIDNA_V1: линии толще. Волосяная линия не
-        # переживает уменьшение кадра на стороне провайдера —
-        # смазывается в фон вместе со всей свечой. Доджи рисуем
-        # светлым, иначе на тёмном фоне бар пропадает совсем.
         if telo < (h - l) * 0.02:
             ax.plot([i - shirina / 2, i + shirina / 2], [c, c],
-                    color=C_UP, linewidth=2.2, zorder=3)
+                    color=C_KRAY, linewidth=1.4, zorder=3)
         else:
             ax.add_patch(plt.Rectangle(
                 (i - shirina / 2, min(o, c)), shirina, telo,
                 facecolor=C_UP if rastet else C_DOWN,
-                edgecolor=C_KRAY, linewidth=1.6, zorder=3))
+                edgecolor=C_KRAY, linewidth=0.9, zorder=3))
 
     # Аллигатор — толсто, это главные линии кадра
     for ryad, cvet, imya in ((jaw, C_JAW, "Челюсть"),
@@ -267,7 +242,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
             print(f"[КАДР] приседающие не нарисовались: {_e_sq}")
 
     ax.set_facecolor(C_FON)
-    ax.grid(True, color=C_SETKA, linewidth=0.8)   # SVECHA_VIDNA_V1
+    ax.grid(True, color="#00000012", linewidth=0.8)
     # правее последней свечи оставляем место под вынос линий
     ax.set_xlim(-1, n + SDVIG_JAW + 1)
     # легенда снаружи справа — в углу она закрывала свечи
@@ -275,11 +250,11 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
               bbox_to_anchor=(1.005, 1.0), borderaxespad=0)
     zag = f"{symbol} {timeframe}".strip()
     if zag:
-        ax.set_title(zag, fontsize=15, loc="left", color=C_TEKST)
+        ax.set_title(zag, fontsize=15, loc="left", color="#222")
     ax.yaxis.set_major_locator(MaxNLocator(nbins=9))
-    ax.tick_params(labelsize=10, colors=C_TEKST)   # SVECHA_VIDNA_V1
+    ax.tick_params(labelsize=10)
     for s in ax.spines.values():
-        s.set_color(C_RAMKA)
+        s.set_color("#00000030")
 
     # AO — знак и форма важнее величины
     xs = [i for i, v in enumerate(ao) if v is not None]
@@ -288,14 +263,13 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
         cveta = [C_AO_UP if (k == 0 or ys[k] >= ys[k - 1]) else C_AO_DOWN
                  for k in range(len(ys))]
         axo.bar(xs, ys, color=cveta, width=0.7, zorder=3)
-    # SVECHA_VIDNA_V1: нулевая линия и подписи — под тёмный фон.
-    axo.axhline(0, color="#ffffff66", linewidth=1.3, zorder=2)
+    axo.axhline(0, color="#00000055", linewidth=1.1, zorder=2)
     axo.set_facecolor(C_FON)
-    axo.grid(True, color=C_SETKA, linewidth=0.8)
-    axo.set_ylabel("AO", fontsize=11, color=C_TEKST)
-    axo.tick_params(labelsize=9, colors=C_TEKST)
+    axo.grid(True, color="#00000012", linewidth=0.8)
+    axo.set_ylabel("AO", fontsize=11)
+    axo.tick_params(labelsize=9)
     for s in axo.spines.values():
-        s.set_color(C_RAMKA)
+        s.set_color("#00000030")
 
     # Подписи времени — редко: частые превращаются в кашу
     shag = max(1, n // 8)
@@ -323,23 +297,6 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
                 _f.unlink(missing_ok=True)
         except Exception:
             pass
-    # SVECHA_VIDNA_V1: КОНТРОЛЬНАЯ МЕТКА. Код из двух букв и двух
-    # цифр, новый при каждой отрисовке. Его нет ни на столе, ни в
-    # промпте, ни в знаниях — ТОЛЬКО на картинке. Спроси трейдера
-    # «какой код в левом верхнем углу кадра?»: назвал — видит,
-    # не назвал — не видит, и никакие цвета этого не объяснят.
-    try:
-        import random as _rnd
-        _bukvy = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
-        _kod = (_rnd.choice(_bukvy) + _rnd.choice(_bukvy)
-                + f'{_rnd.randint(10, 99)}')
-        fig.text(0.012, 0.985, _kod, ha='left', va='top',
-                 fontsize=18, color='#ffd866', family='monospace',
-                 fontweight='bold', zorder=20)
-        print(f'[КАДР] контрольная метка: {_kod}')
-    except Exception as _e_kod:
-        print(f'[КАДР] метка не встала: {_e_kod}')
-
     kuda = Path(kuda)
     kuda.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(kuda, facecolor=C_FON, bbox_inches="tight")
@@ -396,5 +353,3 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
 # TOLKO_ZAKRYTYE_V1 - marker
 
 # PRISEDAYUSHCHIE_NA_KADRE_V1 - marker
-
-# SVECHA_VIDNA_V1 - marker
