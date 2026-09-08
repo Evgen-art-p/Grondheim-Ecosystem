@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-08T13:53:24.259504",
+  "updated": "2026-09-08T15:49:17.955491",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -12,7 +12,7 @@
   "positions": [],
   "feed": {
     "mode": "real",
-    "symbol": "EURUSD"
+    "symbol": "USDCNH"
   },
   "brut": {
     "verdict": "REJECTED",
@@ -209,5 +209,11 @@
     "выход": 1.17192,
     "pnl": -2e-05
   },
-  "zhivoy_kadr": {}
+  "zhivoy_kadr": {
+    "put": "C:\\Users\\Евгений\\Desktop\\Grondheim-Ecosystem\\Биржа\\кадры\\USDCNH_H1_20260908_154917_018481.png",
+    "podpis": "USDCNH H1, последние 140 баров",
+    "chey": "Илья",
+    "slot": "A06",
+    "ruka": "pokazat_etazh"
+  }
 }
