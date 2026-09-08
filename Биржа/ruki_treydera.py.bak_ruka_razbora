@@ -169,17 +169,6 @@ def shema(rabochiy_etazh: str = "") -> list:
                                "description": "необязательно: сузить поиск"}},
                 "required": ["о_чём"]}}},
         {"type": "function", "function": {
-            "name": "razbor_struktury",
-            "description": (
-                "Разметка волн: номера, три места входа по риску, "
-                "отношения между волнами. ЭТО ИНСТРУМЕНТ ВЕДЕНИЯ, а не "
-                "входа. Зови, когда ты УЖЕ В РЫНКЕ и хочешь прикинуть, "
-                "где ты в структуре и сколько ещё можно пройти. Перед "
-                "входом это не нужно: там вопрос один — кончился ход "
-                "или нет."),
-            "parameters": {"type": "object", "properties": {},
-                           "required": []}}},
-        {"type": "function", "function": {
             "name": "chemu_uchili",
             "description": (
                 "Какие дисциплины и сколько рисунков есть в Академии. "
@@ -528,36 +517,7 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
                     "ты не повесил закладку. Решай без этого.")
         return f"=== ПО ЗАКЛАДКЕ «{po}» ===\n{nayd}"
 
-    def _razbor_struktury(args: dict) -> str:
-        """RUKA_RAZBORA_V1: полка ВЕДЕНИЯ. Лежит в подпапке
-        знания/ведение/ и потому НЕ грузится с остальными знаниями на
-        каждом взгляде — загрузчик берёт только файлы папки, подпапки
-        пропускает. Достаётся рукой, когда трейдер уже в рынке.
-
-        Слово Шефа 08.09: «он из дальнейшего разбора, когда уже вошёл и
-        видит, что правильно идёт, может определить, где он зашёл в
-        своей структуре, и дальше спланировать, сколько пройти можно».
-        """
-        try:
-            _koren = Path(__file__).resolve().parent.parent
-            _p = (_koren / "GRONDHEIM_CITY" / "Биржа" / "цеха" / ceh
-                  / "слоты" / slot / "знания" / "ведение")
-            if not _p.exists():
-                return "полки ведения нет"
-            _kuski = []
-            for f in sorted(_p.iterdir()):
-                if f.is_file() and f.suffix.lower() in (".md", ".txt"):
-                    _kuski.append(f"\n\n===== {f.stem} =====\n"
-                                  + f.read_text(encoding="utf-8"))
-            if not _kuski:
-                return "полка ведения пуста"
-            return ("=== РАЗБОР СТРУКТУРЫ (для ведения, не для входа) ==="
-                    + "".join(_kuski)[:6000])
-        except Exception as e:
-            return f"разбор не прочитался: {e}"
-
-    itog = {"razbor_struktury": _razbor_struktury,      # RUKA_RAZBORA_V1
-            "moi_yarlyki": _moi_yarlyki,                # RUKI_ZAKLADOK_V1
+    itog = {"moi_yarlyki": _moi_yarlyki,                # RUKI_ZAKLADOK_V1
             "zapomnit_s_yarlykom": _zapomnit_s_yarlykom,
             "vspomnit_po_yarlyku": _vspomnit_po_yarlyku,
             "stol_na_etazhe": _stol,
@@ -622,5 +582,3 @@ def _ruka_mayaka_ruki(kto: str) -> dict:
 # RUKI_ZAKLADOK_V1 - marker
 
 # KARTINA_HOD_V1 - marker
-
-# RUKA_RAZBORA_V1 - marker
