@@ -55,17 +55,13 @@ C_LIPS = "#2ea043"
 C_FON = "#fdf6e3"
 C_AO_UP = "#2ea043"
 C_AO_DOWN = "#d92626"
-# PRISEDAYUSHCHIE_NA_KADRE_V1: строчка приседающих внизу кадра.
-# Красный — как в терминале Шефа (BW MFI, красный столбик).
-C_SQUAT = "#d92626"
 
 
 def narisovat(bars: list, alligator: dict, ao_series: list,
               symbol: str = "", timeframe: str = "",
               kuda: Optional[Path] = None,
               barov: int = BAROV_V_KADRE,
-              fraktaly: Optional[dict] = None,
-              prisedayushchie: Optional[list] = None) -> Optional[Path]:
+              fraktaly: Optional[dict] = None) -> Optional[Path]:
     """Рисует кадр и возвращает путь к PNG. Нет matplotlib — вернёт None.
 
     bars       — список баров как их отдаёт feed_source
@@ -210,37 +206,6 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
     except Exception as _e_rb:
         print(f"[КАДР] разворотники не нарисовались: {_e_rb}")
 
-    # PRISEDAYUSHCHIE_NA_KADRE_V1: строчка приседающих вдоль низа.
-    # Не второе окно и не гистограмма объёма — просто отметка, ГДЕ
-    # рынок присел. Смысл ей придаёт место: на дне после падения —
-    # упёрся в пол, на потолке — толкают, а не растёт, в середине
-    # хода — вдох. Кадр кладёт факт, вывод делает смотрящий.
-    # Совпадение с разворотником отмечать отдельно не нужно: кружок
-    # окажется под тем же баром, где жёлтая стрелка.
-    if prisedayushchie:
-        try:
-            _sdvig_sq = len(bars) - n
-            _nizy = [x['low'] for x in b]
-            _razmah_sq = max(x['high'] for x in b) - min(_nizy)
-            _stroka_y = min(_nizy) - _razmah_sq * 0.045
-            _xs_sq = []
-            for _s in prisedayushchie:
-                _i = _s.get('bar_index')
-                if _i is None:
-                    continue
-                _k = _i - _sdvig_sq
-                if 0 <= _k < n:
-                    _xs_sq.append(_k)
-            if _xs_sq:
-                ax.plot(_xs_sq, [_stroka_y] * len(_xs_sq),
-                        linestyle='none', marker='o',
-                        markerfacecolor=C_SQUAT,
-                        markeredgecolor=C_SQUAT,
-                        markersize=4.5, zorder=5,
-                        label='приседающий')
-        except Exception as _e_sq:
-            print(f"[КАДР] приседающие не нарисовались: {_e_sq}")
-
     ax.set_facecolor(C_FON)
     ax.grid(True, color="#00000012", linewidth=0.8)
     # правее последней свечи оставляем место под вынос линий
@@ -317,7 +282,7 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
         sys.path.insert(0, str(p))
     from feed_source import bars as source_bars
     from williams_core import (compute_alligator, compute_ao_series,
-                               detect_fractals, detect_squat_bars)
+                               detect_fractals)
 
     bs, point = source_bars(symbol, timeframe, count=max(400, barov + 60))
     # TOLKO_ZAKRYTYE_V1: кадр рисуем по тем же барам, по которым считан
@@ -335,21 +300,11 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
     al = compute_alligator(highs, lows, point=point)
     ao = compute_ao_series(highs, lows)
     fr = detect_fractals(bs)
-    # PRISEDAYUSHCHIE_NA_KADRE_V1: считаем ЯДРОМ, не своей формулой.
-    # detect_squat_bars — канон BWMFI: объём вырос, MFI упал.
-    # Второй счёт той же сущности в рисовалке = вторая правда.
-    try:
-        _sq = detect_squat_bars(bs, point=point).get('all') or []
-    except Exception as _e_sq:
-        print(f"[КАДР] приседающие не посчитались: {_e_sq}")
-        _sq = []
     return narisovat(bs, al, ao, symbol, timeframe, kuda=kuda, barov=barov,
-                     fraktaly=fr, prisedayushchie=_sq)
+                     fraktaly=fr)
 
 # KADR_I_VAKANSIYA_V1 - marker
 
 # RB_NA_KADRE_V1 - marker
 
 # TOLKO_ZAKRYTYE_V1 - marker
-
-# PRISEDAYUSHCHIE_NA_KADRE_V1 - marker

@@ -157,31 +157,6 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
     RUKI_TREYDERA_V1. Не вышло с руками — падаем на обычный глаз, а
     не молчим: зрение важнее рук.
     """
-    # ZHIVOY_KADR_V1: крючок после каждой руки. Ловит только ответы
-    # вида "[КАДР: путь] инструмент этаж" и кладёт их на общую площадь
-    # города, чтобы кабинет показал Шефу ТОТ ЖЕ этаж, на который
-    # трейдер сходил руками. Ничего не считает и не решает.
-    def _zhivoy_kadr_kryuchok(_imya, _args, _otvet):
-        try:
-            s = str(_otvet or "")
-            if not s.startswith("[КАДР: "):
-                return
-            _put = s[7:s.index("]")]
-            _podpis = s[s.index("]") + 1:].strip()[:120]
-            from hooks import load_trading_state, save_trading_state
-            _t = load_trading_state()
-            _t["zhivoy_kadr"] = {
-                "put": _put,
-                "podpis": _podpis,
-                "chey": _kto_ya() or slot,
-                "slot": slot,
-                "ruka": str(_imya),
-            }
-            save_trading_state(_t)
-            print(f"[ЖИВОЙ КАДР] {slot} посмотрел: {_podpis}")
-        except Exception as _e_zk:
-            print(f"[ЖИВОЙ КАДР] не запомнился ({_e_zk}) — не беда")
-
     def obertka(system="", user="", knowledge="", **kw):
         put = None
         try:
@@ -211,7 +186,6 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
                                        imya_zhitelya=_kto_ya()),
                     history=kw.get("history"),
                     temperature=kw.get("temperature"),
-                    on_tool_call=_zhivoy_kadr_kryuchok,   # ZHIVOY_KADR_V1
                     agent_id=kw.get("agent_id", slot),
                     slot_id=kw.get("slot_id", slot))
             except Exception as e:
@@ -1337,5 +1311,3 @@ def _kto_ya() -> str:
 # YARKOE_V1 - marker
 
 # RUKI_V_RAZGOVORE_V1 - marker
-
-# ZHIVOY_KADR_V1 - marker

@@ -1008,45 +1008,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
     except Exception as _e_tmr:
         print(f"[КАБИНЕТ] лента не догоняет ({_e_tmr}) — не беда")
 
-    # ZHIVOY_KADR_V1: панель показывает ТО, НА ЧТО СМОТРИТ ТРЕЙДЕР.
-    # Раньше кадр всегда был про назначенный этаж места, а когда
-    # трейдер уходил руками на другой — Шеф этого не видел вовсе, и
-    # сверить его слова было не с чем. Тот же приём, что у ленты выше:
-    # раз в секунду смотрим на площадь города, не появился ли новый.
-    _zhivoy_vidno = {"put": None}
-
-    def _dognat_zhivoy_kadr():
-        try:
-            if not kadr_ref["element"]:
-                return
-            from hooks import load_trading_state
-            zk = (load_trading_state() or {}).get("zhivoy_kadr") or {}
-            put = zk.get("put")
-            if not put or put == _zhivoy_vidno["put"]:
-                return
-            p = Path(put)
-            if not p.exists():
-                return
-            _zhivoy_vidno["put"] = put
-            kadr_ref["element"].clear()
-            with kadr_ref["element"]:
-                ui.image(str(p)).style(
-                    "width:100%; height:100%; object-fit:contain; "
-                    "flex:1; min-height:0;")
-                _chey = zk.get("chey") or zk.get("slot") or "трейдер"
-                _pod = zk.get("podpis") or ""
-                ui.label(f"🖐 {_chey} смотрит рукой · {_pod}").style(
-                    "color:rgba(224,160,32,0.9); font-size:11px; "
-                    "letter-spacing:0.06em; padding-top:6px; "
-                    "flex-shrink:0; width:100%; text-align:center;")
-        except Exception:
-            pass
-
-    try:
-        ui.timer(1.0, _dognat_zhivoy_kadr)
-    except Exception as _e_zk:
-        print(f"[КАБИНЕТ] живой кадр не догоняет ({_e_zk}) — не беда")
-
     # ── KABINET_GRAFIK_V1: кадр ──────────────────────────────
     def _aktivnyy_rynok() -> tuple:
         """Что сейчас на полке: символ и рабочий этаж.
@@ -1348,18 +1309,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             ui.notify("⚠ кадр не нарисовался (нет matplotlib или баров)",
                       type="warning")
             return None
-        # ZHIVOY_KADR_V1: Шеф смотрит сам — значит живой кадр трейдера
-        # больше не показываем поверх, пока трейдер не сходит рукой
-        # заново. Иначе таймер перерисует панель через секунду.
-        try:
-            from hooks import load_trading_state, save_trading_state
-            _t_zk = load_trading_state()
-            if _t_zk.get("zhivoy_kadr"):
-                _t_zk["zhivoy_kadr"] = {}
-                save_trading_state(_t_zk)
-            _zhivoy_vidno["put"] = None
-        except Exception:
-            pass
         kadr_ref["element"].clear()
         with kadr_ref["element"]:
             # KADR_NA_VES_KVADRAT_V1: тянемся на всю клетку, но БЕЗ
@@ -4162,5 +4111,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # POKAZAT_KADR_NE_VESHAET_SERVER_V1 - marker
 
 # SVOYA_MODEL_POLEM_V1 - marker
-
-# ZHIVOY_KADR_V1 - marker

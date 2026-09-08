@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-07T02:53:03.326581",
+  "updated": "2026-09-08T03:51:17.177362",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -12,7 +12,7 @@
   "positions": [],
   "feed": {
     "mode": "real",
-    "symbol": "XAUUSD"
+    "symbol": "EURUSD"
   },
   "brut": {
     "verdict": "REJECTED",
@@ -208,5 +208,12 @@
     "причина": "EXIT_BELL",
     "выход": 1.17192,
     "pnl": -2e-05
+  },
+  "zhivoy_kadr": {
+    "put": "C:\\Users\\Евгений\\Desktop\\Grondheim-Ecosystem\\Биржа\\кадры\\GBPUSD_H1_20260908_035116_552338.png",
+    "podpis": "GBPUSD H1, последние 140 баров",
+    "chey": "Илья",
+    "slot": "A06",
+    "ruka": "pokazat_etazh"
   }
 }
