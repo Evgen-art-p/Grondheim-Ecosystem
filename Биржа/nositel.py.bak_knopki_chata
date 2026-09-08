@@ -462,7 +462,7 @@ def zapisat_vyvod(magic, vyvod: str, pnl_r=None, limit: int = 10) -> dict:
     try:
         res = d.dopisat_vyvod(vyvod, limit=limit,
                               pattern=_klyuch_trader(vyvod),
-                              otkuda="работа")  # CHAT_KNOPKI_I_OSMYSLIT_V1: было «рынок» — а рабочими считаются «работа» и «факт», и собственные выводы трейдера рабочим поиском НЕ находились   # DVER_V_METKI_V1: голос вывода назван   # YAKORYA_DVA_YARUSA_V1
+                              otkuda="рынок")   # DVER_V_METKI_V1: голос вывода назван   # YAKORYA_DVA_YARUSA_V1
     except AttributeError:
         print("[МОСТ] ⚠️  в dvizhok нет dopisat_vyvod — "
               "нужен patch_dvizhok_stol_chisto_vyvod_v1")
@@ -707,7 +707,7 @@ def zapisat_vyvod_pare(ceh: str, slot: str, vyvod: str,
     try:
         res = d.dopisat_vyvod(vyvod, limit=limit,
                               pattern=_klyuch_sensora(vyvod),
-                              otkuda="работа")  # CHAT_KNOPKI_I_OSMYSLIT_V1: было «рынок» — а рабочими считаются «работа» и «факт», и собственные выводы трейдера рабочим поиском НЕ находились   # DVER_V_METKI_V1: голос вывода назван   # YAKORYA_DVA_YARUSA_V1
+                              otkuda="рынок")   # DVER_V_METKI_V1: голос вывода назван   # YAKORYA_DVA_YARUSA_V1
     except AttributeError:
         return {"дописано": False, "причина": "нет руки опыта"}
 
@@ -854,5 +854,3 @@ def otmetit_yarkim_slotom(ceh: str, slot: str, tekst: str, otkuda: str = "раб
 # SUD_PATTERNA_V1 - marker
 
 # YARKOE_V1 - marker
-
-# CHAT_KNOPKI_I_OSMYSLIT_V1 - marker

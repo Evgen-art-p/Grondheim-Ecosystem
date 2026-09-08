@@ -3531,167 +3531,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         ui.notify("Очищено", type="info")
 
     # ── чат с активным агентом ───────────────────────────────
-    # ═══ CHAT_KNOPKI_I_OSMYSLIT_V1 ═══
-    # Сохранить / достать — тем же способом и с тем же именем файла,
-    # что в кабинете Брата: один город, одна привычка.
-    _CHATY_DIR = Path(__file__).resolve().parent / "чаты"
-
-    def _sohranit_chat():
-        if not state.get("chat_history"):
-            ui.notify("Разговор пустой — нечего сохранять", type="warning")
-            return
-        try:
-            import json
-            from datetime import datetime as _dt
-            _CHATY_DIR.mkdir(parents=True, exist_ok=True)
-            ts = _dt.now().strftime("%Y-%m-%d_%H-%M-%S")
-            fp = _CHATY_DIR / f"чат_{ts}.json"
-            fp.write_text(json.dumps(state["chat_history"],
-                                     ensure_ascii=False, indent=2),
-                          encoding="utf-8")
-            ui.notify(f"💾 сохранено: {fp.name}", type="positive")
-        except Exception as e:
-            ui.notify(f"не сохранилось: {e}", type="negative")
-
-    def _dostat_chat():
-        try:
-            files = sorted(_CHATY_DIR.glob("чат_*.json"), reverse=True) \
-                if _CHATY_DIR.exists() else []
-        except Exception:
-            files = []
-        if not files:
-            ui.notify("Сохранённых разговоров нет", type="warning")
-            return
-        with ui.dialog() as _dlg, ui.card().style(
-                "background:#0d1117;border:1px solid rgba(255,255,255,0.12);"
-                "border-radius:16px;min-width:340px;padding:20px;"):
-            ui.html('<div style="color:rgba(255,255,255,0.9);font-weight:700;'
-                    'font-size:0.9rem;margin-bottom:14px;letter-spacing:0.08em;">'
-                    '📂 ВЫБЕРИ РАЗГОВОР</div>')
-            for fp in files[:20]:
-                def _zagruzit(f=fp):
-                    try:
-                        import json
-                        state["chat_history"] = json.loads(
-                            f.read_text(encoding="utf-8"))
-                        update_chat_display()
-                        _dlg.close()
-                        ui.notify(f"📂 загружен: {f.name}", type="positive")
-                    except Exception as e:
-                        ui.notify(f"не загрузилось: {e}", type="negative")
-                ui.button(fp.stem.replace("чат_", ""),
-                          on_click=_zagruzit).props("flat no-caps").style(
-                    "width:100%;text-align:left;font-family:monospace;"
-                    "font-size:0.78rem;color:rgba(255,255,255,0.75);"
-                    "padding:8px 12px;border-radius:8px;"
-                    "background:rgba(255,255,255,0.04);margin-bottom:4px;")
-            ui.button("отмена", on_click=_dlg.close).props("flat").style(
-                "margin-top:10px;color:rgba(255,255,255,0.4);font-size:0.75rem;")
-        _dlg.open()
-
-    def _ochistit_razgovor():
-        """Чистит ТОЛЬКО ленту разговора. История сделок — своя кнопка
-        наверху, её этот веник не трогает. Нужно при смене модели:
-        новая не должна получать разговор, который вела предыдущая,
-        иначе подхватит чужой голос и чужие выводы."""
-        n = len(state.get("chat_history") or [])
-        if not n:
-            ui.notify("Разговор и так пуст", type="info")
-            return
-        with ui.dialog() as _dlg, ui.card().style(
-                "background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);"):
-            ui.label(f"Очистить разговор? ({n} сообщений)").style(
-                "font-weight:700;color:rgba(255,255,255,0.9);font-size:14px;")
-            ui.label("История сделок не пострадает — у неё своя кнопка "
-                     "наверху. Сохранённые разговоры тоже останутся.").style(
-                "color:rgba(255,255,255,0.55);font-size:12px;max-width:340px;")
-            with ui.row():
-                ui.button("отмена", on_click=_dlg.close).props("flat")
-
-                def _da():
-                    state["chat_history"] = []
-                    update_chat_display()
-                    _dlg.close()
-                    ui.notify("🧹 разговор очищен", type="positive")
-                ui.button("Очистить", on_click=_da).props("color=negative")
-        _dlg.open()
-
-    async def _osmyslit():
-        """Житель сам пишет вывод по последним своим словам — и вывод
-        ложится ему В ПАМЯТЬ КАК РАБОЧИЙ.
-
-        Почему рабочий, а не «общение». Память жителя раскладывается по
-        КОНТЕКСТУ входа, и мост с Биржи спрашивает только рабочее. Если
-        записать разговор как общение — за столом он не всплывёт
-        никогда, и выученное у Шефа пропадёт даром. Слово Шефа: «на
-        работе же разговор».
-
-        Вывод пишет ОН, а не мы: своими словами, по своим последним
-        сообщениям. Мы только просим и кладём.
-        """
-        aid = state.get("active_agent")
-        _karta = {"A02": ("торговый_хаос", "A02", "chat_with_morj"),
-                  "A03": ("торговый_хаос", "A03", "chat_with_panikyor"),
-                  "A04": ("торговый_хаос", "A04", "chat_with_hans"),
-                  "A05": ("контора", "архивариус", "chat_with_arkhiv"),
-                  "A06": ("торговый_хаос", "A06", "chat_with_brut"),
-                  "A07": ("торговый_хаос", "A07", "chat_with_avan"),
-                  "A08": ("торговый_хаос", "A08", "chat_with_cons"),
-                  "A09": ("контора", "исполнитель", "chat_with_executor")}
-        if aid not in _karta:
-            ui.notify("Осмыслить может только живой собеседник", type="warning")
-            return
-        _ceh_id, _slot, _fn_name = _karta[aid]
-        svoi = [m for m in (state.get("chat_history") or [])
-                if m.get("role") == "assistant" and m.get("agent") == aid
-                and m.get("content")]
-        if not svoi:
-            ui.notify("Он ещё ничего не сказал — осмыслять нечего",
-                      type="warning")
-            return
-        label = _agent_label(roster, aid)
-        ui.notify(f"🧠 {label} осмысляет...", type="info")
-        prosba = (
-            "Остановись и посмотри на свои последние слова в этом "
-            "разговоре. Что ты из него забрал ДЛЯ РАБОТЫ? Напиши ОДИН "
-            "короткий вывод своими словами — одно-два предложения, без "
-            "пересказа разговора и без JSON. Не «мы обсудили то-то», а "
-            "то, что ты теперь понимаешь и будешь делать иначе. Если "
-            "забрать нечего — так и скажи одной строкой.")
-        try:
-            _brain = _slot_brain(_ceh_id, _slot)
-            if _brain is None:
-                raise RuntimeError(f"мозг {_slot} ещё не в слоте")
-            _chat = getattr(_brain, _fn_name)
-            dialog = [m for m in state["chat_history"]
-                      if m.get("role") in ("user", "assistant")
-                      and m.get("content")][-10:]
-            vyvod = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: _chat(prosba, None, dialog))
-        except Exception as e:
-            ui.notify(f"не осмыслилось: {e}", type="negative")
-            return
-        vyvod = (str(vyvod or "")).strip()
-        if not vyvod:
-            ui.notify("Он промолчал — ничего не записано", type="warning")
-            return
-        try:
-            from nositel import otmetit_yarkim_slotom
-            res = otmetit_yarkim_slotom(_ceh_id, _slot, vyvod[:600],
-                                        otkuda="работа")
-        except Exception as e:
-            ui.notify(f"в память не легло: {e}", type="negative")
-            return
-        state["chat_history"].append({
-            "role": "assistant", "agent": aid,
-            "content": f"🧠 осмыслил: {vyvod}"})
-        update_chat_display()
-        if res.get("дописано"):
-            ui.notify("🧠 легло в память как рабочее", type="positive")
-        else:
-            ui.notify(f"🧠 не записалось: {res.get('причина','—')}",
-                      type="warning")
-
     async def send_message():
         if not input_ref["element"]:
             return
@@ -4172,18 +4011,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                                 ui.label("Отчёты агентов появятся здесь")
 
                 with ui.element("div").classes("floating-console"):
-                    # CHAT_KNOPKI_I_OSMYSLIT_V1: три маленькие иконки слева —
-                    # сохранить, достать, очистить. Золото — как у Брата.
-                    for _ico, _hint, _fn in (
-                            ("💾", "сохранить разговор", _sohranit_chat),
-                            ("📂", "достать разговор", _dostat_chat),
-                            ("🧹", "очистить разговор", _ochistit_razgovor)):
-                        ui.button(_ico, on_click=_fn).props("flat").tooltip(
-                            _hint).style(
-                            "font-size:1rem;padding:4px 8px;border-radius:9px;"
-                            "min-width:0;color:rgba(201,168,76,0.9);"
-                            "background:rgba(201,168,76,0.10);"
-                            "border:1px solid rgba(201,168,76,0.30);")
                     input_ref["element"] = ui.input(placeholder="Сообщение Совету...").props("borderless").style("flex:1")
                     input_ref["element"].on("keydown.enter", send_message)
                     # KABINET_GRAFIK_V1: посмотреть самому / дать посмотреть
@@ -4202,20 +4029,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 with ui.element("div").classes("glass").style("margin-top:12px; flex-shrink:0; overflow:hidden;"):
                     vitals_ref["element"] = ui.element("div")
                     update_vitals()
-
-                # CHAT_KNOPKI_I_OSMYSLIT_V1: под аватаром, над приборами.
-                # Житель сам пишет вывод по последним своим словам, и
-                # вывод ложится ему в память КАК РАБОЧИЙ — иначе за
-                # столом выученное у Шефа не всплывёт никогда.
-                ui.button("🧠 ОСМЫСЛИТЬ", on_click=_osmyslit).props(
-                    "flat no-caps").tooltip(
-                    "Пусть сам напишет, что забрал из разговора — "
-                    "и запомнит это как рабочее").style(
-                    "margin-top:12px;width:100%;font-size:0.72rem;"
-                    "letter-spacing:0.08em;padding:8px 10px;"
-                    "border-radius:10px;color:rgba(201,168,76,0.9);"
-                    "background:rgba(201,168,76,0.10);"
-                    "border:1px solid rgba(201,168,76,0.30);")
 
                 with ui.element("div").classes("glass").style("margin-top:12px; flex-shrink:0; overflow:hidden;"):
                     ui.html('<div class="panel-title">ПРИБОРЫ</div>')
@@ -4351,5 +4164,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # SVOYA_MODEL_POLEM_V1 - marker
 
 # ZHIVOY_KADR_V1 - marker
-
-# CHAT_KNOPKI_I_OSMYSLIT_V1 - marker
