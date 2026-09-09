@@ -734,14 +734,6 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
 
     def _otdat(args: dict) -> str:
         from datetime import datetime, timezone
-        # POLYA_PRIKAZA_PROSHCHAYUT_V1: имя поля чистим от пробелов и
-        # регистра. Первый живой приказ пришёл с полем «почему » — с
-        # пробелом на конце — и причина потерялась целиком. Имя РУКИ
-        # поиск уже прощает; имена полей сверялись знак в знак, а это
-        # та же болезнь этажом ниже. Значения не трогаем: прощаем
-        # описку в имени, ничего не выдумывая за трейдера.
-        args = {str(_k).strip().lower(): _v
-                for _k, _v in (args or {}).items()}
         chto = str(args.get("что", "")).upper().strip()
         if chto not in _PRIKAZY:
             return ("Такого приказа нет: " + (chto or "пусто") +

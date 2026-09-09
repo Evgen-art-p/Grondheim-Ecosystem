@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-09T17:39:47.651332",
+  "updated": "2026-09-10T02:07:36.394420",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -15,16 +15,19 @@
     "symbol": "EURUSD"
   },
   "brut": {
-    "verdict": "REJECTED",
-    "reason": "Нет четкого сигнала для входа: Аллигатор спит, нет разворотного бара.",
-    "direction": null,
-    "entry": null,
-    "stop": null,
+    "verdict": "APPROVED",
+    "reason": "вход по медвежьему тренду, приседающий бар",
+    "direction": "SHORT",
+    "entry": 6.705,
+    "stop": 6.71,
     "lot": null,
-    "action": "WAIT",
+    "action": "ENTER",
     "new_stop": null,
     "add_lot": null,
-    "бар": "2026.05.22 04:00"
+    "бар": "2026.09.09 12:00",
+    "отдан_рукой": true,
+    "кто_отдал": "Илья",
+    "ключ_отдавшего": "bc9dd782fa1fbc5dec28a7b192adeeff43dccc721fd27d1530378110647d09ad"
   },
   "avan": {
     "verdict": "REJECTED",
