@@ -1,6 +1,6 @@
 [
   {
-    "Rarity": "Common",
+    "Rarity": "Mythic",
     "Object_Type_Class": "agent",
     "ID_Object": "001_GENESIS_LOKA",
     "Official_Name": "Лока",
@@ -269,7 +269,7 @@
     "_Creator_Seal_Hash": "2c913628dd0f524a3ecd3e50c31a6d72d32c26d92713b9441d178d6f0104058d"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "020_VERA",
     "Official_Name": "Вера",
@@ -355,7 +355,7 @@
     "_Creator_Seal_Hash": "a4c58112b90678292fd71aa7a30b3d072af08c310da73bd6ef690e9646abf08c"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "021_MORJ",
     "Official_Name": "Морж",
@@ -393,7 +393,7 @@
     "_Creator_Seal_Hash": "cbb8b5f220052efafabb51c2213fbe0bd9012277f5ef77212fd273524704e4dd"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "022_PANIK",
     "Official_Name": "Паник",
@@ -433,7 +433,7 @@
     "_Creator_Seal_Hash": "6083244c4e97902e260f614ef7a1a00d4ea416a5069f4d015b44452b802ec15e"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "024_GANS",
     "Official_Name": "Ганс",
@@ -476,7 +476,7 @@
     "_Creator_Seal_Hash": "abaf9ffa31605ce9bb262bcc6e10f5ec7b75e97b8bdcf748234d610e55ed8632"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Epic",
     "Object_Type_Class": "agent",
     "ID_Object": "005_ARCHIE",
     "Official_Name": "Арчи",
@@ -514,7 +514,7 @@
     "_Creator_Seal_Hash": "1beec21d90d7a2d708d86765932fd48699d02a3b711b2bc427e3dfec9150cfe5"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "025_BRUT",
     "Official_Name": "Брут",
@@ -552,7 +552,7 @@
     "_Creator_Seal_Hash": "32b5fd778028ea72791470db82b4f321d61b7aa0a651ecaee56328e6840463b8"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "026_ILYA",
     "Official_Name": "Илья",
@@ -590,7 +590,7 @@
     "_Creator_Seal_Hash": "bc9dd782fa1fbc5dec28a7b192adeeff43dccc721fd27d1530378110647d09ad"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "027_VASILY",
     "Official_Name": "Василий",
@@ -628,7 +628,7 @@
     "_Creator_Seal_Hash": "9c406b3a00dc10cd778e188c4cd01872bf3a337ee5332849da28e3b2454b2c10"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Epic",
     "Object_Type_Class": "agent",
     "ID_Object": "006_SERGEY",
     "Official_Name": "Сергей",
@@ -757,7 +757,7 @@
     "_Creator_Seal_Hash": "5224ba3d8cd74de325bc19d2d584c717359af6e05a791d87038c4ee981a49c1a"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "028_NINA",
     "Official_Name": "Нина",
@@ -841,7 +841,7 @@
     "_Creator_Seal_Hash": "1449e09903a611238106333673adb3f402f66280c2b2f165b6f6ee899e3a7195"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Epic",
     "Object_Type_Class": "agent",
     "ID_Object": "004_OLE",
     "Official_Name": "Оле",
@@ -943,7 +943,7 @@
     "_Creator_Seal_Hash": "43e04cd19d88de5a497ec87b7cfb97bd478fc6a3f2563a34716866efeff3a5bf"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Mythic",
     "Object_Type_Class": "agent",
     "ID_Object": "002_GENESIS_CREATOR",
     "Official_Name": "Джем",
@@ -984,7 +984,7 @@
     "_Creator_Seal_Hash": "9a8604a590ccc6f552c5504cb6c9def031fe0f227e6395a01280c86fae125c12"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Epic",
     "Object_Type_Class": "agent",
     "ID_Object": "0006_ANDREY",
     "Official_Name": "Андрей",
@@ -1027,7 +1027,7 @@
     "_Creator_Seal_Hash": "d48c5a56476987089128b98cc8116ea78eccb69109f4f59b73c8d37af67cefe7"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Mythic",
     "Object_Type_Class": "agent",
     "ID_Object": "0007_CINDY",
     "Official_Name": "Синди",
@@ -1073,7 +1073,7 @@
     "_Creator_Seal_Hash": "96a13a4dad1d65e0fc4054157d68f298a822a78cb6e7406c23ffc629251b4631"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Epic",
     "Object_Type_Class": "agent",
     "ID_Object": "0008_SOFIA",
     "Official_Name": "София",
@@ -1120,7 +1120,7 @@
     "_Creator_Seal_Hash": "8e937307c30297a75c121156b98687ce17b8152fe1c1c05262317705970b5bf8"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Mythic",
     "Object_Type_Class": "agent",
     "ID_Object": "RITA_017",
     "Official_Name": "Рита",
@@ -1229,7 +1229,7 @@
     "_Creator_Seal_Hash": "a3381dbeb94c6ace248d5320b00cee4b8656f17fdd0e4bb6f6a693943672f1c8"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "030_STELLA",
     "Official_Name": "Стелла",
@@ -1275,7 +1275,7 @@
     "_Creator_Seal_Hash": "037e55e02c13673bb8ba46509827ab2d75af10274173d9afb2b8d15943735439"
   },
   {
-    "Rarity": "Common",
+    "Rarity": "Rare",
     "Object_Type_Class": "agent",
     "ID_Object": "031_MIMI",
     "Official_Name": "Мими",
