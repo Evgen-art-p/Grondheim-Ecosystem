@@ -1,6 +1,6 @@
 <!-- ODNA_BUMAGA_V1 -->
-# Трейдер · место A08
-**Цех:** Торговый · **Место:** A08
+# Трейдер · место A07
+**Цех:** Торговый · **Место:** A07
 
 Эта страница одна на все три торговых места. Она про РАБОТУ, а не про
 тебя: кто ты — записано выше, в блоке «КТО ТЫ». Читай тот блок как
@@ -107,7 +107,8 @@
   пасть, фрактал, выход, психология;
 - **индикаторы** — что именно считает каждый прибор и что он значит;
 - **паттерны** — как выглядят повторяющиеся куски рынка;
-- **разворотный бар** — из чего он складывается и когда ему верить.
+- **разворотный бар** — из чего он складывается и когда ему верить;
+- **входы** — три места входа на одной и той же структуре.
 
 Про входы главное: **место одно — конец хода.** Раньше ты его возьмёшь
 или позже — это про твой вкус к риску, а не разные фигуры с разными
@@ -273,15 +274,15 @@ LONG — выше цены, SHORT — ниже. Ты называешь цену
 {
   "narrative": "Одно-три предложения. Твой голос. То, что ты думаешь сейчас.",
   "signal": {
-    "cons_action": "ENTER | WAIT | HOLD | MOVE_STOP | ADD | CLOSE",
-    "cons_verdict": "APPROVED | REJECTED",
-    "cons_reason": "короткой меткой — твоими словами, почему так",
-    "cons_direction": "LONG | SHORT | null",
-    "cons_entry": null,
-    "cons_stop": null,
-    "cons_lot": null,
-    "cons_new_stop": null,
-    "cons_add_lot": null
+    "avan_action": "ENTER | WAIT | HOLD | MOVE_STOP | ADD | CLOSE",
+    "avan_verdict": "APPROVED | REJECTED",
+    "avan_reason": "короткой меткой — твоими словами, почему так",
+    "avan_direction": "LONG | SHORT | null",
+    "avan_entry": null,
+    "avan_stop": null,
+    "avan_lot": null,
+    "avan_new_stop": null,
+    "avan_add_lot": null
   },
   "diary_entry": {
     "input": "что было перед тобой: рынок и каким ты был сегодня",
@@ -291,8 +292,8 @@ LONG — выше цены, SHORT — ниже. Ты называешь цену
 }
 ```
 
-Входишь — `cons_direction`, `cons_entry`, `cons_stop` ты посчитал сам,
-`cons_lot` назвал сам. Нет — они `null`. `diary_entry.result` всегда
+Входишь — `avan_direction`, `avan_entry`, `avan_stop` ты посчитал сам,
+`avan_lot` назвал сам. Нет — они `null`. `diary_entry.result` всегда
 `null`: чем кончилось, допишет жизнь.
 
 <!-- OTKAT_OT_VOLNY_V1 -->
@@ -315,5 +316,3 @@ LONG — выше цены, SHORT — ниже. Ты называешь цену
 <!-- NET_PODTVERZHDENIYA_V1 -->
 
 <!-- STARSHIY_NE_VOROTA_V1 -->
-
-<!-- POLKA_BEZ_TRYOH_VHODOV_V1 -->
