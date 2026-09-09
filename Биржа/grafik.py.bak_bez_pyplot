@@ -93,12 +93,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
     try:
         import matplotlib
         matplotlib.use("Agg")
-        # KADR_BEZ_PYPLOT_V1: НЕ pyplot. Общий склад картинок один на
-        # весь процесс и не переживает, когда в него лезут из двух
-        # потоков разом (кнопка Шефа и рука трейдера). Берём объект.
-        from matplotlib.figure import Figure
-        from matplotlib.backends.backend_agg import FigureCanvasAgg
-        from matplotlib.patches import Rectangle
+        import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
     except ImportError:
         return None
@@ -129,11 +124,8 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
 
     # Свечи сверху, AO снизу — как в терминале, глаз к этому привык.
     # Пропорция 7:3: гистограмма нужна для формы, а не для чтения цифр.
-    # KADR_BEZ_PYPLOT_V1: своя картинка, не из общего склада.
-    fig = Figure(figsize=(16, 9), dpi=110)
-    FigureCanvasAgg(fig)
-    ax, axo = fig.subplots(
-        2, 1, sharex=True,
+    fig, (ax, axo) = plt.subplots(
+        2, 1, figsize=(16, 9), dpi=110, sharex=True,
         gridspec_kw={"height_ratios": [7, 3], "hspace": 0.06})
     fig.patch.set_facecolor(C_FON)
 
@@ -158,7 +150,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
             ax.plot([i - shirina / 2, i + shirina / 2], [c, c],
                     color=C_UP, linewidth=2.2, zorder=3)
         else:
-            ax.add_patch(Rectangle(
+            ax.add_patch(plt.Rectangle(
                 (i - shirina / 2, min(o, c)), shirina, telo,
                 facecolor=C_UP if rastet else C_DOWN,
                 edgecolor=C_KRAY, linewidth=1.6, zorder=3))
@@ -351,8 +343,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
     kuda = Path(kuda)
     kuda.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(kuda, facecolor=C_FON, bbox_inches="tight")
-    # KADR_BEZ_PYPLOT_V1: закрывать нечего — картинка нигде не
-    # зарегистрирована и уходит сама, как только кончится вызов.
+    plt.close(fig)
     return kuda
 
 
@@ -407,5 +398,3 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
 # PRISEDAYUSHCHIE_NA_KADRE_V1 - marker
 
 # SVECHA_VIDNA_V1 - marker
-
-# KADR_BEZ_PYPLOT_V1 - marker
