@@ -257,21 +257,7 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
                 return f"Такого этажа нет: {tf}. Есть: {', '.join(masshtab.LESTNICA)}"
             import stol as _s
             t = _s.nakryt(symbol, tf, self_key=self_key)
-            chisla = f"=== СТОЛ · {symbol} {tf} ===\n" + _s.slovami(t)
-            # STOL_S_KADROM_V1: кадр важнее чисел, и просить его
-            # отдельной рукой трейдер не обязан. Рисуем этот же этаж
-            # и кладём числа следом. Картинка не вышла — уходят одни
-            # числа, как было: рука из-за кадра не падает.
-            try:
-                import grafik
-                put = grafik.kadr(symbol, tf)
-            except Exception as _ek:
-                put = None
-                print(f"[СТОЛ] кадр {tf} не нарисовался ({_ek}) — только числа")
-            if put:
-                return (f"[КАДР: {put}] {symbol} {tf} · стол ниже\n"
-                        + chisla)
-            return chisla
+            return f"=== СТОЛ · {symbol} {tf} ===\n" + _s.slovami(t)
         except Exception as e:
             return f"стол на {tf} не накрылся: {e}"
 

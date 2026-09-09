@@ -161,7 +161,11 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
             if not s.startswith("[КАДР: "):
                 return
             _put = s[7:s.index("]")]
-            _podpis = s[s.index("]") + 1:].strip()[:120]
+            # STOL_S_KADROM_V1: подпись — ПЕРВАЯ строка. За ней
+            # теперь может идти таблица чисел, и без этого на
+            # панель Шефа поехал бы её кусок.
+            _hvost = s[s.index("]") + 1:].strip().splitlines()
+            _podpis = (_hvost[0] if _hvost else "")[:120]
             from hooks import load_trading_state, save_trading_state
             _t = load_trading_state()
             _t["zhivoy_kadr"] = {
