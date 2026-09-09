@@ -665,20 +665,7 @@ async def _vahta_sluzhba():
     """
     if not _VAHTA["идёт"] or _VAHTA["работает"]:
         return
-    # EDINYY_VYBOR_V1: сторожим ЭКРАН, а не то, что вахта запомнила
-    # при нажатии. Переехал выбор — вахта переехала следом, снимать и
-    # заводить заново не нужно. Экран пуст — держимся прежнего.
     sym, tf = _VAHTA["инструмент"], _VAHTA["этаж"]
-    try:
-        import ekran as _ekr
-        _i, _e = _ekr.para()
-        if _i and _e and (_i, _e) != (sym, tf):
-            print(f"[ВАХТА] ▣ выбор переехал: {sym} {tf} → {_i} {_e}")
-            sym, tf = _i, _e
-            _VAHTA.update({"инструмент": _i, "этаж": _e, "бар": ""})
-            return          # новый пост — этот тик только запоминаем
-    except Exception:
-        pass
     if not sym or not tf:
         return
     bar = _vahta_posledniy_bar(sym, tf)
@@ -2353,13 +2340,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             ui.notify("⏱ выбери слева, по какой свече дежурить",
                       type="warning")
             return
-        # EDINYY_VYBOR_V1: встать на вахту — это и есть выбор.
-        # Пишем в экран, чтобы трейдер и кадр поехали туда же.
-        try:
-            import ekran as _ekr
-            _ekr.postavit(_s, _t, kto="Шеф", pochemu="встал на вахту")
-        except Exception as _e_ekr:
-            print(f"[ВАХТА] экран не записался ({_e_ekr})")
         _VAHTA.update({"идёт": True, "инструмент": _s, "этаж": _t,
                        "бар": "", "цех": tseh_id})
         _vahta_zavesti()
@@ -4395,5 +4375,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # CHAT_KNOPKI_I_OSMYSLIT_V1 - marker
 
 # VZGLYAD_PO_VYBORU_V1 - marker
-
-# EDINYY_VYBOR_V1 - marker
