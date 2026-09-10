@@ -1414,20 +1414,15 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             # VZGLYAD_DOHODIT_V1: то, что Шеф показал, должно дойти и
             # до трейдера — иначе он отвечает про свою картинку, а
             # спрашивают его про эту, и оба правы.
-            # STOP_I_VZGLYAD_V1: помечаем только то, что Шеф показал
-            # РУКОЙ. Раньше метка вешалась на любую отрисовку — и
-            # трейдеру, работающему на M5, досылался автоматический D1
-            # с подписью «показал Шеф». Графики не сходились.
-            if state.pop("взгляд_рукой", False):
-                try:
-                    from datetime import datetime as _dtv
-                    _t_zk["vzglyad_shefa"] = {
-                        "путь": str(put),
-                        "подпись": f"{symbol} {tf}",
-                        "когда": _dtv.now().isoformat(timespec="seconds"),
-                    }
-                except Exception:
-                    pass
+            try:
+                from datetime import datetime as _dtv
+                _t_zk["vzglyad_shefa"] = {
+                    "путь": str(put),
+                    "подпись": f"{symbol} {tf}",
+                    "когда": _dtv.now().isoformat(timespec="seconds"),
+                }
+            except Exception:
+                pass
             save_trading_state(_t_zk)
             _zhivoy_vidno["put"] = None
         except Exception:
@@ -2615,11 +2610,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         _razbudili = 0          # TESTER_PULT_V1: оплаченных взглядов
         try:
             for data, _sl, _sym, _tf, k in mesta:
-                # STOP_I_VZGLYAD_V1: передышка для интерфейса. Без неё
-                # на сплошном ходу цикл не отпускает поток, нажатие
-                # СТОП не успевает обработаться — и прогон идёт дальше,
-                # хотя проверка флага стоит прямо ниже.
-                await asyncio.sleep(0)
                 if state.get("stop_requested"):
                     state["chat_history"].append({
                         "role": "system", "content": "⏸ остановлено"})
@@ -3251,15 +3241,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             try:
                 from vybor import naznachit as _nazn
                 _nazn(tseh_id, slot, a["symbol"])
-                # SVOY_VYBOR_U_KAZHDOGO_V1: запоминаем и ЭТАЖ — тому,
-                # кого Шеф сейчас выбрал, и только ему. Раньше клик
-                # назначал один инструмент, а этаж молча брался «от
-                # комфорта»: выбрать этаж трейдеру было нечем.
-                try:
-                    from vybor import zapisat_etazh as _zap
-                    _zap(tseh_id, slot, a["symbol"], a["timeframe"])
-                except Exception as _e_et:
-                    print(f"[ВЫБОР] этаж не запомнился ({_e_et})")
                 imya = _agent_label(roster, state["active_agent"])
                 ui.notify(f"{imya} → {a['symbol']} {a['timeframe']}",
                           type="positive")
@@ -4489,11 +4470,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     input_ref["element"] = ui.input(placeholder="Сообщение Совету...").props("borderless").style("flex:1")
                     input_ref["element"].on("keydown.enter", send_message)
                     # KABINET_GRAFIK_V1: посмотреть самому / дать посмотреть
-                    # STOP_I_VZGLYAD_V1: рука Шефа — вот она.
-                    ui.button("👁 Взгляд",
-                              on_click=lambda: (
-                                  state.__setitem__("взгляд_рукой", True),
-                                  pokazat_kadr())[-1]).props(
+                    ui.button("👁 Взгляд", on_click=lambda: pokazat_kadr()).props(
                         "flat no-caps").style(
                         "font-size:0.75rem; padding:8px 14px; border-radius:20px; "
                         "color:rgba(139,233,253,0.9); background:rgba(139,233,253,0.10); "

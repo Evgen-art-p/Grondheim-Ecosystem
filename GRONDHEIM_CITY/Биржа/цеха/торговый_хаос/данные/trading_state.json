@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-10T19:26:25.342725",
+  "updated": "2026-09-11T01:10:02.258432",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -16,15 +16,9 @@
   },
   "brut": {
     "verdict": "REJECTED",
-    "reason": "",
-    "direction": null,
-    "entry": null,
-    "stop": null,
-    "lot": null,
+    "reason": "проверка руки",
     "action": "WAIT",
-    "new_stop": null,
-    "add_lot": null,
-    "бар": "2025.10.13 01:20",
+    "бар": "2025.03.06",
     "отдан_рукой": true,
     "кто_отдал": "Илья",
     "ключ_отдавшего": "bc9dd782fa1fbc5dec28a7b192adeeff43dccc721fd27d1530378110647d09ad"
@@ -81,7 +75,7 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2025.10.13 02:15"
+    "бар": "2025.03.06"
   },
   "точки": {
     "EURUSD H4": {
@@ -193,13 +187,60 @@
       }
     },
     "EURUSD M5": {
-      "reshali_na_bare": "2025.10.13 02:15",
+      "reshali_na_bare": "2025.03.13 19:55",
+      "otvet_bara": {
+        "alive": true,
+        "reason": "жива",
+        "changed": false,
+        "direction": "BULL"
+      },
+      "alive": true,
+      "trend_direction": "BULL",
+      "zero_point_price": 1.08528,
+      "rodilas_na_bare": "2025.03.13 20:05",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 4,
+      "kray_posle": 1.08641,
+      "struktura_pozadi": 116,
+      "konec_volny_1": null,
+      "konec_volny_2": null,
+      "попыток": 0,
+      "нога": 0
+    },
+    "EURUSD D1": {
+      "reshali_na_bare": "2025.03.06",
       "otvet_bara": {
         "alive": false,
         "reason": "точки нет",
         "changed": false,
         "direction": null
-      }
+      },
+      "alive": false,
+      "trend_direction": "BEAR",
+      "zero_point_price": 1.0533,
+      "rodilas_na_bare": "2025.01.27",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 57,
+      "kray_posle": 1.02111,
+      "struktura_pozadi": 162,
+      "konec_volny_1": {
+        "цена": 1.02111,
+        "бар": "2025.02.03",
+        "сторона": "BULL",
+        "структура": 167,
+        "баров_от_точки": 38,
+        "нога": 3
+      },
+      "konec_volny_2": {
+        "цена": 1.05058,
+        "бар": "2025.02.21",
+        "баров_от_макушки": 13,
+        "нога": 3
+      },
+      "попыток": 0,
+      "нога": 3
     }
   },
   "наблюдения": {
@@ -228,6 +269,13 @@
         "с_бара": "2025.10.13 00:35",
         "последний_бар": "2025.10.13 00:35"
       }
+    },
+    "EURUSD D1": {
+      "A06": {
+        "за_чем": "за выходом цены из флэта и формированием четкого хода.",
+        "с_бара": "2025.01.13",
+        "последний_бар": "2025.02.26"
+      }
     }
   },
   "последнее_закрытие": {
@@ -237,5 +285,10 @@
     "выход": 1.17192,
     "pnl": -2e-05
   },
-  "zhivoy_kadr": {}
+  "zhivoy_kadr": {},
+  "vzglyad_shefa": {
+    "путь": "None",
+    "подпись": "EURUSD D1",
+    "когда": "2026-09-11T00:19:49"
+  }
 }

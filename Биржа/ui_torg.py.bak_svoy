@@ -3251,15 +3251,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             try:
                 from vybor import naznachit as _nazn
                 _nazn(tseh_id, slot, a["symbol"])
-                # SVOY_VYBOR_U_KAZHDOGO_V1: запоминаем и ЭТАЖ — тому,
-                # кого Шеф сейчас выбрал, и только ему. Раньше клик
-                # назначал один инструмент, а этаж молча брался «от
-                # комфорта»: выбрать этаж трейдеру было нечем.
-                try:
-                    from vybor import zapisat_etazh as _zap
-                    _zap(tseh_id, slot, a["symbol"], a["timeframe"])
-                except Exception as _e_et:
-                    print(f"[ВЫБОР] этаж не запомнился ({_e_et})")
                 imya = _agent_label(roster, state["active_agent"])
                 ui.notify(f"{imya} → {a['symbol']} {a['timeframe']}",
                           type="positive")
