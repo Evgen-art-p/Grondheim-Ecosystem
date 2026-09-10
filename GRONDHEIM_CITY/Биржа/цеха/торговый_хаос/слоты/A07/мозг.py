@@ -126,10 +126,11 @@ def _glaz(_chat, symbol, timeframe, slot, preambula=None):
                     user_text=(preambula if preambula is not None
                                else _GLAZ_PREAMBULA) + user,
                     knowledge=knowledge,
-                    images=[{"base64": base64.b64encode(
+                    images=([{"base64": base64.b64encode(
                                  _P(put).read_bytes()).decode("ascii"),
                               "mime_type": "image/png",
-                              "name": _P(put).name}],
+                              "name": _P(put).name}]
+                            + _kadr_shefa()),
                     # RAZGOVOR_SO_STOLOM_V1: история и температура
                     # ронялись здесь — с картинкой он забывал разговор
                     # и говорил средним голосом вместо своего.
@@ -198,10 +199,11 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
                     user_text=(preambula if preambula is not None
                                else _GLAZ_PREAMBULA) + user,
                     knowledge=knowledge,
-                    images=[{"base64": base64.b64encode(
+                    images=([{"base64": base64.b64encode(
                                  _P(put).read_bytes()).decode("ascii"),
                              "mime_type": "image/png",
-                             "name": _P(put).name}],
+                             "name": _P(put).name}]
+                            + _kadr_shefa()),
                     tools_schema=_rt.shema(timeframe),
                     executors=_rt.ruki(symbol, ceh, slot, self_key,
                                        dnevnik_fn=_read_recent_diary,
@@ -1443,3 +1445,41 @@ def _povod_blok(povod: str) -> str:
 # POVOD_VIDEN_V1 - marker
 
 # PERVYY_UROVEN_ODIN_SIGNAL_V1 - marker
+
+
+# ── VZGLYAD_DOHODIT_V1: кадр, который показал Шеф ─────────────
+# Свой кадр у трейдера остаётся ПЕРВЫМ — рабочий взгляд не
+# подменяем. Показанное идёт вторым, с подписью, чьё оно. Иначе он
+# потеряет свой этаж и станет отвечать про чужую картинку.
+
+def _kadr_shefa() -> list:
+    """Картинка со «Взгляда» Шефа, если она свежая. Иначе пусто."""
+    try:
+        import base64
+        from datetime import datetime, timedelta
+        from pathlib import Path as _P
+        from hooks import load_trading_state
+        v = (load_trading_state() or {}).get("vzglyad_shefa") or {}
+        put = v.get("путь")
+        if not put:
+            return []
+        try:
+            kogda = datetime.fromisoformat(str(v.get("когда")))
+            if datetime.now() - kogda > timedelta(minutes=15):
+                return []      # старое — не всплывает посреди работы
+        except Exception:
+            pass
+        p = _P(put)
+        if not p.exists():
+            return []
+        print(f"[ВЗГЛЯД] Шеф показывает: {v.get('подпись', '')}")
+        return [{"base64": base64.b64encode(
+                     p.read_bytes()).decode("ascii"),
+                 "mime_type": "image/png",
+                 "name": f"показал Шеф · {v.get('подпись', '')}"}]
+    except Exception as _e:
+        print(f"[ВЗГЛЯД] кадр Шефа не подложился ({_e}) — не беда")
+        return []
+
+
+# VZGLYAD_DOHODIT_V1 - marker

@@ -1411,19 +1411,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             _t_zk = load_trading_state()
             if _t_zk.get("zhivoy_kadr"):
                 _t_zk["zhivoy_kadr"] = {}
-            # VZGLYAD_DOHODIT_V1: то, что Шеф показал, должно дойти и
-            # до трейдера — иначе он отвечает про свою картинку, а
-            # спрашивают его про эту, и оба правы.
-            try:
-                from datetime import datetime as _dtv
-                _t_zk["vzglyad_shefa"] = {
-                    "путь": str(put),
-                    "подпись": f"{symbol} {tf}",
-                    "когда": _dtv.now().isoformat(timespec="seconds"),
-                }
-            except Exception:
-                pass
-            save_trading_state(_t_zk)
+                save_trading_state(_t_zk)
             _zhivoy_vidno["put"] = None
         except Exception:
             pass
