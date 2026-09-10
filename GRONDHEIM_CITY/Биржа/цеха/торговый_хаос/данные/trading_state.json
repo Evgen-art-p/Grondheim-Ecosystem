@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-10T02:59:37.507976",
+  "updated": "2026-09-10T03:12:46.691986",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -12,7 +12,7 @@
   "positions": [],
   "feed": {
     "mode": "real",
-    "symbol": "NVDA"
+    "symbol": "USDCAD"
   },
   "brut": {
     "verdict": "APPROVED",
@@ -221,5 +221,11 @@
     "выход": 1.17192,
     "pnl": -2e-05
   },
-  "zhivoy_kadr": {}
+  "zhivoy_kadr": {
+    "put": "C:\\Users\\Евгений\\Desktop\\Grondheim-Ecosystem\\Биржа\\кадры\\USDCAD_D1_20260910_031246_059987.png",
+    "podpis": "USDCAD D1 · стол ниже",
+    "chey": "Илья",
+    "slot": "A06",
+    "ruka": "stol_na_etazhe"
+  }
 }
