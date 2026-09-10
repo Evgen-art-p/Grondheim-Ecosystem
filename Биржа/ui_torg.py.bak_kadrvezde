@@ -1237,11 +1237,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         _kandidat_vid()
         _vremya_vid()
         try:
-            # KADR_RISUETSYA_VEZDE_V1: pokazat_kadr асинхронная, а мы
-            # в обычной функции. Прямой вызов создаёт корутину и НЕ
-            # выполняет её — молча, без исключения. Ставим задачей.
-            import asyncio as _a
-            _a.get_event_loop().create_task(pokazat_kadr())
+            pokazat_kadr()
         except Exception as e:
             print(f"[ИСКАТЕЛЬ] кадр не перерисовался: {e}")
         try:
@@ -1321,10 +1317,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             return
         _vremya_vid()
         try:
-            # KADR_RISUETSYA_VEZDE_V1: то же самое — задачей, иначе
-            # корутина повиснет неисполненной и кадр останется прошлым.
-            import asyncio as _a
-            _a.get_event_loop().create_task(pokazat_kadr())
+            pokazat_kadr()          # сразу видно следующий бар
         except Exception as e:
             print(f"[ВРЕМЯ] кадр не перерисовался: {e}")
 
