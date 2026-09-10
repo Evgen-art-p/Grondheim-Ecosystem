@@ -1219,6 +1219,41 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
     narrative, _slova, diary_entry = _parse_avan(response)
     # SLOVO_NE_PRIKAZ_V1: решение — только с руки
     signal = _signal_ot_ruki(md.get("bar_time"), _slova)
+
+    # PERESPROS_V1: приказа нет — спрашиваем в лицо, один раз.
+    # Напоминания он видел и всё равно отвечал словами; уговоры
+    # кончились. Руки те же, так что во втором заходе приказ ложится
+    # на табло по-настоящему.
+    if not signal:
+        try:
+            _peresp = (
+                "\n\n— — —\n"
+                "СТОП. Ты сказал, что видишь, но приказа не отдал — "
+                "значит НИЧЕГО НЕ ПРОИЗОШЛО: исполнитель слов не "
+                "слышит, и в истории это останется разговором.\n"
+                "Ответь делом, не текстом: решил работать — позови "
+                "руку otdat_prikaz с ENTER (сторона, цена, стоп). Не "
+                "работаешь — позови её же с WAIT и причиной. Третьего "
+                "нет.")
+            _otvet2 = _chat_glazami(
+                system=system_full, user=user_msg + _peresp,
+                knowledge=knowledge, agent_id="A07", slot_id=_SLOT,
+                temperature=_my_temp())
+            signal = _signal_ot_ruki(md.get("bar_time"), None)
+            if signal:
+                print(f"[ПЕРЕСПРОС] отдал приказ со второго раза: "
+                      f"{signal.get('avan_action')}")
+                _n2, _s2, _d2 = _parse_avan(_otvet2)
+                if _n2:
+                    narrative = _n2
+                if _d2:
+                    diary_entry = _d2
+            else:
+                print("[ПЕРЕСПРОС] и во второй раз без приказа — "
+                      "решения нет")
+        except Exception as _e_per:
+            print(f"[ПЕРЕСПРОС] не вышло ({_e_per}) — иду как есть")
+
     signal = _sanitize(signal)
     signal = _sanitize_manage(signal)   # TRADER_MANAGE_LANG_V1: язык ведения
 
@@ -1495,3 +1530,5 @@ def _kadr_shefa() -> list:
 # VZGLYAD_DOHODIT_V1 - marker
 
 # NAPOMINANIE_RUKI_V1 - marker
+
+# PERESPROS_V1 - marker
