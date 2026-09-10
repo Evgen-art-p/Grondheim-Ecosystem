@@ -1379,13 +1379,13 @@ def page_brat():
             render()
         dlg.open()
 
-    # ── CHISTKA_U_BRATA_V1 · CHISTKA_UBIRAET_V2 ──────────────
-    # Клинеров четыре, реестр ведёт ГОРОД/chistka.py. Здесь только
-    # показываем и зовём — правила уборки живут в самих клинерах.
-    # Из терминала это не запустить: путь через папку с кириллицей.
+    # ── CHISTKA_U_BRATA_V1: менеджер чистки ──────────────────
+    # Клинеров стало четыре, и каждый жил сам по себе. Реестр ведёт
+    # ГОРОД/chistka.py — здесь только показываем. Из терминала это
+    # не запустить: путь через папку с кириллицей, консоль её режет.
 
     async def do_chistka():
-        """Список клинеров, что нашлось, слово Брата и уборка."""
+        """Список клинеров, что нашлось у каждого, и слово Брата."""
         import asyncio
         loop = asyncio.get_event_loop()
 
@@ -1405,7 +1405,7 @@ def page_brat():
 
         with ui.dialog() as dlg, ui.card().style(
             "background:#0d1117; border:1px solid rgba(255,255,255,0.12); "
-            "border-radius:16px; min-width:620px; max-width:800px; "
+            "border-radius:16px; min-width:600px; max-width:780px; "
             "padding:20px;"
         ):
             ui.html('<div style="color:rgba(255,255,255,0.9); '
@@ -1420,7 +1420,7 @@ def page_brat():
             with telo:
                 ui.html('<div style="color:rgba(255,255,255,0.55); '
                         'font-size:0.8rem;">Смотрю, что накопилось… '
-                        'несколько секунд.</div>')
+                        'это занимает несколько секунд.</div>')
             with ui.row().style("gap:8px; margin-top:14px; width:100%;"):
                 ui.button("закрыть", on_click=dlg.close).props("flat").style(
                     "color:rgba(255,255,255,0.4); font-size:0.75rem;")
@@ -1433,133 +1433,71 @@ def page_brat():
                     "border:1px solid rgba(120,168,201,0.50); color:#fff;")
         dlg.open()
 
-        async def _narisovat():
-            try:
-                razvedka = await loop.run_in_executor(None, CH.razvedat)
-                slova = await loop.run_in_executor(
-                    None, CH.slovo_brata, razvedka)
-            except Exception as e:
-                telo.clear()
-                with telo:
-                    ui.html(f'<div style="color:rgba(255,120,120,0.9); '
-                            f'font-size:0.8rem;">Разведка споткнулась: '
-                            f'{e}</div>')
-                return
-
-            async def _ubrat_bak():
-                n, kuda = await loop.run_in_executor(
-                    None, CH.ubrat_bak_ceha, False)
-                ui.notify(f"перенесено {n} → {kuda}" if n
-                          else "нечего убирать", color="positive")
-                await _narisovat()
-
-            async def _ubrat_pam(zhitel, sloy):
-                if not zhitel or not sloy:
-                    ui.notify("выбери жителя и слой", color="warning")
-                    return
-                n = await loop.run_in_executor(
-                    None, CH.ubrat_pamyat, zhitel, sloy, False)
-                ui.notify(f"{zhitel}: перенесено {n} файл(ов)" if n
-                          else f"{zhitel}: в «{sloy}» пусто",
-                          color="positive" if n else "warning")
-                await _narisovat()
-
+        try:
+            razvedka = await loop.run_in_executor(None, CH.razvedat)
+            slova = await loop.run_in_executor(
+                None, CH.slovo_brata, razvedka)
+        except Exception as e:
             telo.clear()
             with telo:
-                for c in CH.spisok():
-                    d = razvedka.get(c["имя"], {}) or {}
-                    if d.get("беда"):
-                        ui.html(f'<div style="margin:8px 0; padding:10px; '
-                                f'border-radius:8px; '
-                                f'background:rgba(255,120,120,0.06); '
-                                f'border:1px solid rgba(255,120,120,0.25); '
-                                f'color:rgba(255,180,180,0.85); '
-                                f'font-size:0.76rem;"><b>{c["имя"]}</b> — '
-                                f'не смотрится: {d["беда"]}</div>')
-                        continue
-                    opasno = c.get("опасно")
-                    cvet = ("rgba(255,200,120," if opasno
-                            else "rgba(120,168,201,")
-                    with ui.element("div").style(
-                        f"margin:8px 0; padding:10px 12px; border-radius:8px; "
-                        f"background:{cvet}0.06); border:1px solid {cvet}0.28);"
-                    ):
-                        ui.html(
-                            f'<div style="display:flex; '
-                            f'justify-content:space-between; '
-                            f'align-items:baseline;">'
-                            f'<span style="color:rgba(255,255,255,0.9); '
-                            f'font-weight:700; font-size:0.82rem;">'
-                            f'{"⚠ " if opasno else ""}{c["имя"]}</span>'
-                            f'<span style="color:rgba(255,255,255,0.55); '
-                            f'font-size:0.74rem;">{d.get("файлов", 0)} '
-                            f'файл(ов)</span></div>'
-                            f'<div style="color:rgba(255,255,255,0.45); '
-                            f'font-size:0.72rem; margin-top:3px;">'
-                            f'{c["что"]} · в {c["куда"]}</div>'
-                            + "".join(
-                                f'<div style="color:rgba(255,255,255,0.55); '
-                                f'font-size:0.72rem; margin-top:2px;">· {s}'
-                                f'</div>'
-                                for s in (d.get("строки") or [])[:5]))
+                ui.html(f'<div style="color:rgba(255,120,120,0.9); '
+                        f'font-size:0.8rem;">Разведка споткнулась: '
+                        f'{e}</div>')
+            return
 
-                        if c["имя"] == "бэкапы_цеха" and d.get("файлов"):
-                            ui.button("убрать в архив",
-                                      on_click=_ubrat_bak
-                                      ).props("flat no-caps dense").style(
-                                "margin-top:8px; font-size:0.72rem; "
-                                "color:rgba(120,168,201,0.95);")
+        telo.clear()
+        with telo:
+            for c in CH.spisok():
+                d = razvedka.get(c["имя"], {}) or {}
+                if d.get("беда"):
+                    ui.html(
+                        f'<div style="margin:8px 0; padding:10px; '
+                        f'border-radius:8px; '
+                        f'background:rgba(255,120,120,0.06); '
+                        f'border:1px solid rgba(255,120,120,0.25); '
+                        f'color:rgba(255,180,180,0.85); font-size:0.76rem;">'
+                        f'<b>{c["имя"]}</b> — не смотрится: {d["беда"]}</div>')
+                    continue
+                opasno = c.get("опасно")
+                cvet = ("rgba(255,200,120," if opasno
+                        else "rgba(120,168,201,")
+                ui.html(
+                    f'<div style="margin:8px 0; padding:10px 12px; '
+                    f'border-radius:8px; background:{cvet}0.06); '
+                    f'border:1px solid {cvet}0.28);">'
+                    f'<div style="display:flex; justify-content:space-between; '
+                    f'align-items:baseline;">'
+                    f'<span style="color:rgba(255,255,255,0.9); '
+                    f'font-weight:700; font-size:0.82rem;">'
+                    f'{"⚠ " if opasno else ""}{c["имя"]}</span>'
+                    f'<span style="color:rgba(255,255,255,0.55); '
+                    f'font-size:0.74rem;">{d.get("файлов", 0)} файл(ов)'
+                    f'</span></div>'
+                    f'<div style="color:rgba(255,255,255,0.45); '
+                    f'font-size:0.72rem; margin-top:3px;">{c["что"]} · '
+                    f'в {c["куда"]}</div>'
+                    + "".join(
+                        f'<div style="color:rgba(255,255,255,0.55); '
+                        f'font-size:0.72rem; margin-top:2px;">· {s}</div>'
+                        for s in (d.get("строки") or [])[:5])
+                    + f'<div style="color:rgba(255,255,255,0.35); '
+                      f'font-size:0.68rem; margin-top:5px; '
+                      f'font-family:monospace;">{c["как убрать"]}</div>'
+                    + '</div>')
 
-                        elif c["имя"] == "память" and d.get("файлов"):
-                            with ui.row().style("gap:6px; margin-top:8px; "
-                                                "align-items:center;"):
-                                kto = ui.select(
-                                    CH.zhiteli_pamyati(), label="житель"
-                                ).props("dense outlined").style(
-                                    "min-width:130px; font-size:0.72rem;")
-                                chto = ui.select(
-                                    CH.sloi_pamyati(), value="разговоры",
-                                    label="слой"
-                                ).props("dense outlined").style(
-                                    "min-width:120px; font-size:0.72rem;")
-                                ui.button(
-                                    "убрать",
-                                    on_click=lambda: _ubrat_pam(
-                                        kto.value, chto.value)
-                                ).props("flat no-caps dense").style(
-                                    "font-size:0.72rem; "
-                                    "color:rgba(120,168,201,0.95);")
-                            ui.html('<div style="color:rgba(255,255,255,0.35); '
-                                    'font-size:0.68rem; margin-top:4px;">'
-                                    'метки и маяки в выбор не идут — это '
-                                    'нажитое, оно убирается только из '
-                                    'командной строки, поимённо.</div>')
-
-                        elif opasno:
-                            ui.html('<div style="color:rgba(255,200,120,0.75); '
-                                    'font-size:0.68rem; margin-top:6px;">'
-                                    'кнопки нет намеренно: это торговая '
-                                    'история, из неё считаются веса.</div>')
-                            ui.html(f'<div style="color:rgba(255,255,255,0.35); '
-                                    f'font-size:0.68rem; margin-top:2px; '
-                                    f'font-family:monospace;">'
-                                    f'{c["как убрать"]}</div>')
-
-                if slova:
-                    ui.html('<div style="margin:14px 0 4px; '
-                            'color:rgba(255,255,255,0.55); '
-                            'font-size:0.72rem; letter-spacing:0.08em;">'
-                            'ЧТО Я ОБ ЭТОМ ДУМАЮ</div>')
-                    for s in slova:
-                        ui.html(
-                            f'<div style="margin:5px 0; padding:9px 12px; '
-                            f'border-radius:8px; '
-                            f'background:rgba(255,255,255,0.03); '
-                            f'border-left:2px solid rgba(120,168,201,0.5); '
-                            f'color:rgba(255,255,255,0.75); '
-                            f'font-size:0.76rem; line-height:1.5;">{s}</div>')
-
-        await _narisovat()
+            if slova:
+                ui.html(
+                    '<div style="margin:14px 0 4px; '
+                    'color:rgba(255,255,255,0.55); font-size:0.72rem; '
+                    'letter-spacing:0.08em;">ЧТО Я ОБ ЭТОМ ДУМАЮ</div>')
+                for s in slova:
+                    ui.html(
+                        f'<div style="margin:5px 0; padding:9px 12px; '
+                        f'border-radius:8px; '
+                        f'background:rgba(255,255,255,0.03); '
+                        f'border-left:2px solid rgba(120,168,201,0.5); '
+                        f'color:rgba(255,255,255,0.75); '
+                        f'font-size:0.76rem; line-height:1.5;">{s}</div>')
 
     # PATCH_BRAT_TIK_V1 — суточный тик из кабинета
     async def do_uborka():

@@ -249,6 +249,76 @@ def slovo_brata(razvedka: dict = None) -> list:
     return slova
 
 
+# ═══════════════════════════════════════════════════════════
+# УБОРКА · правила здесь не переписываются, зовутся чужие
+# ═══════════════════════════════════════════════════════════
+
+def _chulan(imya: str) -> Path:
+    from datetime import datetime
+    return (_REPO / "_АРХИВ_ЧИСТКИ" / imya /
+            datetime.now().strftime("%Y%m%d_%H%M%S"))
+
+
+def ubrat_bak_ceha(suho: bool = True) -> tuple:
+    """Перенести .bak слотов в архив. (сколько, куда)."""
+    import json
+    import shutil
+    from datetime import datetime
+    d = _razvedka_bak_ceha()
+    puti = d.get("пути") or []
+    if not puti:
+        return 0, ""
+    kuda = _chulan("бэкапы_цеха")
+    baza = (_REPO / "GRONDHEIM_CITY" / "Биржа" / "цеха" /
+            "торговый_хаос" / "слоты")
+    manifest = []
+    for f in puti:
+        otn = f.relative_to(baza)
+        manifest.append({"что": str(otn), "байт": f.stat().st_size})
+        if suho:
+            continue
+        (kuda / otn).parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(f), str(kuda / otn))
+    if suho:
+        return len(puti), ""
+    kuda.mkdir(parents=True, exist_ok=True)
+    (kuda / "манифест.json").write_text(json.dumps(
+        {"что": "бэкапы торгового цеха",
+         "когда": datetime.now().isoformat(timespec="seconds"),
+         "как вернуть": "положить обратно по полю «что» в слоты",
+         "файлы": manifest}, ensure_ascii=False, indent=2), encoding="utf-8")
+    return len(puti), str(kuda.relative_to(_REPO))
+
+
+def zhiteli_pamyati() -> list:
+    """Имена жителей — для выбора в кабинете."""
+    _koren_v_put()
+    try:
+        import chistilshchik_pamyati as P
+        return [d.name for d in P.zhiteli()]
+    except Exception:
+        return []
+
+
+def sloi_pamyati() -> list:
+    _koren_v_put()
+    try:
+        import chistilshchik_pamyati as P
+        return [s for s, (_, prosto) in P.SLOI.items() if prosto]
+    except Exception:
+        return ["разговоры", "отклик", "архив", "чувства"]
+
+
+def ubrat_pamyat(zhitel: str, sloy: str, suho: bool = True) -> int:
+    """Убрать слой памяти одного жителя. Правила — в его же клинере."""
+    _koren_v_put()
+    import chistilshchik_pamyati as P
+    dom = P.KOVCHEG / zhitel
+    if not dom.is_dir():
+        return 0
+    return P.ubrat(dom, sloy, suho=suho)
+
+
 def _pokazat(imya: str = "", so_slovom: bool = False):
     print()
     print("МЕНЕДЖЕР ЧИСТКИ · ничего не удаляется, всё в чулан с манифестом")
