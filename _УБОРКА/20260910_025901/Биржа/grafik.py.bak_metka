@@ -344,11 +344,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
         fig.text(0.012, 0.985, _kod, ha='left', va='top',
                  fontsize=18, color='#ffd866', family='monospace',
                  fontweight='bold', zorder=20)
-        # METKA_NAZYVAET_KADR_V1: метка без имени кадра
-        # бесполезна — за один взгляд их печатается несколько,
-        # и ответ трейдера не с чем сверить.
-        _chey = f"{symbol} {timeframe}".strip() or "?"
-        print(f'[КАДР] контрольная метка: {_kod} · {_chey}')
+        print(f'[КАДР] контрольная метка: {_kod}')
     except Exception as _e_kod:
         print(f'[КАДР] метка не встала: {_e_kod}')
 
