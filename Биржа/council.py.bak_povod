@@ -687,12 +687,8 @@ def wake_council(symbol: str = "", timeframe: str = "",
             continue
         print(f"[КЛЮЧ] 🔑 {slot}: {_k['почему']}")
         print(f"[СОВЕТ] 👤 {slot}: {_p['symbol']} {_p['timeframe']}")
-        # POVOD_VIDEN_V1: повод больше не остаётся в логе — трейдер
-        # должен знать, что именно его разбудило. Иначе он сочиняет
-        # себе ожидание бара, который уже случился.
         r = _call(ceh, slot, fn,
-                  symbol=_p["symbol"], timeframe=_p["timeframe"],
-                  povod=_k.get("почему", ""))
+                  symbol=_p["symbol"], timeframe=_p["timeframe"])
         summary["woke"].append(aid)
         summary["results"][aid] = r
         sig = r.get("signal", {}) or {}
