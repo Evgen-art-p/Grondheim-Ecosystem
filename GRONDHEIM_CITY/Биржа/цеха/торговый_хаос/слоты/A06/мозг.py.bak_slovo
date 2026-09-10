@@ -423,14 +423,6 @@ def _append_diary(signal: dict, diary_entry: dict, market: dict, table: dict):
         "entry":     signal.get("brut_entry"),
         "stop":      signal.get("brut_stop"),
         "lot":       signal.get("brut_lot"),
-        # ISTORIYA_OT_SLEDA_V1: дневник пишет ФАКТ, не рассказ.
-        # Ниже — то, что доказано рычагом: был ли приказ, что
-        # приказано и зачем. input/action остаются голосом трейдера
-        # и стоят РЯДОМ, а не вместо: видно, где факт, где слова.
-        "что":       signal.get("brut_action"),
-        "почему":    signal.get("brut_reason"),
-        "рычаг":     bool(signal),
-        "ключ":      _klyuch_svoy(),
         # голос трейдера о себе — вводная и поступок (из diary_entry промта)
         "input":     (diary_entry or {}).get("input", ""),
         "action":    (diary_entry or {}).get("action", ""),
@@ -1260,9 +1252,7 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
     except Exception as _e:
         print(f"[МОСТ] ⚠️  память не поднялась: {_e}")
 
-    narrative, _slova, diary_entry = _parse_brut(response)
-    # SLOVO_NE_PRIKAZ_V1: решение — только с руки
-    signal = _signal_ot_ruki(md.get("bar_time"), _slova)
+    narrative, signal, diary_entry = _parse_brut(response)
     signal = _sanitize(signal)
     signal = _sanitize_manage(signal)   # TRADER_MANAGE_LANG_V1: язык ведения
 
@@ -1377,86 +1367,3 @@ def _kto_ya() -> str:
 # RUKI_V_RAZGOVORE_V1 - marker
 
 # ZHIVOY_KADR_V1 - marker
-
-
-# ── SLOVO_NE_PRIKAZ_V1: решение приходит с руки, не из текста ──
-# Раньше цифры входа вылавливались из ответа модели. Сергей-исполнитель
-# читал табло и был чист — врала середина: приказ рождался у разбора,
-# а не у трейдера. Отсюда «сказал и не вошёл» = «вошёл».
-#
-# Теперь решение берётся ТОЛЬКО с табло и только то, что положено
-# рукой otdat_prikaz на этом самом баре. Текст остаётся голосом.
-
-_TABLO_KEY_BRUT = "brut"
-_PRIKAZ_POLYA = ("action", "verdict", "reason", "direction", "entry",
-                 "stop", "lot", "new_stop", "add_lot")
-
-
-def _signal_ot_ruki(bar_time=None, slova: dict = None) -> dict:
-    """Решение трейдера — с табло, куда он положил его рукой.
-
-    Пусто, если: руку не звал; приказ с другого бара (протух);
-    табло не открылось. Пустое решение означает ровно то же, что
-    «не работаю» — город никого не откроет.
-    """
-    try:
-        from hooks import load_trading_state
-        t = load_trading_state()
-    except Exception as _e:
-        print(f"[РЕШЕНИЕ] табло не открылось ({_e}) — решения нет")
-        return {}
-
-    v = dict((t.get(_TABLO_KEY_BRUT) or {}))
-    otdan = bool(v.get("отдан_рукой"))
-    bar_v = str(v.get("бар") or "")
-
-    if otdan and bar_time and bar_v and bar_v != str(bar_time):
-        print("[РЕШЕНИЕ] приказ с прошлого бара — не беру")
-        otdan = False
-
-    if not otdan:
-        if slova:
-            print("[СЛОВО] в ответе есть поля решения, но рукой приказ "
-                  "не отдан — решения нет. Слово приказом не считается.")
-        return {}
-
-    out = {}
-    for pole in _PRIKAZ_POLYA:
-        if v.get(pole) is not None:
-            out["brut_" + pole] = v[pole]
-    print(f"[РЕШЕНИЕ] с руки: {out.get('brut_action')} "
-          f"{out.get('brut_direction') or ''}".rstrip())
-    return out
-
-
-# SLOVO_NE_PRIKAZ_V1 - marker
-
-
-# ── ISTORIYA_OT_SLEDA_V1: свой ключ для записи ────────────────
-# Запись подписана именем (YASHCHIK_STOLA_V1) — это для глаз. Ключ
-# нужен, чтобы её нашли ПОПЕРЁК города: имя может повториться,
-# печать — нет. Нет модуля или нет жителя — пустая строка, и запись
-# просто остаётся с одним именем, как была.
-
-def _klyuch_svoy() -> str:
-    try:
-        import sys as _s
-        from pathlib import Path as _P
-        # ищем папку ГОРОД вверх по дереву, а не считаем уровни:
-        # счёт уровней ломается от любой перестановки папок
-        _g = None
-        for _up in _P(__file__).resolve().parents:
-            if (_up / "ГОРОД" / "klyuch.py").exists():
-                _g = str(_up / "ГОРОД")
-                break
-        if _g is None:
-            return ""
-        if _g not in _s.path:
-            _s.path.insert(0, _g)
-        import klyuch
-        return klyuch.klyuch_zhitelya(_kto_ya() or "")
-    except Exception:
-        return ""
-
-
-# ISTORIYA_OT_SLEDA_V1 - marker
