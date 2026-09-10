@@ -60,10 +60,6 @@ MODELS_CATALOG = [
     {"id": "deepseek/deepseek-chat",           "name": "DeepSeek V3",       "price": "$0.14/$0.28"},
     {"id": "meta-llama/llama-3.3-70b-instruct","name": "Llama 3.3 70B",     "price": "$0.10/$0.32"},
     {"id": "anthropic/claude-sonnet-4-5",      "name": "Claude Sonnet 4.5", "price": "$3/$15"},
-    # QWEN_V_SPISKE_V1 (слово Шефа 10.09). Цена прочерком:
-    # выдуманное число хуже отсутствующего — по нему станут
-    # считать. Посмотрит на openrouter.ai — впишем.
-    {"id": "qwen/qwen3.5-397b-a17b",           "name": "Qwen 3.5 397B",   "price": "—"},
 ]
 # GEMINI_PO_UMOLCHANIYU_V1: открываемся на модели, которая ВИДИТ кадр.
 # Проверено Шефом на одном и том же кадре: 4o mini читал «Аллигатор спит,
@@ -1284,20 +1280,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         if ":" not in vremya:
             vremya = "00:00"
         try:
-            god, mes, den = int(god), int(mes), int(den)
-            # DATY_PO_CHELOVECHESKI_V1: «2016.30.04» — тридцатый месяц.
-            # Раньше такое молча уходило в пустоту, и прогон шёл не
-            # туда, куда просили, ничего не сказав.
-            if not (1 <= mes <= 12 and 1 <= den <= 31):
-                raise ValueError(f"месяц {mes}, день {den}")
-            itog = f"{god:04d}.{mes:02d}.{den:02d} {vremya}"
-        except ValueError as _e:
-            print(f"[ПРОГОН] дату «{s}» не разобрал ({_e}) — иду от сегодня")
-            try:
-                ui.notify(f"дату «{s}» не понял — пишется "
-                          f"число.месяц.год", type="warning")
-            except Exception:
-                pass
+            itog = f"{int(god):04d}.{int(mes):02d}.{int(den):02d} {vremya}"
+        except ValueError:
+            print(f"[ПРОГОН] дату «{s}» не разобрал — иду от сегодня")
             return ""
         print(f"[ПРОГОН] ищу места до {itog}")
         return itog
@@ -2555,30 +2540,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
 
         if not mesta:
             state["tester_running"] = False
-            # DATY_PO_CHELOVECHESKI_V1: «пусто» само по себе врёт —
-            # похоже, будто сломан прогон. Чаще всего история просто
-            # в другом отрезке. Говорим, какая она есть.
-            _skazat = "Ничего не нашлось в истории — пусто."
-            try:
-                _kraya = []
-                for _sl2 in (state.get("tester_sloty") or []):
-                    _s2, _t2 = _para_slota(_sl2)
-                    _v2, _ = _src_bars(_s2, _t2, 0)
-                    if _v2:
-                        _kraya.append(f"{_s2} {_t2}: история с "
-                                      f"{_v2[0].get('date', '?')} по "
-                                      f"{_v2[-1].get('date', '?')}")
-                if _kraya:
-                    _zadano = (state.get("progon_ot_daty") or "").strip()
-                    _do = (state.get("progon_po_datu") or "").strip()
-                    _otrez = (f" Задан отрезок {_zadano or 'с начала'} → "
-                              f"{_do or 'до конца'}.")
-                    _skazat = ("В заданном отрезке баров нет. " +
-                               " · ".join(_kraya) + "." + _otrez)
-            except Exception:
-                pass
             state["chat_history"].append({
-                "role": "system", "content": _skazat})
+                "role": "system",
+                "content": "Ничего не нашлось в истории — пусто."})
             update_chat_display()
             ui.notify("Мест не нашлось", type="warning")
             return
@@ -4260,7 +4224,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             def _on_daty_change(e):   # PROGON_S_DATY_V1
                                 state["progon_ot_daty"] = (e.value or "").strip()
                             ui.input(
-                                value="", placeholder="с 28.04.2026",   # DATY_PO_CHELOVECHESKI_V1
+                                value="", placeholder="с 2026.04.28",
                                 on_change=_on_daty_change,
                             ).props(
                                 'dense outlined '
@@ -4279,7 +4243,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             def _on_po_datu_change(e):   # TESTER_PULT_V1
                                 state["progon_po_datu"] = (e.value or "").strip()
                             ui.input(
-                                value="", placeholder="по 30.07.2026",  # DATY_PO_CHELOVECHESKI_V1
+                                value="", placeholder="по 2026.07.30",
                                 on_change=_on_po_datu_change,
                             ).props(
                                 'dense outlined '

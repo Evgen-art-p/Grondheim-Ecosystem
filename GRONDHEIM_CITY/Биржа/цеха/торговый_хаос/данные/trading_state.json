@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-10T13:07:49.039384",
+  "updated": "2026-09-10T19:26:25.342725",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -11,20 +11,20 @@
   },
   "positions": [],
   "feed": {
-    "mode": "real",
+    "mode": "tester",
     "symbol": "EURUSD"
   },
   "brut": {
-    "verdict": "APPROVED",
-    "reason": "вход по медвежьему тренду, приседающий бар",
-    "direction": "SHORT",
-    "entry": 6.705,
-    "stop": 6.71,
+    "verdict": "REJECTED",
+    "reason": "",
+    "direction": null,
+    "entry": null,
+    "stop": null,
     "lot": null,
-    "action": "ENTER",
+    "action": "WAIT",
     "new_stop": null,
     "add_lot": null,
-    "бар": "2026.09.09 12:00",
+    "бар": "2025.10.13 01:20",
     "отдан_рукой": true,
     "кто_отдал": "Илья",
     "ключ_отдавшего": "bc9dd782fa1fbc5dec28a7b192adeeff43dccc721fd27d1530378110647d09ad"
@@ -81,16 +81,16 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2026.09.09 12:00"
+    "бар": "2025.10.13 02:15"
   },
   "точки": {
     "EURUSD H4": {
-      "reshali_na_bare": "2025.02.03 00:00",
+      "reshali_na_bare": "2026.09.10 12:00",
       "otvet_bara": {
         "alive": false,
-        "reason": "структурный слом (close): цена закрылась за 1.14968",
-        "changed": true,
-        "direction": "BULL"
+        "reason": "точки нет",
+        "changed": false,
+        "direction": null
       },
       "alive": false,
       "trend_direction": "BULL",
@@ -191,6 +191,15 @@
         "changed": false,
         "direction": null
       }
+    },
+    "EURUSD M5": {
+      "reshali_na_bare": "2025.10.13 02:15",
+      "otvet_bara": {
+        "alive": false,
+        "reason": "точки нет",
+        "changed": false,
+        "direction": null
+      }
     }
   },
   "наблюдения": {
@@ -212,6 +221,13 @@
         "с_бара": "2025.12.23 04:00",
         "последний_бар": "2026.01.20 08:00"
       }
+    },
+    "EURUSD M5": {
+      "A06": {
+        "за_чем": "Вижу флэт. Аллигатор спит — линии переплелись и лежат горизонтально, порядка между ними нет. Цена топчется в узком диапазоне около 1.1610 уже несколько часов. AO мёртвый — мелкие столбики пляшут у нуля, никакого размаха. Разворотный бар отмечен, но он ВНУТРИ пасти, а не оторван от линий. По канону разворотник должен стоять в стороне от Аллигатора, а не в переплетении. Это не конец хода — это отсут",
+        "с_бара": "2025.10.13 00:35",
+        "последний_бар": "2025.10.13 00:35"
+      }
     }
   },
   "последнее_закрытие": {
@@ -221,11 +237,5 @@
     "выход": 1.17192,
     "pnl": -2e-05
   },
-  "zhivoy_kadr": {
-    "put": "C:\\Users\\Евгений\\Desktop\\Grondheim-Ecosystem\\Биржа\\кадры\\USDCNH_D1_20260910_130748_435342.png",
-    "podpis": "USDCNH D1 · стол ниже",
-    "chey": "Илья",
-    "slot": "A06",
-    "ruka": "stol_na_etazhe"
-  }
+  "zhivoy_kadr": {}
 }
