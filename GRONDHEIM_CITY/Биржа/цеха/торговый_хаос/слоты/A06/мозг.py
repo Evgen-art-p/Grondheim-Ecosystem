@@ -1270,7 +1270,7 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
     # Напоминания он видел и всё равно отвечал словами; уговоры
     # кончились. Руки те же, так что во втором заходе приказ ложится
     # на табло по-настоящему.
-    if not signal:
+    if not signal and not _gorod_skazal_hvatit():
         try:
             _peresp = (
                 "\n\n— — —\n"
@@ -1593,3 +1593,23 @@ def _kadr_shefa() -> list:
 # NAPOMINANIE_RUKI_V1 - marker
 
 # PERESPROS_V1 - marker
+
+
+# ── STOP_ZHYOSTKO_V1: город сказал «хватит» ───────────────────
+# Мозг про кнопку СТОП ничего не знает и знать не должен. Но
+# переспрос — это ЛИШНИЙ вопрос к модели, и задавать его после
+# нажатия кнопки значит держать Шефа ещё минуту без причины.
+# Признак лежит на общей площади, читаем оттуда.
+
+def _gorod_skazal_hvatit() -> bool:
+    try:
+        from hooks import load_trading_state
+        if bool((load_trading_state() or {}).get("стоп_прогона")):
+            print("[ПЕРЕСПРОС] город сказал «стоп» — не переспрашиваю")
+            return True
+    except Exception:
+        pass
+    return False
+
+
+# STOP_ZHYOSTKO_V1 - marker

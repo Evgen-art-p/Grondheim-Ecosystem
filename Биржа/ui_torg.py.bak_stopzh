@@ -1923,31 +1923,11 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                   type="info")
 
     def request_stop():
-        # STOP_ZHYOSTKO_V1: первое нажатие — мягко, второе — бросаем.
-        # Прогон висит внутри вопроса к модели, поэтому мягкий стоп
-        # слышен только когда ответ вернётся. Второе нажатие не ждёт.
         if not state.get("tester_running"):
             ui.notify("Перебор не идёт", type="warning")
             return
-        if state.get("stop_requested"):
-            state["stop_hard"] = True
-            _pometit_stop_dlya_mozga(True)
-            ui.notify("⏹ БРОСАЮ — не жду текущий ответ", type="warning")
-            return
         state["stop_requested"] = True
-        _pometit_stop_dlya_mozga(True)
-        ui.notify("⏸ СТОП — встану, как вернётся текущий ответ "
-                  "(нажми ещё раз, чтобы бросить сразу)", type="info")
-
-    def _pometit_stop_dlya_mozga(nado: bool):
-        """Мозг про кнопку не знает — кладём признак на общую площадь."""
-        try:
-            from hooks import load_trading_state, save_trading_state
-            _t = load_trading_state()
-            _t["стоп_прогона"] = bool(nado)
-            save_trading_state(_t)
-        except Exception as _e:
-            print(f"[СТОП] признак не лёг ({_e})")
+        ui.notify("⏸ СТОП — останавливаю на следующем кандидате...", type="info")
 
     def toggle_learn():
         """TORG_LEARN_SWITCH_V1: УЧИТЬ — писать ли выводы из сделок в живых жителей.
@@ -2506,8 +2486,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             print(f"[ОТЧЁТ] не завёлся ({_e}) — прогон пойдёт без записи")
         state["tester_running"] = True
         state["stop_requested"] = False
-        state["stop_hard"] = False          # STOP_ZHYOSTKO_V1
-        _pometit_stop_dlya_mozga(False)
         _bylo_moment = ""
         try:
             _bylo_moment = istoriya.gde_stoim()
@@ -2642,9 +2620,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 # СТОП не успевает обработаться — и прогон идёт дальше,
                 # хотя проверка флага стоит прямо ниже.
                 await asyncio.sleep(0)
-                if state.get("stop_hard"):   # STOP_ZHYOSTKO_V1
-                    stopped = True
-                    break
                 if state.get("stop_requested"):
                     state["chat_history"].append({
                         "role": "system", "content": "⏸ остановлено"})

@@ -1923,31 +1923,11 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                   type="info")
 
     def request_stop():
-        # STOP_ZHYOSTKO_V1: первое нажатие — мягко, второе — бросаем.
-        # Прогон висит внутри вопроса к модели, поэтому мягкий стоп
-        # слышен только когда ответ вернётся. Второе нажатие не ждёт.
         if not state.get("tester_running"):
             ui.notify("Перебор не идёт", type="warning")
             return
-        if state.get("stop_requested"):
-            state["stop_hard"] = True
-            _pometit_stop_dlya_mozga(True)
-            ui.notify("⏹ БРОСАЮ — не жду текущий ответ", type="warning")
-            return
         state["stop_requested"] = True
-        _pometit_stop_dlya_mozga(True)
-        ui.notify("⏸ СТОП — встану, как вернётся текущий ответ "
-                  "(нажми ещё раз, чтобы бросить сразу)", type="info")
-
-    def _pometit_stop_dlya_mozga(nado: bool):
-        """Мозг про кнопку не знает — кладём признак на общую площадь."""
-        try:
-            from hooks import load_trading_state, save_trading_state
-            _t = load_trading_state()
-            _t["стоп_прогона"] = bool(nado)
-            save_trading_state(_t)
-        except Exception as _e:
-            print(f"[СТОП] признак не лёг ({_e})")
+        ui.notify("⏸ СТОП — останавливаю на следующем кандидате...", type="info")
 
     def toggle_learn():
         """TORG_LEARN_SWITCH_V1: УЧИТЬ — писать ли выводы из сделок в живых жителей.
@@ -2506,8 +2486,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             print(f"[ОТЧЁТ] не завёлся ({_e}) — прогон пойдёт без записи")
         state["tester_running"] = True
         state["stop_requested"] = False
-        state["stop_hard"] = False          # STOP_ZHYOSTKO_V1
-        _pometit_stop_dlya_mozga(False)
         _bylo_moment = ""
         try:
             _bylo_moment = istoriya.gde_stoim()
@@ -2642,9 +2620,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 # СТОП не успевает обработаться — и прогон идёт дальше,
                 # хотя проверка флага стоит прямо ниже.
                 await asyncio.sleep(0)
-                if state.get("stop_hard"):   # STOP_ZHYOSTKO_V1
-                    stopped = True
-                    break
                 if state.get("stop_requested"):
                     state["chat_history"].append({
                         "role": "system", "content": "⏸ остановлено"})
@@ -2922,53 +2897,22 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 _otn = _gde
             _hvost = f" · отчёт: {_otn}"
             print(f"[ОТЧЁТ] 📄 {_gde}")
-        # ITOG_PROGONA_VIDEN_V1: разбор по местам вместо трёх чисел.
-        # Главное различие — СДЕЛАЛ или ТОЛЬКО ПОДУМАЛ: приказ отдан
-        # рукой или ответ остался словами. До Закона Рычага это было
-        # одно и то же, теперь разное — и в итоге должно быть видно.
-        _vhodov = _otkazov = _molchaniy = 0
-        _sdelal, _podumal = [], []
+        # PROGON_VIDNO_V1: итог словами, а не только путь к папке.
+        _vhodov = 0
+        _otkazov = 0
         try:
             for _m in (_otchyot.mesta if _otchyot is not None else []):
                 _v = str(_m.get("вердикт", "")).upper()
-                _kogda = str(_m.get("бар") or _m.get("дата") or "?")
-                _pochemu = str(_m.get("причина") or _m.get("reason") or "")
-                _rukoy = bool(_m.get("отдан_рукой")
-                              or _m.get("рычаг")
-                              or _v in ("APPROVED", "ENTER", "OK", "WAIT",
-                                        "REJECTED"))
                 if _v in ("APPROVED", "ENTER", "OK"):
                     _vhodov += 1
-                    _sdelal.append(f"· {_kogda}  ВОШЁЛ   {_pochemu[:70]}")
                 elif _v in ("REJECTED", "WAIT"):
                     _otkazov += 1
-                    _sdelal.append(f"· {_kogda}  WAIT    {_pochemu[:70]}")
-                else:
-                    _molchaniy += 1
-                    _podumal.append(f"· {_kogda}  сказал словами, "
-                                    f"руку не позвал")
-        except Exception as _e_it:
-            print(f"[ИТОГ] не собрался ({_e_it})")
-
-        _stroki = [f"✓ прогон окончен · мест {proydeno}{_hvost}", ""]
-        _stroki.append(f"СДЕЛАЛ (приказ отдан рукой): {len(_sdelal)}")
-        _stroki += ["  " + s for s in _sdelal[:12]] or ["  — ни разу"]
-        if len(_sdelal) > 12:
-            _stroki.append(f"  … ещё {len(_sdelal) - 12}")
-        _stroki.append("")
-        _stroki.append(f"ТОЛЬКО ПОДУМАЛ (приказа не было): {len(_podumal)}")
-        _stroki += ["  " + s for s in _podumal[:12]] or ["  — ни разу"]
-        if len(_podumal) > 12:
-            _stroki.append(f"  … ещё {len(_podumal) - 12}")
-        _stroki.append("")
-        _stroki.append(f"ВХОДОВ: {_vhodov} · ОТКАЗОВ РУКОЙ: {_otkazov} · "
-                       f"МОЛЧАНИЙ: {_molchaniy}")
-        if _molchaniy and not _vhodov:
-            _stroki.append("Сделок нет не потому, что сломалось: он "
-                           "отказывался сам. Смотри причины выше.")
-
+        except Exception:
+            pass
         state["chat_history"].append({
-            "role": "system", "content": "\n".join(_stroki)})
+            "role": "system",
+            "content": (f"✓ прогон окончен · мест {proydeno} · "
+                        f"входов {_vhodov} · отказов {_otkazov}{_hvost}")})
         update_chat_display()
         ui.notify(f"✓ прогон окончен · {proydeno} мест", type="positive")
 
