@@ -4592,28 +4592,24 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         _clean_btn.on("click", lambda: _ochistit_istoriyu())
                         with _clean_btn:
                             ui.html("🧹 ОЧИСТИТЬ")
-                        # KNOPKA_OTCHYOTA_K_OCHISTKE_V1: отчёт — сюда же.
-                        # Справа в своём ряду его перекрывали кнопки
-                        # тестера, как раньше «← Брат» и надпись Биржи.
-                        _otchyot_btn = ui.element("div").style(
-                            "display:flex;align-items:center;"
-                            "padding:6px 14px;border-radius:7px;"
-                            "font-size:12px;font-weight:700;cursor:pointer;"
-                            "background:rgba(99,130,255,0.08);"
-                            "color:rgba(150,175,255,0.85);"
-                            "border:1px solid rgba(99,130,255,0.3);")
-                        _otchyot_btn.on("click", lambda: ui.navigate.to(
-                            f"/otchyot/{tseh_id}", new_tab=True))
-                        with _otchyot_btn:
-                            ui.html("📄 ОТЧЁТ")
                     # UBRAT_NADPIS_BIRZHA_V1: надпись «БИРЖА · СОВЕТ» убрана —
                     # наезжала на кнопку ОЧИСТИТЬ, и была избыточна
                     # (страница подписана вкладками и хедером Совета).
                     # UBRAT_KNOPKU_BRAT_V1: кнопка «← Брат» убрана по
                     # слову Шефа — не использовалась и жалась к
                     # «ОЧИСТИТЬ». К Брату ходим через город.
-                    # KNOPKA_OTCHYOTA_K_OCHISTKE_V1: кнопка отчёта
-                    # переехала в общий ряд, к «ОЧИСТИТЬ».
+                    # STRANICA_OTCHYOTA_V1: на её место — отчёт прогона.
+                    with ui.row().style("gap:8px; justify-content:flex-end;"):
+                        ui.button(
+                            "📄 ОТЧЁТ",
+                            on_click=lambda: ui.navigate.to(
+                                f"/otchyot/{tseh_id}", new_tab=True)
+                        ).props("flat").style(
+                            "padding:6px 14px; border-radius:8px; "
+                            "font-size:12px; "
+                            "background:rgba(99,130,255,0.08); "
+                            "border:1px solid rgba(99,130,255,0.25); "
+                            "color:rgba(180,190,220,0.8);")
 
                 with ui.element("div").classes("stage-content").style("flex:1; min-height:0; overflow:hidden;"):
                     with ui.element("div").classes("split-view").style("height:100%; min-height:0; overflow:hidden;"):

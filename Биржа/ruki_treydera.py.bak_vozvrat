@@ -271,8 +271,8 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
                 print(f"[СТОЛ] кадр {tf} не нарисовался ({_ek}) — только числа")
             if put:
                 return (f"[КАДР: {put}] {symbol} {tf} · стол ниже\n"
-                        + chisla + _domoy(tf))
-            return chisla + _domoy(tf)
+                        + chisla)
+            return chisla
         except Exception as e:
             return f"стол на {tf} не накрылся: {e}"
 
@@ -385,37 +385,7 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
             return f"показать {tf} не вышло: {e}"
         if not put:
             return f"котировок {symbol} {tf} не дали"
-        return (f"[КАДР: {put}] {symbol} {tf}, последние 140 баров"
-                + _domoy(tf))
-
-    def _domoy(kuda_hodil: str) -> str:
-        """VOZVRAT_NA_RABOCHIY_V1: сходил на чужой этаж — вот твой.
-
-        Возвращает хвост к ответу руки: кадр рабочего этажа, чтобы
-        последним перед глазами был ДОМ, а не тот этаж, куда ходили
-        смотреть. Решение и вход — всегда на своём.
-
-        Сходил на свой же (или рабочего этажа нет) — хвоста нет:
-        возвращать некуда. Это же покрывает случай, когда трейдер
-        сменил рабочий этаж на тот, куда пришёл, — он уже дома.
-        """
-        try:
-            svoy = (rabochiy_etazh or "").strip().upper()
-            if not svoy or svoy == (kuda_hodil or "").strip().upper():
-                return ""
-            import grafik
-            _p = grafik.kadr(symbol, svoy, linii=False)
-            if not _p:
-                return (f"\n\n(домой на {svoy} не вернулся: котировок не "
-                        f"дали. Решай по своему этажу, а не по {kuda_hodil}.)")
-            print(f"[ВОЗВРАТ] {slot}: посмотрел {kuda_hodil} → домой на {svoy}")
-            return (f"\n\n[КАДР: {_p}] ВЕРНУЛСЯ ДОМОЙ · {symbol} {svoy} — "
-                    f"твой рабочий этаж. Смотрел ты {kuda_hodil}, а решаешь "
-                    f"и входишь здесь.")
-        except Exception as _e:
-            print(f"[ВОЗВРАТ] не вышло ({_e}) — трейдер остался на "
-                  f"{kuda_hodil}")
-            return ""
+        return f"[КАДР: {put}] {symbol} {tf}, последние 140 баров"
 
     def _krayniye(args: dict) -> str:
         """KRAYNIYE_TOCHKI_V1: вершина и дно. Факты, не разметка."""
@@ -778,35 +748,6 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
     if not tablo:
         return {}     # не торговое место — руки нет
 
-    def _chto_u_menya_est() -> str:
-        """NE_ZAYDI_DVAZHDY_V1: своя заявка или позиция — словами.
-
-        Пусто — значит руки свободны и входить можно.
-        """
-        try:
-            from hooks import load_trading_state as _lts
-            _t = _lts() or {}
-            for _p in (_t.get("positions") or []):
-                if str(_p.get("symbol", "")).strip().upper() != \
-                        str(symbol).strip().upper():
-                    continue
-                _st = str(_p.get("status") or "").upper()
-                if _st not in ("OPEN", "PENDING"):
-                    continue
-                _kto = str(_p.get("slot") or _p.get("agent") or "")
-                if _kto and _kto.upper() != str(slot).upper():
-                    continue
-                _n = str(_p.get("direction") or "?").upper()
-                _c = _p.get("entry")
-                _s = _p.get("stop")
-                _chto = ("позиция" if _st == "OPEN" else "висящая заявка")
-                return (f"{_chto}: {_n} {symbol}"
-                        + (f" по {_c}" if _c else "")
-                        + (f", стоп {_s}" if _s else ""))
-        except Exception as _e:
-            print(f"[РУКА] своё не спросилось ({_e}) — пропускаю приказ")
-        return ""
-
     def _otdat(args: dict) -> str:
         from datetime import datetime, timezone
         # POLYA_PRIKAZA_PROSHCHAYUT_V1: имя поля чистим от пробелов и
@@ -827,17 +768,6 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
         stop = args.get("стоп")
 
         if chto == "ENTER":
-            # NE_ZAYDI_DVAZHDY_V1: своё уже есть — второй ENTER не
-            # принимаем. 12.09 трейдер вошёл четыре раза подряд в одно
-            # место: его будили «заявка висит», а он разбирал график
-            # заново и честно входил по правилу «сошлись — окружай».
-            _moyo = _chto_u_menya_est()
-            if _moyo:
-                return ("Приказ НЕ отдан: у тебя УЖЕ есть " + _moyo +
-                        ". Второй раз в то же место не входят. Сейчас "
-                        "можно: HOLD — держать, MOVE_STOP — подвинуть "
-                        "стоп, ADD — долить к этой же позиции, "
-                        "CLOSE — закрыть.")
             net = []
             if napravlenie not in ("LONG", "SHORT"):
                 net.append("направление (LONG или SHORT)")

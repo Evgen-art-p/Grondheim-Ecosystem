@@ -1075,7 +1075,6 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
         # stol_na_etazhe. Здесь остаётся только то, без чего
         # нельзя НАЗВАТЬ цену: своя позиция и текущий бар.
         + _povod_blok(povod)      # POVOD_VIDEN_V1
-        + _svoyo_blok()           # NE_ZAYDI_DVAZHDY_V1
         + "=== ЧТО У ТЕБЯ НА РУКАХ ===\n"
         f"{json.dumps({'position': table_for_avan.get('position'),
                        'бар': (table_for_avan.get('market') or {}).get('price'),
@@ -1465,42 +1464,6 @@ _RUKA_NAPOMINANIE = (
     "работать — тоже позови руку с WAIT, чтобы отказ был виден.\n\n")
 
 
-def _svoyo_blok() -> str:
-    """NE_ZAYDI_DVAZHDY_V1: что у меня уже есть.
-
-    Раньше трейдеру говорили только «заявка ещё висит» — без стороны,
-    цены и стопа. Он разбирал график заново и входил снова: за один
-    час четыре одинаковых входа. Теперь видит своё первым делом.
-    """
-    try:
-        from hooks import load_trading_state as _lts
-        _t = _lts() or {}
-        _moi = []
-        for _p in (_t.get("positions") or []):
-            _st = str(_p.get("status") or "").upper()
-            if _st not in ("OPEN", "PENDING"):
-                continue
-            _n = str(_p.get("direction") or "?").upper()
-            _c = _p.get("entry")
-            _s = _p.get("stop")
-            _moi.append(("ПОЗИЦИЯ ОТКРЫТА" if _st == "OPEN"
-                         else "ЗАЯВКА ВИСИТ")
-                        + f": {_n} {_p.get('symbol', '')}"
-                        + (f" по {_c}" if _c else "")
-                        + (f", стоп {_s}" if _s else ""))
-        if not _moi:
-            return ""
-        return ("=== ЧТО У ТЕБЯ УЖЕ ЕСТЬ ===\n"
-                + "\n".join(_moi)
-                + "\nВходить второй раз в то же место НЕ НАДО — рука "
-                  "такой приказ и не примет. Твоя работа сейчас: "
-                  "держать (HOLD), двигать стоп (MOVE_STOP), доливать "
-                  "(ADD) или закрывать (CLOSE).\n\n")
-    except Exception as _e:
-        print(f"[СВОЁ] не спросилось ({_e})")
-        return ""
-
-
 def _povod_blok(povod: str) -> str:
     """Факт повода — без цены и без стороны.
 
@@ -1601,5 +1564,3 @@ def _gorod_skazal_hvatit() -> bool:
 # STOP_ZHYOSTKO_V1 - marker
 
 # KADRY_V_CHATE_V1 - marker
-
-# NE_ZAYDI_DVAZHDY_V1 - marker
