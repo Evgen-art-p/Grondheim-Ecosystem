@@ -64,7 +64,6 @@ _LESENKA = (2000, 500, 200)
 _GLUBINA_POMNIM: dict = {}     # (символ, этаж) -> ступень, которая дала бары
 _PUSTO_POMNIM: dict = {}       # (символ, этаж) -> когда получили пусто
 _PUSTO_ZHIVYOT = 60.0          # секунд молчать, не переспрашивая
-_POCHEMU_SKAZALI: set = set()  # KOMPAS_GOVORIT_POCHEMU_V1: один раз на пару
 
 
 # GLUBINA_KOMPASA_V3 ─────────────────────────────────────────
@@ -184,7 +183,6 @@ def global_trend(symbol: str, working_tf: str,
     # одного (в реале — с двумя повторами и снами внутри насоса), и
     # прогон по истории из быстрого стал ползучим.
     sbars, point = _sprosit_starshiy(symbol, senior)
-    _syrykh = len(sbars or [])          # KOMPAS_GOVORIT_POCHEMU_V1
     # ОТСЕЧКА БУДУЩЕГО: оставляем только старшие бары ДО даты прогона.
     # Старший бар входит, если его дата <= дате текущего рабочего бара.
     if as_of_date and sbars:
@@ -193,29 +191,6 @@ def global_trend(symbol: str, working_tf: str,
     # берём последние 300 из отсечённого (хватает на Аллигатор + запас)
     if len(sbars) > 300:
         sbars = sbars[-300:]
-    # KOMPAS_GOVORIT_POCHEMU_V1: раньше отказ был немым — «не пришёл»,
-    # и всё. Теперь видно, на чём споткнулись: источник не дал баров,
-    # обрезка по дате прогона съела всё, или их просто мало.
-    try:
-        _skolko = len(sbars or [])
-        _klyuch_zh = (symbol, senior)
-        if _skolko < 40 or point is None:
-            if _klyuch_zh not in _POCHEMU_SKAZALI:
-                _POCHEMU_SKAZALI.add(_klyuch_zh)
-                if not _syrykh:
-                    _p = "источник не дал ни одного бара"
-                elif _skolko == 0:
-                    _p = (f"источник дал {_syrykh}, но обрезка по дате "
-                          f"{as_of_date} не оставила ни одного")
-                elif point is None:
-                    _p = f"баров {_skolko}, но цена шага (point) неизвестна"
-                else:
-                    _p = (f"баров всего {_skolko} — меньше сорока, "
-                          f"мерить веер не на чем")
-                print(f"[КОМПАС] {symbol} {senior}: {_p}")
-    except Exception:
-        pass
-
     if not sbars or point is None or len(sbars) < 40:
         return {"bias": "NONE", "senior_tf": senior, "ok": False,
                 "why": f"старший этаж {senior} не дал баров"}
