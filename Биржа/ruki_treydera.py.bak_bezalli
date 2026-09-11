@@ -264,8 +264,7 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
             # числа, как было: рука из-за кадра не падает.
             try:
                 import grafik
-                # KADR_BEZ_ALLIGATORA_V1: трейдеру — без линий
-                put = grafik.kadr(symbol, tf, linii=False)
+                put = grafik.kadr(symbol, tf)
             except Exception as _ek:
                 put = None
                 print(f"[СТОЛ] кадр {tf} не нарисовался ({_ek}) — только числа")
@@ -379,8 +378,7 @@ def ruki(symbol: str, ceh: str, slot: str, self_key: str,
             if not masshtab.est(tf):
                 return f"такого этажа нет: {tf}"
             import grafik
-            # KADR_BEZ_ALLIGATORA_V1: трейдеру — без линий
-            put = grafik.kadr(symbol, tf, linii=False)
+            put = grafik.kadr(symbol, tf)
         except Exception as e:
             return f"показать {tf} не вышло: {e}"
         if not put:

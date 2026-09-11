@@ -83,8 +83,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
               kuda: Optional[Path] = None,
               barov: int = BAROV_V_KADRE,
               fraktaly: Optional[dict] = None,
-              prisedayushchie: Optional[list] = None,
-              linii: bool = True) -> Optional[Path]:
+              prisedayushchie: Optional[list] = None) -> Optional[Path]:
     """Рисует кадр и возвращает путь к PNG. Нет matplotlib — вернёт None.
 
     bars       — список баров как их отдаёт feed_source
@@ -164,15 +163,10 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
                 facecolor=C_UP if rastet else C_DOWN,
                 edgecolor=C_KRAY, linewidth=1.6, zorder=3))
 
-    # Аллигатор — толсто, это главные линии кадра.
-    # KADR_BEZ_ALLIGATORA_V1: но трейдеру первого уровня они не
-    # рисуются вовсе. Три попытки запретить их бумагой провалились —
-    # он возвращался к ним в каждом отказе. Нечего вплетать, если
-    # нечего видеть. Направление он берёт строкой со стола.
-    for ryad, cvet, imya in (() if not linii else
-                             ((jaw, C_JAW, "Челюсть"),
-                              (teeth, C_TEETH, "Зубы"),
-                              (lips, C_LIPS, "Губы"))):
+    # Аллигатор — толсто, это главные линии кадра
+    for ryad, cvet, imya in ((jaw, C_JAW, "Челюсть"),
+                             (teeth, C_TEETH, "Зубы"),
+                             (lips, C_LIPS, "Губы")):
         xs = [i for i, v in enumerate(ryad) if v is not None]
         ys = [v for v in ryad if v is not None]
         if xs:
@@ -367,8 +361,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
 
 
 def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
-         barov: int = BAROV_V_KADRE,
-         linii: bool = True) -> Optional[Path]:
+         barov: int = BAROV_V_KADRE) -> Optional[Path]:
     """Взять бары из источника, посчитать индикаторы и нарисовать кадр.
 
     Готовая кнопка для кабинета: «посмотреть» — Шеф видит то же, что
@@ -431,8 +424,7 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
         print(f"[КАДР] приседающие не посчитались: {_e_sq}")
         _sq = []
     return narisovat(bs, al, ao, symbol, timeframe, kuda=kuda, barov=barov,
-                     fraktaly=fr, prisedayushchie=_sq,
-                     linii=linii)          # KADR_BEZ_ALLIGATORA_V1
+                     fraktaly=fr, prisedayushchie=_sq)
 
 # KADR_I_VAKANSIYA_V1 - marker
 

@@ -2650,13 +2650,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                         "role": "system", "content": "⏸ остановлено"})
                     update_chat_display()
                     break
-                # BUDIM_NA_SVOYOM_BARE_V1: курсор — на момент ЗАКРЫТИЯ
-                # бара места, а не на его начало. Машина времени отдаёт
-                # только закрытое: поставь курсор на начало — и сам бар
-                # события окажется «ещё идущим», город возьмёт
-                # предыдущий, а трейдера разбудят ДО того, как некрон
-                # сформировался. Отсюда и его вечное «жду ещё бар».
-                istoriya.postavit(_moment_zakrytiya(data, _tf))
+                istoriya.postavit(data)
                 # PROGON_PODRYAD_V1: на сплошном ходу считаем сами и
                 # смотрим ключ. Закрыт — идём дальше молча и даром.
                 if k.get("подряд"):
@@ -4533,18 +4527,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     # UBRAT_KNOPKU_BRAT_V1: кнопка «← Брат» убрана по
                     # слову Шефа — не использовалась и жалась к
                     # «ОЧИСТИТЬ». К Брату ходим через город.
-                    # STRANICA_OTCHYOTA_V1: на её место — отчёт прогона.
-                    with ui.row().style("gap:8px; justify-content:flex-end;"):
-                        ui.button(
-                            "📄 ОТЧЁТ",
-                            on_click=lambda: ui.navigate.to(
-                                f"/otchyot/{tseh_id}", new_tab=True)
-                        ).props("flat").style(
-                            "padding:6px 14px; border-radius:8px; "
-                            "font-size:12px; "
-                            "background:rgba(99,130,255,0.08); "
-                            "border:1px solid rgba(99,130,255,0.25); "
-                            "color:rgba(180,190,220,0.8);")
 
                 with ui.element("div").classes("stage-content").style("flex:1; min-height:0; overflow:hidden;"):
                     with ui.element("div").classes("split-view").style("height:100%; min-height:0; overflow:hidden;"):
@@ -4762,23 +4744,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # VZGLYAD_PO_VYBORU_V1 - marker
 
 # EDINYY_VYBOR_V1 - marker
-
-
-def _moment_zakrytiya(data_bara: str, etazh: str) -> str:
-    """Момент, когда этот бар закрылся. Не вышло посчитать — отдаём
-    как есть: лучше прежнее поведение, чем сломанный курсор."""
-    try:
-        from datetime import timedelta
-        import istoriya as _ist
-        import masshtab as _m
-        t0 = _ist.kak_vremya(data_bara)
-        minut = _m.minut(etazh)
-        if t0 is None or not minut:
-            return data_bara
-        return (t0 + timedelta(minutes=minut)).strftime(_ist.FORMAT)
-    except Exception as _e:
-        print(f"[ПРОГОН] момент закрытия не посчитался ({_e}) — "
-              f"ставлю курсор как раньше")
-        return data_bara
-
-# BUDIM_NA_SVOYOM_BARE_V1 - marker

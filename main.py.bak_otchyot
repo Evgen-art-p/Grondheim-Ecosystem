@@ -264,24 +264,6 @@ def _torg0():
     page_torg()
 
 
-# ── STRANICA_OTCHYOTA_V1: отчёт прогона — кадр и разбор рядом ──
-# В консоли никто разбираться не будет, в папках тем более. Здесь
-# каждое место видно глазами: кадр того бара и что он про него сказал.
-from ui_otchyot import page_otchyot
-
-@ui.page("/otchyot")
-def _otchyot0():
-    page_otchyot()
-
-@ui.page("/otchyot/{ceh}")
-def _otchyot1(ceh: str = "торговый_хаос"):
-    page_otchyot(ceh)
-
-@ui.page("/otchyot/{ceh}/{papka}")
-def _otchyot2(ceh: str = "торговый_хаос", papka: str = ""):
-    page_otchyot(ceh, papka)
-
-
 if __name__ in {"__main__", "__mp_main__"}:
     ui.run(
         title="Грондхейм · Брат",
