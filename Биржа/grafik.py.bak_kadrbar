@@ -384,30 +384,6 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
         bs = _tolko_zakrytye(bs)
     except Exception:
         pass
-    # KADR_PO_BARU_GORODA_V1: не заглядываем вперёд. В прогоне курсор
-    # успевает сдвинуться, и кадр рисовался по бару, которого в момент
-    # вопроса ещё не было, — трейдер подглядывал в будущее.
-    try:
-        from hooks import load_trading_state as _lts
-        _bar_goroda = str(((_lts() or {}).get("рынок") or {}).get("бар") or "")
-        if _bar_goroda:
-            _do = [b for b in bs if str(b.get("date", "")) <= _bar_goroda]
-            # обрезаем ВСЕГДА, когда что-то осталось. Порога тут быть
-            # не должно: «мало баров — нарисую как есть» означало бы
-            # снова показать будущее, а короткий честный кадр лучше
-            # длинного, но подглядывающего.
-            if _do:
-                if len(_do) != len(bs):
-                    print(f"[КАДР] обрезал по бару города {_bar_goroda}: "
-                          f"{len(bs)} → {len(_do)}")
-                bs = _do
-            else:
-                print(f"[КАДР] по бару города {_bar_goroda} баров нет — "
-                      f"кадра не будет")
-                return None
-    except Exception as _e_bar:
-        print(f"[КАДР] бар города не спросился ({_e_bar}) — рисую как есть")
-
     if not bs:
         return None
     highs = [x["high"] for x in bs]

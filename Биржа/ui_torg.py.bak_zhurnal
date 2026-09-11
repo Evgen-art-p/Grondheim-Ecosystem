@@ -2922,59 +2922,50 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 _otn = _gde
             _hvost = f" · отчёт: {_otn}"
             print(f"[ОТЧЁТ] 📄 {_gde}")
-        # ZHURNAL_PROGONA_V1: журнал сделок вместо списка фраз.
-        # Даты берём из «когда_на_рынке» (отчёт кладёт их туда), а
-        # места делим по ДЕЙСТВИЮ: вход, ведение, отказ, молчание.
-        _vhodov = _otkazov = _vedeniy = _molchaniy = 0
-        _stroki_zhurnala = []
-        _gde_kadry = ""
+        # ITOG_PROGONA_VIDEN_V1: разбор по местам вместо трёх чисел.
+        # Главное различие — СДЕЛАЛ или ТОЛЬКО ПОДУМАЛ: приказ отдан
+        # рукой или ответ остался словами. До Закона Рычага это было
+        # одно и то же, теперь разное — и в итоге должно быть видно.
+        _vhodov = _otkazov = _molchaniy = 0
+        _sdelal, _podumal = [], []
         try:
             for _m in (_otchyot.mesta if _otchyot is not None else []):
-                _kogda = str(_m.get("когда_на_рынке")
-                             or _m.get("место_найдено_на") or "?")[:16]
-                _d = str(_m.get("действие") or "").upper()
-                _v = str(_m.get("вердикт") or "").upper()
-                _pochemu = str(_m.get("причина") or "").strip()
-                _kadr = str(_m.get("кадр") or "")
-                if _kadr and not _gde_kadry:
-                    _gde_kadry = "кадры"
-
-                if _d == "ENTER" or _v in ("APPROVED", "ENTER", "OK"):
+                _v = str(_m.get("вердикт", "")).upper()
+                _kogda = str(_m.get("бар") or _m.get("дата") or "?")
+                _pochemu = str(_m.get("причина") or _m.get("reason") or "")
+                _rukoy = bool(_m.get("отдан_рукой")
+                              or _m.get("рычаг")
+                              or _v in ("APPROVED", "ENTER", "OK", "WAIT",
+                                        "REJECTED"))
+                if _v in ("APPROVED", "ENTER", "OK"):
                     _vhodov += 1
-                    _c = _m.get("цена_входа")
-                    _s = _m.get("стоп_входа")
-                    _hv = (f" @ {_c}" if _c else "")
-                    _hv += (f", стоп {_s}" if _s else "")
-                    _metka = f"ВОШЁЛ {_hv}".strip()
-                elif _d in ("HOLD", "MOVE_STOP", "ADD", "CLOSE"):
-                    _vedeniy += 1
-                    _metka = {"HOLD": "ДЕРЖУ", "MOVE_STOP": "СТОП ПЕРЕНЁС",
-                              "ADD": "ДОЛИЛ", "CLOSE": "ЗАКРЫЛ"}[_d]
-                elif _d == "WAIT" or _v in ("REJECTED", "WAIT"):
+                    _sdelal.append(f"· {_kogda}  ВОШЁЛ   {_pochemu[:70]}")
+                elif _v in ("REJECTED", "WAIT"):
                     _otkazov += 1
-                    _metka = "ОТКАЗ"
+                    _sdelal.append(f"· {_kogda}  WAIT    {_pochemu[:70]}")
                 else:
                     _molchaniy += 1
-                    _metka = "ПОДУМАЛ, приказа не было"
-                _stroki_zhurnala.append(
-                    f"  {_kogda:16} {_metka:22} {_pochemu[:58]}")
+                    _podumal.append(f"· {_kogda}  сказал словами, "
+                                    f"руку не позвал")
         except Exception as _e_it:
             print(f"[ИТОГ] не собрался ({_e_it})")
 
         _stroki = [f"✓ прогон окончен · мест {proydeno}{_hvost}", ""]
-        _stroki += _stroki_zhurnala[:40]
-        if len(_stroki_zhurnala) > 40:
-            _stroki.append(f"  … ещё {len(_stroki_zhurnala) - 40} "
-                           f"(все — в отчёте)")
+        _stroki.append(f"СДЕЛАЛ (приказ отдан рукой): {len(_sdelal)}")
+        _stroki += ["  " + s for s in _sdelal[:12]] or ["  — ни разу"]
+        if len(_sdelal) > 12:
+            _stroki.append(f"  … ещё {len(_sdelal) - 12}")
         _stroki.append("")
-        _stroki.append(f"ВХОДОВ: {_vhodov} · ВЕДЕНИЕ: {_vedeniy} · "
-                       f"ОТКАЗОВ: {_otkazov} · БЕЗ ПРИКАЗА: {_molchaniy}")
-        if _gde_kadry:
-            _stroki.append("Кадры каждого места — в папке отчёта, "
-                           "подпапка «кадры».")
-        if not _vhodov and not _molchaniy:
-            _stroki.append("Входов нет, но все решения отданы рукой — "
-                           "он отказывался сам, причины выше.")
+        _stroki.append(f"ТОЛЬКО ПОДУМАЛ (приказа не было): {len(_podumal)}")
+        _stroki += ["  " + s for s in _podumal[:12]] or ["  — ни разу"]
+        if len(_podumal) > 12:
+            _stroki.append(f"  … ещё {len(_podumal) - 12}")
+        _stroki.append("")
+        _stroki.append(f"ВХОДОВ: {_vhodov} · ОТКАЗОВ РУКОЙ: {_otkazov} · "
+                       f"МОЛЧАНИЙ: {_molchaniy}")
+        if _molchaniy and not _vhodov:
+            _stroki.append("Сделок нет не потому, что сломалось: он "
+                           "отказывался сам. Смотри причины выше.")
 
         state["chat_history"].append({
             "role": "system", "content": "\n".join(_stroki)})

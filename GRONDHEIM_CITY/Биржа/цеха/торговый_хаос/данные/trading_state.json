@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-11T13:19:59.344561",
+  "updated": "2026-09-11T19:16:22.624116",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -9,53 +9,17 @@
     "trend_direction": null,
     "rodilas_na_bare": null
   },
-  "positions": [
-    {
-      "trader": "BRUT",
-      "symbol": "EURUSD",
-      "timeframe": "D1",
-      "magic": 100001,
-      "direction": "LONG",
-      "entry": 1.025,
-      "stop": 1.017,
-      "tp": null,
-      "lot": null,
-      "status": "OPEN",
-      "mode": "PAPER",
-      "opened_at": "2025.01.14",
-      "pnl": null,
-      "iskra_zero_point": null,
-      "стол_входа": {
-        "iskra": {
-          "t1_status": "NOT_FOUND",
-          "zero_point_price": null,
-          "trend_direction": "BULL"
-        },
-        "morj": {
-          "morj_status": "AWAKE",
-          "wave_1_validated": false,
-          "tension_peak": true
-        },
-        "panic": {
-          "panic_phase": "GREED"
-        },
-        "hans": {
-          "fractal_valid": false,
-          "fractal_side": null,
-          "fractal_price": null
-        }
-      }
-    }
-  ],
+  "positions": [],
   "feed": {
     "mode": "tester",
-    "symbol": "EURUSD"
+    "symbol": "EURUSD",
+    "момент": "2025.02.04 04:00"
   },
   "brut": {
     "verdict": "REJECTED",
     "reason": "",
     "action": "WAIT",
-    "бар": "2025.03.17",
+    "бар": "2025.02.04 01:00",
     "отдан_рукой": true,
     "кто_отдал": "Илья",
     "ключ_отдавшего": "bc9dd782fa1fbc5dec28a7b192adeeff43dccc721fd27d1530378110647d09ad",
@@ -118,7 +82,7 @@
     "history_dna": ""
   },
   "рынок": {
-    "бар": "2025.03.17"
+    "бар": "2025.02.04 02:00"
   },
   "точки": {
     "EURUSD H4": {
@@ -284,6 +248,15 @@
       },
       "попыток": 0,
       "нога": 4
+    },
+    "EURUSD H1": {
+      "reshali_na_bare": "2025.02.04 02:00",
+      "otvet_bara": {
+        "alive": false,
+        "reason": "точки нет",
+        "changed": false,
+        "direction": null
+      }
     }
   },
   "наблюдения": {
@@ -319,6 +292,13 @@
         "с_бара": "2025.02.21",
         "последний_бар": "2025.02.21"
       }
+    },
+    "EURUSD H1": {
+      "A06": {
+        "за_чем": "за появлением приседающих баров или более явной дивергенции AO.",
+        "с_бара": "2020.01.02 13:00",
+        "последний_бар": "2025.02.03 00:00"
+      }
     }
   },
   "последнее_закрытие": {
@@ -331,8 +311,8 @@
   "zhivoy_kadr": {},
   "vzglyad_shefa": {
     "путь": "None",
-    "подпись": "EURUSD D1",
-    "когда": "2026-09-11T12:50:03"
+    "подпись": "EURUSD H1",
+    "когда": "2026-09-11T19:04:07"
   },
-  "стоп_прогона": true
+  "стоп_прогона": false
 }

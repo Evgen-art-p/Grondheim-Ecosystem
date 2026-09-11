@@ -48,19 +48,6 @@ class Otchyot:
                 verdikt = str(zn)
             if kl.endswith("_reason") and zn:
                 prichina = str(zn)
-        # ZHURNAL_PROGONA_V1: сохраняем ДЕЙСТВИЕ и цены. Раньше в
-        # место шёл только вердикт, и «держу позицию» (HOLD) было
-        # неотличимо от «работать не стану» (WAIT).
-        deystvie = ""
-        cena_vhoda = None
-        stop_vhoda = None
-        for kl, zn in signal.items():
-            if kl.endswith("_action") and zn:
-                deystvie = str(zn).upper()
-            if kl.endswith("_entry") and zn is not None:
-                cena_vhoda = zn
-            if kl.endswith("_stop") and zn is not None:
-                stop_vhoda = zn
         skazal = ((otvet or {}).get("narrative") or "").strip()
         if not prichina:
             prichina = skazal[:200]
@@ -105,9 +92,6 @@ class Otchyot:
             # вход. Называем прямо.
             "вердикт": verdikt or ("промолчал" if not skazal
                                    else "ОТВЕТ НЕ РАЗОБРАН"),
-            "действие": deystvie,          # ZHURNAL_PROGONA_V1
-            "цена_входа": cena_vhoda,
-            "стоп_входа": stop_vhoda,
             "причина": prichina,
             "сказал": skazal,
             "кадр": imya_kadra,
