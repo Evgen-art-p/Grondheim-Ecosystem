@@ -4,5 +4,19 @@
     "жители",
     "ГОРОД",
     "Биржа"
-  ]
+  ],
+
+  "reportUndefinedVariable": "error",
+  "reportSelfClsParameterName": "error",
+
+  "reportAttributeAccessIssue": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportUnusedExpression": "none",
+
+  "reportUnboundVariable": "warning",
+  "reportPossiblyUnbound": "warning",
+  "reportReturnType": "warning",
+  "reportArgumentType": "warning",
+  "reportIndexIssue": "warning",
+  "reportCallIssue": "warning"
 }
