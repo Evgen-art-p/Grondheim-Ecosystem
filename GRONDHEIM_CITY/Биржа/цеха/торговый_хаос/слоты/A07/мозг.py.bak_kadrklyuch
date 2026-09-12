@@ -179,14 +179,6 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
                 _t["кадры_ответа"] = _spisok[-12:]
             except Exception:
                 pass
-            # KADR_K_KLYUCHU_V1: панель меняем ОДИН раз за побудку —
-            # на первом кадре ответа, том, что нарисован под вопрос.
-            # Служебные отрисовки её больше не дёргают: Шеф читал
-            # ответ, а картинка успевала уехать на следующее место.
-            if len(_t.get("кадры_ответа") or []) > 1:
-                _t["zhivoy_kadr"] = _t.get("zhivoy_kadr") or {}
-                save_trading_state(_t)
-                return
             _t["zhivoy_kadr"] = {
                 "put": _put,
                 "podpis": _podpis,
@@ -1611,5 +1603,3 @@ def _gorod_skazal_hvatit() -> bool:
 # KADRY_V_CHATE_V1 - marker
 
 # NE_ZAYDI_DVAZHDY_V1 - marker
-
-# KADR_K_KLYUCHU_V1 - marker

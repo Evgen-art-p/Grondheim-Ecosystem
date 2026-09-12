@@ -434,12 +434,10 @@ def _povod_vzglyada(symbol: str, timeframe: str) -> str:
                                al.get("teeth_series"), al.get("lips_series"))
         if rb.get("direction"):
             povody.append(f"разворотный бар {rb['direction']} @ {rb['price']}")
-        # KLYUCH_TOLKO_NEKRON_V1: излом больше не будит. Он говорит
-        # ГДЕ и дозревает позже — это второй уровень. Трейдера будили
-        # изломом «18 баров назад», а он искал разворотный бар на
-        # правом краю и рассказывал про него: разбор выходил не про
-        # ту картинку. Считаться излом продолжает, будить — нет.
-        _ = _izl
+        iz = _izl.dozrel(bs)
+        if iz:
+            povody.append(f"излом {iz['тип']} @ {iz['цена']} "
+                          f"({iz['баров_назад']} бар назад) стал виден")
         return "; ".join(povody)
     except Exception as _e:
         # Сбой прибора — НЕ повод будить на каждом баре: остальные
@@ -473,7 +471,7 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
             return {"будим": True, "почему": _vz}
         rodilas = str(tch.get("rodilas_na_bare") or "")
         if tch.get("alive") and bar_goroda and rodilas == bar_goroda                 and not tch.get("barov_s_tochki"):
-            return {"будим": False,      # KLYUCH_TOLKO_NEKRON_V1
+            return {"будим": True,
                     "почему": f"точка родилась: {tch.get('trend_direction')} @ "
                               f"{tch.get('zero_point_price')}"}
 
@@ -544,7 +542,7 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
                         "почему": f"{_kray} волны 1 переехал{'а' if _st == 'BULL' else 'о'} "
                                   f"на {kv.get('цена')} — волна идёт, "
                                   f"событие впереди"}
-            return {"будим": False,      # KLYUCH_TOLKO_NEKRON_V1
+            return {"будим": True,
                     "почему": f"волна 1 кончилась, {_kray} @ "
                               f"{kv.get('цена')} "
                               f"({kv.get('баров_от_точки')} бар. от точки)"}
@@ -553,7 +551,7 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
         # кончился. Момент того, кто работает третье место.
         kv2 = tch.get("konec_volny_2") or {}
         if kv2 and str(kv2.get("бар") or "") == bar_goroda and bar_goroda:
-            return {"будим": False,      # KLYUCH_TOLKO_NEKRON_V1
+            return {"будим": True,
                     "почему": f"откат кончился @ {kv2.get('цена')} "
                               f"({kv2.get('баров_от_макушки')} бар. от "
                               f"{'вершины' if tch.get('trend_direction') == 'BULL' else 'дна'})"}
