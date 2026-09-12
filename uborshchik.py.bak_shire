@@ -175,11 +175,9 @@ def sobrat_patchi(teksty: dict) -> tuple:
 
     Возвращает (отработавшие, ещё_не_накатанные)."""
     gotovye, zhdut = [], []
-    # RASSHIRIT_UBORSHCHIKA_V1: раньше здесь стояла проверка имени
-    # ("patch_"/"postavit_") — фильтр по имени не добавлял
-    # безопасности (её и так даёт метка ниже), только прятал патчи
-    # с другими именами от проверки вовсе.
     for p in sorted(KOREN.glob("*.py")):
+        if not p.name.startswith(("patch_", "postavit_")):
+            continue
         if p.name in NEPRIKASAEMYE:
             continue
         try:
