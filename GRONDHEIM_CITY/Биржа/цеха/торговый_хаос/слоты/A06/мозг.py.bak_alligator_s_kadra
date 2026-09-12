@@ -137,7 +137,7 @@ def _glaz(_chat, symbol, timeframe, slot, preambula=None):
         put = None
         try:
             import grafik
-            put = grafik.kadr(symbol, timeframe, linii=False)  # KADR_BEZ_ALLIGATORA_V1
+            put = grafik.kadr(symbol, timeframe)
         except Exception as e:
             print(f"[КАДР] не нарисовался ({e}) — работаю без глаз")
         if put:
@@ -227,7 +227,7 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
         put = None
         try:
             import grafik
-            put = grafik.kadr(symbol, timeframe, linii=False)  # KADR_BEZ_ALLIGATORA_V1
+            put = grafik.kadr(symbol, timeframe)
         except Exception as e:
             print(f"[КАДР] не нарисовался ({e}) — работаю без глаз")
         if put:
