@@ -55,7 +55,9 @@ import llm  # BIRZHA_MODEL_SEL_V1: переключатель модели -- se
 # существует, но не подключён ни к одному слоту).
 MODELS_CATALOG = [
     {"id": "openai/gpt-4o-mini-2024-07-18",    "name": "GPT-4o mini",      "price": "$0.15/$0.60"},
-    {"id": "google/gemini-2.5-flash",          "name": "Gemini 2.5 Flash",  "price": "$0.15/$0.60"},
+    {"id": "openai/gpt-5.6-luna",              "name": "GPT-5.6 Luna",      "price": "$0.20 / $1.20"},
+    {"id": "openai/gpt-5-mini",                "name": "GPT-5 Mini",      "price": "$0.25 / $2"},
+    {"id": "google/gemini-2.5-flash",          "name": "Gemini 2.5 Flash",  "price": "$0.30 / $2.50"},
     {"id": "anthropic/claude-haiku-4-5",       "name": "Claude Haiku 4.5",  "price": "$1/$5"},
     {"id": "deepseek/deepseek-chat",           "name": "DeepSeek V3",       "price": "$0.14/$0.28"},
     {"id": "meta-llama/llama-3.3-70b-instruct","name": "Llama 3.3 70B",     "price": "$0.10/$0.32"},
@@ -63,7 +65,7 @@ MODELS_CATALOG = [
     # QWEN_V_SPISKE_V1 (слово Шефа 10.09). Цена прочерком:
     # выдуманное число хуже отсутствующего — по нему станут
     # считать. Посмотрит на openrouter.ai — впишем.
-    {"id": "qwen/qwen3.5-397b-a17b",           "name": "Qwen 3.5 397B",   "price": "—"},
+    {"id": "qwen/qwen3.5-397b-a17b",           "name": "Qwen 3.5 397B",   "price": "$0.39 / $2.34"},
 ]
 # GEMINI_PO_UMOLCHANIYU_V1: открываемся на модели, которая ВИДИТ кадр.
 # Проверено Шефом на одном и том же кадре: 4o mini читал «Аллигатор спит,
