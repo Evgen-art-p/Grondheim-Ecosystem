@@ -1131,6 +1131,7 @@ def run_cons(symbol: str = "XAUUSD", timeframe: str = "H4",
         # нельзя НАЗВАТЬ цену: своя позиция и текущий бар.
         + _povod_blok(povod)      # POVOD_VIDEN_V1
         + _svoyo_blok()           # NE_ZAYDI_DVAZHDY_V1
+        + _okruzhenie_blok(md)    # OKRUZHENIE_BARA_V1
         + "=== ЧТО У ТЕБЯ НА РУКАХ ===\n"
         f"{json.dumps({'position': table_for_cons.get('position'),
                        'бар': (table_for_cons.get('market') or {}).get('price'),
@@ -1546,6 +1547,48 @@ def _svoyo_blok() -> str:
         return ""
 
 
+# ── OKRUZHENIE_BARA_V1: края бара и спред ─────────────────────
+# Трейдер называл цену «на глаз»: заявка и стоп в сорока пунктах друг
+# от друга, взятых ниоткуда. Краёв разворотного бара он не знал —
+# формула некрона отдаёт только ОДИН край, тот, по которому бар
+# опознан. Теперь даём оба и сразу считаем, куда встают ордера.
+#
+# Правило Шефа — про сторону ЦЕНЫ, не про сторону сделки:
+#   сверху бара — на ДВА спреда выше high  (покупка идёт по Ask)
+#   снизу бара  — на ОДИН спред ниже low
+
+SPRED_PUNKTOV = 2.0        # как при подготовке данных: --spread 2.0
+
+
+def _okruzhenie_blok(md: dict) -> str:
+    try:
+        _bary = (md or {}).get("bars") or []
+        if not _bary:
+            return ""
+        b = _bary[-1]
+        hi, lo = b.get("high"), b.get("low")
+        if hi is None or lo is None:
+            return ""
+        _p = (md or {}).get("point") or 0.00001
+        _sp = SPRED_PUNKTOV * _p
+        _okr = lambda x: round(x, 6)
+        long_zayavka = _okr(hi + 2 * _sp)
+        long_stop = _okr(lo - _sp)
+        short_zayavka = _okr(lo - _sp)
+        short_stop = _okr(hi + 2 * _sp)
+        return (
+            "=== КРАЯ ТВОЕГО БАРА (окружать по ним) ===\n"
+            f"верх (high): {_okr(hi)}   низ (low): {_okr(lo)}\n"
+            f"спред {SPRED_PUNKTOV:g} пункта. Сверху бара платим ДВА "
+            f"спреда, снизу — ОДИН.\n"
+            f"  LONG : заявка {long_zayavka}, стоп {long_stop}\n"
+            f"  SHORT: заявка {short_zayavka}, стоп {short_stop}\n"
+            "Окружают по ТЕНЯМ, не по телу. Считать тебе нечего — "
+            "выбери сторону и назови эти числа в приказе.\n\n")
+    except Exception as _e:
+        print(f"[ОКРУЖЕНИЕ] края не посчитались ({_e})")
+        return ""
+
 def _povod_blok(povod: str) -> str:
     """Факт повода — без цены и без стороны.
 
@@ -1652,3 +1695,5 @@ def _gorod_skazal_hvatit() -> bool:
 # KADR_K_KLYUCHU_V1 - marker
 
 # ZHIVOYE_SOOBSHCHENIE_CHISTO_V1 - marker
+
+# OKRUZHENIE_BARA_V1 - marker
