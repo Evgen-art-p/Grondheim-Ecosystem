@@ -791,7 +791,7 @@ _KABINETY: dict = {}
 
 
 
-def _bystryy_pasport(p) -> dict | None:
+def _bystryy_pasport(p) -> dict:
     """Три числа о файле БЕЗ разбора баров: сколько строк, первая
     дата, последняя.
 
@@ -1174,8 +1174,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     state["active_asset"] = j
                     return
             if not tiho:
-                ui.notify("⚠ прежний актив с полки ушёл — "
-                          "выбери заново", type="warning")
+                _tiho(ui.notify, "⚠ прежний актив с полки ушёл — "
+                                 "выбери заново", type="warning")
                 state["active_asset"] = None
                 return
         if state.get("active_asset") is None:
@@ -2653,8 +2653,8 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             _skazat = "Ничего не нашлось в истории — пусто."
             try:
                 _kraya = []
-                from feed_source import bars as _src_bars
-                for _sl2, _s2, _t2 in rabotniki:
+                for _sl2 in (state.get("tester_sloty") or []):
+                    _s2, _t2 = _para_slota(_sl2)
                     _v2, _ = _src_bars(_s2, _t2, 0)
                     if _v2:
                         _kraya.append(f"{_s2} {_t2}: история с "

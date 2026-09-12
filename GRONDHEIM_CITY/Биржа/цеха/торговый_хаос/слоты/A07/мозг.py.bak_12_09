@@ -174,8 +174,8 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
             # все, под словами, про которые они и были.
             try:
                 _spisok = list(_t.get("кадры_ответа") or [])
-                if _put not in _spisok:
-                    _spisok.append(_put)
+                if _p not in _spisok:
+                    _spisok.append(_p)
                 _t["кадры_ответа"] = _spisok[-12:]
             except Exception:
                 pass
@@ -816,7 +816,7 @@ def _my_magic():
         return None
 
 
-def _my_open_position(md: dict) -> dict | None:
+def _my_open_position(md: dict) -> dict:
     """
     Факт открытой позиции ЭТОГО трейдера (по магику) из trading_state.
     Нет позиции → None. Есть → живой факт с плавающим R. Без суждений.
@@ -1258,7 +1258,7 @@ def run_avan(symbol: str = "XAUUSD", timeframe: str = "H4",
             _otvet2 = _chat_glazami(
                 system=system_full, user=user_msg + _peresp,
                 knowledge=knowledge, agent_id="A07", slot_id=_SLOT,
-                temperature=_temp)
+                temperature=_my_temp())
             signal = _signal_ot_ruki(md.get("bar_time"), None)
             if signal:
                 print(f"[ПЕРЕСПРОС] отдал приказ со второго раза: "
@@ -1388,7 +1388,7 @@ _PRIKAZ_POLYA = ("action", "verdict", "reason", "direction", "entry",
                  "stop", "lot", "new_stop", "add_lot")
 
 
-def _signal_ot_ruki(bar_time=None, slova: dict | None = None) -> dict | None:
+def _signal_ot_ruki(bar_time=None, slova: dict = None) -> dict:
     """Решение трейдера — с табло, куда он положил его рукой.
 
     Пусто, если: руку не звал; приказ с другого бара (протух);

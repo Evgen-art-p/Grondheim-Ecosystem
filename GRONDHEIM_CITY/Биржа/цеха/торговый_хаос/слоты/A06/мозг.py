@@ -198,8 +198,8 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
             # все, под словами, про которые они и были.
             try:
                 _spisok = list(_t.get("кадры_ответа") or [])
-                if _p not in _spisok:
-                    _spisok.append(_p)
+                if _put not in _spisok:
+                    _spisok.append(_put)
                 _t["кадры_ответа"] = _spisok[-12:]
             except Exception:
                 pass
@@ -853,7 +853,7 @@ def _my_magic():
         return None
 
 
-def _my_open_position(md: dict) -> dict:
+def _my_open_position(md: dict) -> dict | None:
     """
     Факт открытой позиции ЭТОГО трейдера (по магику) из trading_state.
     Нет позиции → None. Есть → живой факт с плавающим R. Без суждений.
@@ -1449,7 +1449,7 @@ _PRIKAZ_POLYA = ("action", "verdict", "reason", "direction", "entry",
                  "stop", "lot", "new_stop", "add_lot")
 
 
-def _signal_ot_ruki(bar_time=None, slova: dict = None) -> dict:
+def _signal_ot_ruki(bar_time=None, slova: dict | None = None) -> dict | None:
     """Решение трейдера — с табло, куда он положил его рукой.
 
     Пусто, если: руку не звал; приказ с другого бара (протух);
