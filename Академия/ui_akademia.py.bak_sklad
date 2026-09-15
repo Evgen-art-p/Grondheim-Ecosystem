@@ -80,22 +80,6 @@ _BELYY_SHRIFT = r"""
 """
 
 
-# SKLAD_V_ZAGRUZCHIKE_V1: склад Академии — карточки и ключи.
-# Своя точка входа, модуль лежит рядом (Академия/sklad.py).
-try:
-    import sklad as _sklad
-except Exception:
-    try:
-        _sys_sk = __import__("sys")
-        _put_sk = str(Path(__file__).resolve().parent)
-        if _put_sk not in _sys_sk.path:
-            _sys_sk.path.insert(0, _put_sk)
-        import sklad as _sklad
-    except Exception as _e_sk:
-        _sklad = None
-        print(f"[СКЛАД] не подключился: {_e_sk}")
-
-
 # CHTENIE_KNIGI_V1: общая рука чтения города
 try:
     import sys as _sys_ch
@@ -231,28 +215,6 @@ def _ensure_dirs():
 
 def _dom_zhitelya(imya: str) -> Path:
     return _KOVCHEG / imya
-
-
-# SKLAD_V_ZAGRUZCHIKE_V1 -- СТОЛ ЖИВЁТ ПРИ ЖИТЕЛЕ.
-# Раньше стол был списком сессии: закрыл окно -- пусто, а файлы на
-# диске остались навсегда. Стол -- это то, что человек сейчас
-# разбирает, значит и лежать он должен при человеке.
-_STOL_IMYA = "стол_академии.json"
-
-
-def _stol_chitat(dom: Path) -> list:
-    if not dom:
-        return []
-    return _read_json(dom / _STOL_IMYA, []) or []
-
-
-def _stol_pisat(dom: Path, stol: list) -> None:
-    if not dom:
-        return
-    try:
-        _write_json(dom / _STOL_IMYA, stol)
-    except Exception as e:
-        print(f"[СТОЛ] не сохранился: {e}")
 
 
 def _avatar_url(dom: Path) -> str:
@@ -882,11 +844,7 @@ def page_akademia() -> None:
     state = {
         "активное_место": _first,
         "чат": [],
-        # SKLAD_V_ZAGRUZCHIKE_V1: имя поля прежнее -- чтение и уроки
-        # его знают и менять их этим патчем незачем. Изменилось, ОТКУДА
-        # оно берётся: не список сессии, а стол из дома студента.
-        "руда": [],
-        "источник": "", "подпись": "", "тема": "",
+        "руда": [],          # что принял загрузчик за эту сессию
         "отчёт": "",
         "model": DEFAULT_MODEL,
     }
@@ -1008,10 +966,6 @@ def page_akademia() -> None:
     def switch_mesto(n: int):
         m = _mesto_row(mesta, n)
         state["активное_место"] = n
-        # SKLAD_V_ZAGRUZCHIKE_V1: у каждого студента свой стол, и он
-        # ждёт его на месте -- хоть через неделю.
-        state["руда"] = _stol_chitat(m["дом"]) if (m and m["занято"]) else []
-        update_ruda_list()
         update_avatar()
         update_vitals()
         update_bubbles()
@@ -1043,10 +997,6 @@ def page_akademia() -> None:
             for r in state["руда"]:
                 ikona = "🖼" if r["вид"] == "изображение" else "📄"
                 cvet = "rgba(189,0,255,0.9)" if r["вид"] == "изображение" else "rgba(0,204,255,0.9)"
-                # SKLAD_V_ZAGRUZCHIKE_V1: ключ карточки виден глазами --
-                # по нему житель её и достанет потом рукой.
-                _kl = r.get("ключ", "")
-                _pd = r.get("подпись", "")
                 ui.html(f'''
                   <div style="padding:7px 10px;margin:3px 0;border-radius:7px;
                               background:rgba(255,255,255,0.02);
@@ -1058,8 +1008,6 @@ def page_akademia() -> None:
                     </div>
                     <div style="color:rgba(255,255,255,0.6);font-size:9px;margin-top:2px;
                                 word-break:break-all;">{r["имя"]}</div>
-                    {f'<div style="color:rgba(0,255,136,0.65);font-size:9px;margin-top:2px;word-break:break-all;">🔑 {_kl}</div>' if _kl else ''}
-                    {f'<div style="color:rgba(255,255,255,0.45);font-size:9px;margin-top:1px;">{_pd}</div>' if _pd else ''}
                   </div>''')
 
     async def handle_ruda(e):
@@ -1093,41 +1041,11 @@ def page_akademia() -> None:
             return
 
         kb = len(data) / 1024
-
-        # SKLAD_V_ZAGRUZCHIKE_V1: файл лёг на диск -- теперь заводим на
-        # него КАРТОЧКУ. Подпись ставит только Шеф: не заполнил поля --
-        # карточка ляжет без подписи и будет искаться по источнику.
-        # Машина за него не сочиняет.
-        _klyuch, _put_karty = "", str(dest)
-        if _sklad is not None:
-            try:
-                _ist = (state.get("источник") or "").strip()
-                _klyuch = _sklad.polozhit(
-                    put_faila=dest,
-                    otkuda=_ist or f"положено в Академии: {imya}",
-                    podpis=(state.get("подпись") or "").strip(),
-                    tema=(state.get("тема") or "").strip(),
-                    podpisal="Шеф",
-                    klyuch=_sklad.sdelat_klyuch(_ist or "академия", "",
-                                                Path(imya).stem))
-                _k = _sklad.kartochka(_klyuch)
-                if _k.get("файл"):
-                    _put_karty = str(_sklad._MATERIALY / _k["файл"])
-            except Exception as _e_sk2:
-                print(f"[СКЛАД] карточка не легла ({_e_sk2}) -- "
-                      f"файл на диске остался")
-
-        _zapis = {
-            "имя": imya, "вид": vid, "путь": _put_karty,
+        state["руда"].append({
+            "имя": imya, "вид": vid, "путь": str(dest),
             "размер": f"{kb:.0f} КБ",
-            "ключ": _klyuch,
-            "подпись": (state.get("подпись") or "").strip(),
             "когда": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        }
-        state["руда"].append(_zapis)
-        _m_stol = _mesto_row(mesta, state["активное_место"])
-        if _m_stol and _m_stol["занято"]:
-            _stol_pisat(_m_stol["дом"], state["руда"])
+        })
         update_ruda_list()
 
         if vid == "текст":
@@ -1141,13 +1059,19 @@ def page_akademia() -> None:
             # Стол только принимает, как и для текста.
             state["чат"].append({"role": "assistant", "кто": "ЗАГРУЗЧИК",
                                  "content": f"🖼 Принял «{imya}» — лежит на столе."})
-            # SKLAD_V_ZAGRUZCHIKE_V1 (15.09): СНЯТО.
-            # Здесь картинка клалась в историю чата отдельным
-            # сообщением -- и рисовалка чата, умеющая показывать только
-            # строку, вываливала на экран весь PNG буквами. Замысел был
-            # верный (картинка должна жить в истории, а не собираться
-            # заново на каждый вызов), но хранить её надо на складе и
-            # доставать по ключу, а не держать сырьём в ленте.
+            # AKADEMIA_KARTINKA_V_ISTORII_V1 (15.09, Шеф+София): сама
+            # картинка ложится в историю ОДИН раз, здесь, как обычное
+            # сообщение — молча, без слов. Дальше она едет с историей
+            # естественно, её не нужно объяснять заново на каждый вызов.
+            try:
+                _mime_p = _KARTINKA_MIME_STOL.get(ext, "image/png")
+                _url_p = (f"data:{_mime_p};base64,"
+                          f"{base64.b64encode(dest.read_bytes()).decode('ascii')}")
+                state["чат"].append({"role": "user", "content": [
+                    {"type": "image_url", "image_url": {"url": _url_p}},
+                ]})
+            except Exception as _ie:
+                print(f"[СТОЛ] картинка не легла в историю ({_ie})")
             ui.notify(f"🖼 Принято: {imya}", type="info")
         update_chat()
 
@@ -1159,15 +1083,9 @@ def page_akademia() -> None:
                 pass
 
     def clear_ruda():
-        # SKLAD_V_ZAGRUZCHIKE_V1: со стола убираем, со СКЛАДА -- нет.
-        # Карточки остаются: склад не расходуется, и то, что один убрал
-        # со своего стола, другому по-прежнему доступно.
         state["руда"] = []
-        _m_cl = _mesto_row(mesta, state["активное_место"])
-        if _m_cl and _m_cl["занято"]:
-            _stol_pisat(_m_cl["дом"], [])
         update_ruda_list()
-        ui.notify("Стол убран (карточки на складе остались)", type="info")
+        ui.notify("Список очищен (файлы на диске остались)", type="info")
 
     # ── PATCH_AKADEMIA_UROKI_PANEL_V1 ────────────────────────
     state["текущий_урок"] = {"текст": "", "название": ""}
@@ -2035,28 +1953,9 @@ def page_akademia() -> None:
                             "text-transform:uppercase; font-size:11px;")
                         ui.button("CLEAR", on_click=clear_ruda).props("flat dense size=xs").style(
                             "color:rgba(255,80,80,0.5); font-size:9px;")
-                    # SKLAD_V_ZAGRUZCHIKE_V1: подпись ставит ТОЛЬКО Шеф.
-                    # Источник -- короткое имя, из него собирается ключ
-                    # («вильямс» + «gl07_str11» = вильямс/gl07_str11).
-                    ui.html('<div style="padding:4px 16px 2px 16px;color:rgba(255,255,255,0.35);'
-                            'font-size:9px;line-height:1.5;">подпишу сам — '
-                            'машина за меня не сочиняет</div>')
-
-                    def _pole(imya_polya, podskazka):
-                        def _menyat(e, k=imya_polya):
-                            state[k] = e.value or ""
-                        return ui.input(placeholder=podskazka,
-                                        on_change=_menyat).props(
-                            "dense borderless dark").style(
-                            "margin:2px 12px; width:calc(100% - 24px); "
-                            "font-size:11px; color:rgba(255,255,255,0.85); "
-                            "background:rgba(255,255,255,0.05); "
-                            "border:1px solid rgba(255,255,255,0.10); "
-                            "border-radius:8px; padding:1px 8px;")
-
-                    _pole("источник", "источник: вильямс, котин, скрин…")
-                    _pole("подпись", "подпись: что тут нарисовано")
-                    _pole("тема", "тема: трейдинг, психология…")
+                    ui.html('<div style="padding:4px 16px 6px 16px;color:rgba(255,255,255,0.35);'
+                            'font-size:9px;line-height:1.5;">текст → на просев · '
+                            'изображение → на разбор</div>')
                     ruda_ref["uploader"] = ui.upload(
                         on_upload=handle_ruda, multiple=True, auto_upload=True,
                     ).props("flat color=cyan").style("margin: 0 8px 8px 8px;")
@@ -2171,5 +2070,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # UCHEBNIK_UCHENIKU_V1 - marker
 
 # SVOYA_MODEL_POLEM_V1 - marker
-
-# SKLAD_V_ZAGRUZCHIKE_V1 - marker
