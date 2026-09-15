@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-26T15:22:37.262652",
+  "updated": "2026-09-15T21:21:46.243893",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -10,5 +10,18 @@
     "trend_direction": null
   },
   "positions": [],
-  "точки": {}
+  "точки": {
+    "EURUSD H1": {
+      "reshali_na_bare": "2026.09.15 14:00",
+      "otvet_bara": {
+        "alive": false,
+        "reason": "точки нет",
+        "changed": false,
+        "direction": null
+      }
+    }
+  },
+  "рынок": {
+    "бар": "2026.09.15 14:00"
+  }
 }
