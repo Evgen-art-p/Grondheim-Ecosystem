@@ -1151,24 +1151,8 @@ def page_zhitel(zid: str = ""):
                 return
             ruda_dir = dom / RUDA_PODPAPKA
             ruda_dir.mkdir(parents=True, exist_ok=True)
-            _dannye = e.content.read()
-            (ruda_dir / e.name).write_bytes(_dannye)
+            (ruda_dir / e.name).write_bytes(e.content.read())
             ui.notify(f"⛏ руда: {e.name}", color="positive")
-            # AKADEMIA_KARTINKA_V_ISTORII_V1 (перенесено 15.09, Шеф+
-            # София): картинка сразу ложится в историю чата, молча,
-            # там, где её положили — не собирается заново отдельным
-            # звонком, когда её наконец прочитают.
-            if Path(e.name).suffix.lower() in KARTINKA_EXT:
-                try:
-                    _mime_u = _KARTINKA_MIME.get(
-                        Path(e.name).suffix.lower(), "image/png")
-                    _url_u = (f"data:{_mime_u};base64,"
-                              f"{base64.b64encode(_dannye).decode('ascii')}")
-                    state["chat"].append({"role": "user", "content": [
-                        {"type": "image_url", "image_url": {"url": _url_u}},
-                    ]})
-                except Exception as _ie:
-                    print(f"[РУДА] картинка не легла в историю ({_ie})")
             update_files()
         except Exception as ex:
             ui.notify(f"⚠ {ex}", color="negative")
@@ -1217,19 +1201,16 @@ def page_zhitel(zid: str = ""):
                 except Exception as _e:
                     ui.notify(f"⚠ {fp.name}: не прочитать файл — {_e}", color="negative")
                     continue
-                # AKADEMIA_KARTINKA_V_ISTORII_V1: картинка уже лежит в
-                # state["chat"] с момента, когда она попала в руду —
-                # заново прикладывать её здесь не нужно, только история
-                # впереди и сам вопрос на чтение.
-                messages = [{"role": "system", "content": dusha}]
-                for _m in state.get("chat", [])[-20:]:
-                    _r = ("user" if _m.get("role") == "user"
-                          else "assistant")
-                    messages.append({"role": _r,
-                                     "content": _m.get("content", "")})
-                messages.append({"role": "user", "content":
-                                 _prompt_chtenia_kartinka(
-                                     fp.name, linza, lok_imya, professia)})
+                _mime = _KARTINKA_MIME.get(fp.suffix.lower(), "image/png")
+                _url = f"data:{_mime};base64,{base64.b64encode(_img_data).decode('ascii')}"
+                messages = [
+                    {"role": "system", "content": dusha},
+                    {"role": "user", "content": [
+                        {"type": "text", "text": _prompt_chtenia_kartinka(
+                            fp.name, linza, lok_imya, professia)},
+                        {"type": "image_url", "image_url": {"url": _url}},
+                    ]},
+                ]
             else:
                 # CHTENIE_KNIGI_V1: читаем ЦЕЛИКОМ. Раньше брали первые
                 # 50 000 знаков и молчали об остальном — житель даже не

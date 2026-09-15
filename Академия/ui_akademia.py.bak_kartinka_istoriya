@@ -1058,20 +1058,8 @@ def page_akademia() -> None:
             # СОХРАНЯЕТ "📖 Прочитать" (личная память активного студента).
             # Стол только принимает, как и для текста.
             state["чат"].append({"role": "assistant", "кто": "ЗАГРУЗЧИК",
-                                 "content": f"🖼 Принял «{imya}» — лежит на столе."})
-            # AKADEMIA_KARTINKA_V_ISTORII_V1 (15.09, Шеф+София): сама
-            # картинка ложится в историю ОДИН раз, здесь, как обычное
-            # сообщение — молча, без слов. Дальше она едет с историей
-            # естественно, её не нужно объяснять заново на каждый вызов.
-            try:
-                _mime_p = _KARTINKA_MIME_STOL.get(ext, "image/png")
-                _url_p = (f"data:{_mime_p};base64,"
-                          f"{base64.b64encode(dest.read_bytes()).decode('ascii')}")
-                state["чат"].append({"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": _url_p}},
-                ]})
-            except Exception as _ie:
-                print(f"[СТОЛ] картинка не легла в историю ({_ie})")
+                                 "content": f"🖼 Принял «{imya}» — лежит на столе, "
+                                           f"разберёт тот, кто сядет читать."})
             ui.notify(f"🖼 Принято: {imya}", type="info")
         update_chat()
 
@@ -1391,17 +1379,34 @@ def page_akademia() -> None:
             # AKADEMIA_CHESTNAYA_OSHIBKA_V1: пара, а не строка.
             return "⚠ OPENROUTER_API_KEY не задан. Положи ключ в .env.", ""
 
-        # AKADEMIA_KARTINKA_V_ISTORII_V1 (15.09, Шеф+София): картинка
-        # больше не собирается заново из "стола" на каждый вызов — она
-        # уже сидит в истории тем сообщением, в которое легла, когда её
-        # положили (handle_ruda). Здесь просто проигрываем историю как
-        # есть, текст или картинка — без разницы, без повторных
-        # объяснений "вот что перед тобой".
         messages = [{"role": "system", "content": promt}]
-        for m in (istoria or [])[-20:]:
+        for m in (istoria or [])[-10:]:
             r = "user" if m.get("role") == "user" else "assistant"
             messages.append({"role": r, "content": m.get("content", "")})
-        messages.append({"role": "user", "content": vopros})
+        # AKADEMIA_GLAZA_V_CHATE_V1: к вопросу прикрепляем то, что лежит
+        # на столе. Раньше чат нёс один текст, и на вопрос «что на
+        # картинке?» ученик отвечал по имени файла из переписки — то
+        # есть сочинял. Картинки нет — всё как раньше.
+        # AKADEMIA_STOL_ETO_ZAGRUZCHIK_V1: стол — список загрузчика этой
+        # сессии, а не всё, что накопилось в папке руды.
+        # AKADEMIA_VSE_KARTINKI_STOLA_V1: кладём ВСЕ, чтобы можно было
+        # сравнивать страницы между собой.
+        _stol = _kartinka_na_stole(state.get("руда"))
+        _url_stol = _stol[0][1] if _stol else ""
+        if _stol:
+            _skolko = ("На столе перед тобой лежит изображение."
+                       if len(_stol) == 1 else
+                       f"На столе перед тобой {len(_stol)} изображени"
+                       f"{'я' if len(_stol) < 5 else 'й'}, по порядку.")
+            _content = [{"type": "text", "text": (
+                f"({_skolko} Если речь о них — смотри на сами изображения, "
+                f"а не на названия. Не разглядела — так и скажи.)\n\n" + vopros)}]
+            for _fp_i, _url_i in _stol:
+                _content.append({"type": "image_url",
+                                 "image_url": {"url": _url_i}})
+            messages.append({"role": "user", "content": _content})
+        else:
+            messages.append({"role": "user", "content": vopros})
 
         import httpx
         # PATCH_PROXY_VEZDE_V1: без прокси OpenRouter честно отвечает 403
@@ -1694,17 +1699,11 @@ def page_akademia() -> None:
                     "ЧТО ЭТО ВО МНЕ — и только теперь твой отклик своей "
                     "натурой, 2-3 фразы.\n\n"
                     "Суди по самой картинке. Её название ничего не значит.")
-                # AKADEMIA_KARTINKA_V_ISTORII_V1 (15.09): картинка уже
-                # лежит в state["чат"] с момента, когда её положили на
-                # стол — заново прикладывать её здесь не нужно, только
-                # история впереди и сам вопрос.
-                messages = [{"role": "system", "content": dusha + rol}]
-                for _m in (state.get("чат") or [])[-20:]:
-                    _r = ("user" if _m.get("role") == "user"
-                          else "assistant")
-                    messages.append({"role": _r,
-                                     "content": _m.get("content", "")})
-                messages.append({"role": "user", "content": vopros})
+                messages = [{"role": "system", "content": dusha + rol},
+                           {"role": "user", "content": [
+                               {"type": "text", "text": vopros},
+                               {"type": "image_url", "image_url": {"url": url}},
+                           ]}]
             vyzhimka = await _zvat_llm_akademii(messages, state.get("model"))
             # CHTENIE_KNIGI_V1: остальные части — по очереди, с памятью
             # о прочитанном, и общий свод в конце.
