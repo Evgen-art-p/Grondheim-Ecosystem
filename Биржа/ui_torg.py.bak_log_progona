@@ -39,32 +39,6 @@ import asyncio
 
 from nicegui import ui, app, events
 
-
-class _TeeVyvod:
-    """LOG_PROGONA_SYROY_V1: пишет разом в консоль и в файл.
-
-    Ничего не решает и не фильтрует — сырое дублирование вывода,
-    чтобы после прогона было что почитать, кроме памяти терминала.
-    """
-
-    def __init__(self, *potoki):
-        self.potoki = potoki
-
-    def write(self, dannye):
-        for p in self.potoki:
-            try:
-                p.write(dannye)
-            except Exception:
-                pass
-
-    def flush(self):
-        for p in self.potoki:
-            try:
-                p.flush()
-            except Exception:
-                pass
-
-
 _HERE = Path(__file__).resolve().parent          # Биржа/
 _REPO = _HERE.parent                              # корень репо
 for _p in (_REPO, _HERE):
@@ -2583,19 +2557,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         except Exception as _e:
             _otchyot = None
             print(f"[ОТЧЁТ] не завёлся ({_e}) — прогон пойдёт без записи")
-        # LOG_PROGONA_SYROY_V1: дублируем весь вывод в лог.txt рядом
-        # с отчётом — без фильтров, чтобы после прогона не бегать по
-        # терминалу за тем, что там мелькнуло и пропало.
-        _original_stdout = sys.stdout
-        _log_fayl_progona = None
-        if _otchyot is not None:
-            try:
-                _log_fayl_progona = open(_otchyot.papka / "лог.txt", "a",
-                                          encoding="utf-8")
-                sys.stdout = _TeeVyvod(_original_stdout, _log_fayl_progona)
-            except Exception as _e_log:
-                print(f"[ЛОГ] файл прогона не завёлся ({_e_log}) — иду "
-                      f"без него")
         state["tester_running"] = True
         state["stop_requested"] = False
         state["stop_hard"] = False          # STOP_ZHYOSTKO_V1
@@ -3034,15 +2995,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                 except Exception as _er2:
                     print(f"[ПРОГОН] отчёт не показался: {_er2}")
         finally:
-            # LOG_PROGONA_SYROY_V1: возвращаем stdout ПЕРВЫМ делом —
-            # finally срабатывает даже при необработанном исключении,
-            # терминал не должен онеметь навсегда из-за сбоя прогона.
-            sys.stdout = _original_stdout
-            if _log_fayl_progona:
-                try:
-                    _log_fayl_progona.close()
-                except Exception:
-                    pass
             state["tester_running"] = False
             state["stop_requested"] = False
             try:

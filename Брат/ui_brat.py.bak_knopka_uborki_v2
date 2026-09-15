@@ -1425,18 +1425,15 @@ def page_brat():
                 ui.button("закрыть", on_click=dlg.close).props("flat").style(
                     "color:rgba(255,255,255,0.4); font-size:0.75rem;")
                 ui.element("div").style("flex:1")
-                # POCHINIT_KNOPKU_UBORKI_V2: не create_task —
-                # он рвёт стек слотов NiceGUI, do_uborka() внутри
-                # него не может понять, в каком окне рисовать
-                # диалог ("slot stack for this task is empty").
-                # NiceGUI сам умеет выполнять async on_click в
-                # правильном контексте — просто отдаём ему функцию.
-                async def _otkryt_uborku_repo():
-                    dlg.close()
-                    await do_uborka()
-
+                # POCHINIT_KNOPKU_UBORKI_V1: do_uborka — async,
+                # голый вызов внутри lambda создавал корутину и
+                # тут же её ронял, не запустив (диалог закрывался,
+                # дальше — тишина). asyncio.create_task ставит её
+                # в очередь событийного цикла по-настоящему.
                 ui.button("уборка репозитория",
-                          on_click=_otkryt_uborku_repo
+                          on_click=lambda: (dlg.close(),
+                                            asyncio.create_task(
+                                                do_uborka()))
                           ).props("flat no-caps").style(
                     "padding:8px 18px; border-radius:8px; font-size:0.78rem; "
                     "background:rgba(120,168,201,0.20); "
