@@ -159,12 +159,6 @@ def _status_alligatora(al: dict) -> str:
     return "AWAKE"
 
 
-# KOMPAS_PRICHINA_V1: про какой расклад воды уже говорили в лог.
-# Без этого строчка повторялась бы на каждом баре и утопила бы
-# лог так же, как его топят сохранения стола.
-_KOMPAS_SKAZANO = set()
-
-
 def nakryt(symbol: str, timeframe: str,
            md: Optional[dict] = None,
            bars: Optional[list] = None,
@@ -250,28 +244,6 @@ def nakryt(symbol: str, timeframe: str,
     if compass is None and not starshiy_prishyol:
         print(f"[СТОЛ] ⚠️  компаса нет: старший этаж "
               f"{starshiy_tf or '?'} не пришёл")
-    else:
-        # KOMPAS_PRICHINA_V1: этаж пришёл — значит молчание компаса
-        # имеет причину, и она лежит на столе в «вода_почему».
-        # Раньше эта причина не выходила наружу: жалобы нет,
-        # компаса нет, понять нечем. Теперь видно.
-        try:
-            _et = ""
-            if isinstance(_voda_etazhi, dict):
-                _et = ", ".join(f"{k} {v}"
-                                for k, v in _voda_etazhi.items())
-            elif _voda_etazhi:
-                _et = str(_voda_etazhi)
-            _rasklad = f"{compass or 'воды нет'} · {_et} · {_voda_why}"
-            _klyuch = (symbol, timeframe, _rasklad)
-            if _klyuch not in _KOMPAS_SKAZANO:
-                _KOMPAS_SKAZANO.add(_klyuch)
-                _chto = compass if compass else "воды нет"
-                _hvost = _et or _voda_why or "причина не названа"
-                print(f"[КОМПАС] {symbol} {timeframe}: "
-                      f"{_chto} — {_hvost}")
-        except Exception as _e_kp:
-            print(f"[КОМПАС] сказать не вышло ({_e_kp}) — не беда")
     svoy_etazh_napravlenie = md.get("global_bias")
     if svoy_etazh_napravlenie not in ("BULL", "BEAR"):
         svoy_etazh_napravlenie = None
