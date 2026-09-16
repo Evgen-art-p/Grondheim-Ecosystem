@@ -1966,30 +1966,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     print("[ВРЕМЯ] курсор истории снят — вернулись в реал")
             except Exception:
                 pass
-            # SNYAT_BAR_GORODA_V1: и бар города тоже. Кадр обрезается
-            # по полю `рынок.бар` (чтобы трейдер не подглядывал в
-            # будущее), но после прогона там остаётся его последний
-            # бар. Все бары живого рынка свежее — после обрезки не
-            # остаётся ни одного, и кадр не рисуется совсем:
-            #   «по бару города 2025.01.20 баров нет — кадра не будет»
-            # Курсор истории — другое поле, тумблер его снимал, а это
-            # лежало с прошлого раза.
-            # Защиту не отменяем: в прогоне бар города ставится заново
-            # на каждом шаге.
-            try:
-                from hooks import (load_trading_state as _lts_r,
-                                   save_trading_state as _sts_r)
-                _t_r = _lts_r() or {}
-                _ryn_r = dict(_t_r.get("рынок") or {})
-                if _ryn_r.get("бар"):
-                    _staryy_bar = _ryn_r.get("бар")
-                    _ryn_r["бар"] = ""
-                    _t_r["рынок"] = _ryn_r
-                    _sts_r(_t_r)
-                    print(f"[ВРЕМЯ] бар города снят ({_staryy_bar}) — "
-                          f"живой кадр больше не обрезается прошлым")
-            except Exception as _e_bg:
-                print(f"[ВРЕМЯ] бар города не снялся: {_e_bg}")
         try:
             _vremya_vid()
         except Exception:
@@ -4942,5 +4918,3 @@ def _moment_zakrytiya(data_bara: str, etazh: str) -> str:
 # BUDIM_NA_SVOYOM_BARE_V1 - marker
 
 # POLKA_POMNIT_V1 - marker
-
-# SNYAT_BAR_GORODA_V1 - marker

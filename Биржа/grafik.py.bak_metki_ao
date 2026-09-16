@@ -69,10 +69,6 @@ C_LIPS = "#3ddc6b"    # губы зелёные
 C_FON = "#0e1218"     # было #fdf6e3 — см. выше
 C_AO_UP = "#3ddc6b"
 C_AO_DOWN = "#ff5c5c"
-# METKI_PROVALOV_AO_V1: метка на дне провала и на вершине горба.
-# Своего цвета, не из палитры столбиков — чтобы не путалась с ними и
-# читалась как отдельная вещь, а не как ещё один оттенок силы.
-C_AO_METKA = "#ffd24a"
 # SVECHA_VIDNA_V1: сетка, подписи и рамки — под тёмный фон.
 C_SETKA = "#ffffff1f"
 C_TEKST = "#e6edf3"
@@ -306,67 +302,6 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
         cveta = [C_AO_UP if (k == 0 or ys[k] >= ys[k - 1]) else C_AO_DOWN
                  for k in range(len(ys))]
         axo.bar(xs, ys, color=cveta, width=0.7, zorder=3)
-
-        # METKI_PROVALOV_AO_V1 (слово Шефа 15.09): метим САМИ ПРОВАЛЫ
-        # И ГОРБЫ. Цвет столбика говорит только про соседа — выше он
-        # предыдущего или ниже. Дивер живёт не там: он в ГЛУБИНЕ двух
-        # провалов, которые надо сравнить между собой. Раз сравнивать
-        # нужно их — значит их и видно.
-        #
-        # Группа — подряд идущие столбики по одну сторону нуля.
-        # Крайний в группе (самый глубокий у провала, самый высокий у
-        # горба) получает ромб.
-        #
-        # Это ФАКТ, не совет: ничего не соединяем и не подписываем
-        # «дивер». Сравнить две метки — дело глаза, не кадра.
-        _gruppy, _tek = [], []
-        _znak_pred = 0
-        for _k, _v in enumerate(ys):
-            _zn = 1 if _v > 0 else (-1 if _v < 0 else 0)
-            if _zn == 0:
-                if _tek:
-                    _gruppy.append((_znak_pred, _tek))
-                    _tek = []
-                _znak_pred = 0
-                continue
-            if _zn != _znak_pred and _tek:
-                _gruppy.append((_znak_pred, _tek))
-                _tek = []
-            _znak_pred = _zn
-            _tek.append(_k)
-        if _tek:
-            _gruppy.append((_znak_pred, _tek))
-
-        # METKI_PROVALOV_AO_V2: метим только ЗНАЧИМЫЕ провалы и горбы.
-        # В первой версии группой считался любой набор столбиков по
-        # одну сторону нуля — а AO часто пересекает ноль, группы
-        # дробятся, и метки лезли на рябь вместо настоящих провалов.
-        _predel = max((abs(v) for v in ys), default=0.0)
-        _porog = _predel * 0.20          # мельче пятой части — не провал
-        _razmah = (max(ys) - min(ys)) if ys else 0.0
-        _otstup = _razmah * 0.07         # метка стоит В СТОРОНЕ от столбика
-
-        _mx, _my = [], []
-        for _zn, _idx in _gruppy:
-            if len(_idx) < 2:
-                continue
-            _kray = (min(_idx, key=lambda j: ys[j]) if _zn < 0
-                     else max(_idx, key=lambda j: ys[j]))
-            if abs(ys[_kray]) < _porog:
-                continue
-            _mx.append(xs[_kray])
-            # под дном провала и над вершиной горба — чтобы метка не
-            # тонула в столбике и читалась как отдельная вещь
-            _my.append(ys[_kray] - _otstup if _zn < 0
-                       else ys[_kray] + _otstup)
-        if _mx:
-            axo.scatter(_mx, _my, marker="D", s=130,
-                        facecolors=C_AO_METKA, edgecolors="#ffffff",
-                        linewidths=1.4, zorder=6)
-            # запас снизу и сверху, чтобы метки не срезало краем полосы
-            if _razmah:
-                axo.set_ylim(min(ys) - _otstup * 2.2,
-                             max(ys) + _otstup * 2.2)
     # SVECHA_VIDNA_V1: нулевая линия и подписи — под тёмный фон.
     axo.axhline(0, color="#ffffff66", linewidth=1.3, zorder=2)
     axo.set_facecolor(C_FON)
@@ -510,7 +445,3 @@ def kadr(symbol: str, timeframe: str, kuda: Optional[Path] = None,
 # SVECHA_VIDNA_V1 - marker
 
 # KADR_BEZ_PYPLOT_V1 - marker
-
-# METKI_PROVALOV_AO_V1 - marker
-
-# METKI_PROVALOV_AO_V2 - marker
