@@ -54,12 +54,7 @@ if str(_BIRZHA) not in _sys.path:
     _sys.path.insert(0, str(_BIRZHA))
 
 # Лесенка воды. Меняется одной строкой — не по коду.
-# KOMPAS_DLYA_D1_V1: дневки в лесенке НЕ БЫЛО — и трейдер на D1
-# работал без компаса вовсе. В прогоне 16.09 это была каждая
-# строчка лога: «компаса нет, старший этаж W1 не пришёл». Этаж
-# был ни при чём: для D1 просто не написали правило.
 LESENKA = {
-    "D1": ("W1", "MN1"),
     "H4": ("D1", "W1"),
     "H1": ("H4", "D1"),
 }
@@ -143,9 +138,7 @@ def skleit(bars: list, kuda: str) -> list:
     Больше воде ничего и не нужно, она считается по экстремумам.
     """
     kuda = (kuda or "").upper()
-    # KOMPAS_DLYA_D1_V1: добавлен MN1 — склейка знала только день
-    # и неделю, а месяц теперь тоже бывает нужен как этаж воды.
-    if kuda not in ("D1", "W1", "MN1") or not bars:
+    if kuda not in ("D1", "W1") or not bars:
         return []
     groups: dict = {}
     poryadok = []
@@ -155,9 +148,6 @@ def skleit(bars: list, kuda: str) -> list:
             continue
         if kuda == "D1":
             k = (t.year, t.month, t.day)
-        elif kuda == "MN1":
-            # KOMPAS_DLYA_D1_V1: месяц — год и номер месяца.
-            k = (t.year, t.month)
         else:
             iso = t.isocalendar()
             k = (iso[0], iso[1])
@@ -189,8 +179,7 @@ def bary_etazha(symbol: str, tf: str, as_of_date: Optional[str],
     except Exception:
         bars = []
 
-    # KOMPAS_DLYA_D1_V1: месяц тоже можно склеить, если файла нет.
-    if not bars and rabochiy_tf and tf in ("D1", "W1", "MN1"):
+    if not bars and rabochiy_tf and tf in ("D1", "W1"):
         try:
             from feed_source import bars as source_bars
             b, _p = source_bars(symbol, rabochiy_tf, count=GLUBINA_SKLEYKI)
