@@ -1878,18 +1878,9 @@ def page_akademia() -> None:
         novye = [(fp, vid, kl) for fp, vid, kl in fajly
                  if ((kl not in uzhe_klyuchi) if kl
                      else (fp.name not in uzhe))]
-        # PERECHITAT_V1: нового нет, а кнопку нажали — значит хотят
-        # ещё раз. Житель мог прочитать криво: заряд был на дне,
-        # картинка не дошла, знания были старые. Запирать дверь после
-        # одного кривого захода нельзя — иначе починку не на чем
-        # проверить.
-        _perechityvaem = False
         if not novye:
-            if not fajly:
-                ui.notify("На столе пусто — читать нечего", type="info")
-                return
-            novye = list(fajly)
-            _perechityvaem = True
+            ui.notify(f"{imya} уже прочитал(а) всё, что на столе", type="info")
+            return
         try:
             rezidenty, Dvizhok = _dvizhok_dlya(dom)
             dv = Dvizhok(dom)
@@ -1912,10 +1903,8 @@ def page_akademia() -> None:
                 "назовёшь этот материал, чтобы потом его найти. Не "
                 "пересказ, а метки для себя.\n")
 
-        _glagol = "перечитывает" if _perechityvaem else "садится читать"
         state["чат"].append({"role": "assistant", "кто": "СТОЛ",
-                             "content": f"📖 {imya} {_glagol} "
-                                        f"{len(novye)} материал(ов) со стола…"})
+                             "content": f"📖 {imya} садится читать {len(novye)} материал(ов) со стола…"})
         update_chat()
 
         for fp, vid, _klyuch in novye:
@@ -1963,28 +1952,17 @@ def page_akademia() -> None:
                     "ЧТО ЭТО ВО МНЕ — и только теперь твой отклик своей "
                     "натурой, 2-3 фразы.\n\n"
                     "Суди по самой картинке. Её название ничего не значит.")
-                # KARTINKA_V_CHTENIE_V1: картинка едет ВМЕСТЕ С ЭТИМ
-                # вопросом.
-                # Здесь стояло: «картинка уже лежит в истории, заново
-                # прикладывать не нужно». Так было 15.09, когда её
-                # клали в историю. Укладку сняли — она вываливала на
-                # экран весь PNG буквами, — а эту строчку забыли, и
-                # картинка готовилась впустую. Житель описывал материал
-                # по имени файла и выдумывал.
-                # В историю не кладём: там остаётся строка с ключом,
-                # экран чистый, и за одну картинку платим один раз.
+                # AKADEMIA_KARTINKA_V_ISTORII_V1 (15.09): картинка уже
+                # лежит в state["чат"] с момента, когда её положили на
+                # стол — заново прикладывать её здесь не нужно, только
+                # история впереди и сам вопрос.
                 messages = [{"role": "system", "content": dusha + rol}]
                 for _m in (state.get("чат") or [])[-20:]:
                     _r = ("user" if _m.get("role") == "user"
                           else "assistant")
                     messages.append({"role": _r,
                                      "content": _m.get("content", "")})
-                messages.append({"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": url}},
-                    {"type": "text", "text": vopros},
-                ]})
-                print(f"[ЧТЕНИЕ] 🖼 приложил картинку: {fp.name} "
-                      f"({len(data) / 1024:.0f} КБ)")
+                messages.append({"role": "user", "content": vopros})
             vyzhimka = await _zvat_llm_akademii(messages, state.get("model"),
                                                 dom=dom)
             # CHTENIE_KNIGI_V1: остальные части — по очереди, с памятью
@@ -2467,7 +2445,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # VERNUT_KNOPKU_CHTENIYA_V1 - marker
 
 # PODPIS_OKOSHKOM_V1 - marker
-
-# PERECHITAT_V1 - marker
-
-# KARTINKA_V_CHTENIE_V1 - marker

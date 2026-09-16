@@ -985,8 +985,6 @@ def page_akademia() -> None:
         # оно берётся: не список сессии, а стол из дома студента.
         "руда": [],
         "источник": "", "подпись": "", "тема": "",
-        # PODPIS_OKOSHKOM_V1: сюда кладём строку состояния подписи
-        "_подпись_строка": None,
         "отчёт": "",
         "model": DEFAULT_MODEL,
     }
@@ -1010,7 +1008,6 @@ def page_akademia() -> None:
     chat_ref   = {"element": None}
     viewer_ref = {"element": None}
     ruda_ref   = {"element": None, "uploader": None}
-    podpis_ref = {"строка": None}   # PODPIS_OKOSHKOM_V1
     uroki_ref  = {"element": None}  # PATCH_AKADEMIA_UROKI_PANEL_V1
     knigi_ref  = {"uploader": None, "полка": None}
     avatar_ref = {"element": None}
@@ -1878,18 +1875,9 @@ def page_akademia() -> None:
         novye = [(fp, vid, kl) for fp, vid, kl in fajly
                  if ((kl not in uzhe_klyuchi) if kl
                      else (fp.name not in uzhe))]
-        # PERECHITAT_V1: нового нет, а кнопку нажали — значит хотят
-        # ещё раз. Житель мог прочитать криво: заряд был на дне,
-        # картинка не дошла, знания были старые. Запирать дверь после
-        # одного кривого захода нельзя — иначе починку не на чем
-        # проверить.
-        _perechityvaem = False
         if not novye:
-            if not fajly:
-                ui.notify("На столе пусто — читать нечего", type="info")
-                return
-            novye = list(fajly)
-            _perechityvaem = True
+            ui.notify(f"{imya} уже прочитал(а) всё, что на столе", type="info")
+            return
         try:
             rezidenty, Dvizhok = _dvizhok_dlya(dom)
             dv = Dvizhok(dom)
@@ -1912,10 +1900,8 @@ def page_akademia() -> None:
                 "назовёшь этот материал, чтобы потом его найти. Не "
                 "пересказ, а метки для себя.\n")
 
-        _glagol = "перечитывает" if _perechityvaem else "садится читать"
         state["чат"].append({"role": "assistant", "кто": "СТОЛ",
-                             "content": f"📖 {imya} {_glagol} "
-                                        f"{len(novye)} материал(ов) со стола…"})
+                             "content": f"📖 {imya} садится читать {len(novye)} материал(ов) со стола…"})
         update_chat()
 
         for fp, vid, _klyuch in novye:
@@ -1963,28 +1949,17 @@ def page_akademia() -> None:
                     "ЧТО ЭТО ВО МНЕ — и только теперь твой отклик своей "
                     "натурой, 2-3 фразы.\n\n"
                     "Суди по самой картинке. Её название ничего не значит.")
-                # KARTINKA_V_CHTENIE_V1: картинка едет ВМЕСТЕ С ЭТИМ
-                # вопросом.
-                # Здесь стояло: «картинка уже лежит в истории, заново
-                # прикладывать не нужно». Так было 15.09, когда её
-                # клали в историю. Укладку сняли — она вываливала на
-                # экран весь PNG буквами, — а эту строчку забыли, и
-                # картинка готовилась впустую. Житель описывал материал
-                # по имени файла и выдумывал.
-                # В историю не кладём: там остаётся строка с ключом,
-                # экран чистый, и за одну картинку платим один раз.
+                # AKADEMIA_KARTINKA_V_ISTORII_V1 (15.09): картинка уже
+                # лежит в state["чат"] с момента, когда её положили на
+                # стол — заново прикладывать её здесь не нужно, только
+                # история впереди и сам вопрос.
                 messages = [{"role": "system", "content": dusha + rol}]
                 for _m in (state.get("чат") or [])[-20:]:
                     _r = ("user" if _m.get("role") == "user"
                           else "assistant")
                     messages.append({"role": _r,
                                      "content": _m.get("content", "")})
-                messages.append({"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": url}},
-                    {"type": "text", "text": vopros},
-                ]})
-                print(f"[ЧТЕНИЕ] 🖼 приложил картинку: {fp.name} "
-                      f"({len(data) / 1024:.0f} КБ)")
+                messages.append({"role": "user", "content": vopros})
             vyzhimka = await _zvat_llm_akademii(messages, state.get("model"),
                                                 dom=dom)
             # CHTENIE_KNIGI_V1: остальные части — по очереди, с памятью
@@ -2255,90 +2230,30 @@ def page_akademia() -> None:
                         ui.label("ЗАГРУЗЧИК").style(
                             "color:rgba(255,255,255,0.92); font-weight:900; letter-spacing:.12em; "
                             "text-transform:uppercase; font-size:11px;")
-                        # PODPIS_OKOSHKOM_V1: поля ушли в окошко.
-                        # Панель фиксированной высоты, ниже неё блок
-                        # уроков — три поля утаскивали «Прочитать» вниз,
-                        # под соседний блок.
-                        ui.button("✎ ПОДПИСЬ", on_click=lambda: _okno_podpisi()) \
-                            .props("flat dense size=xs").style(
-                            "color:rgba(0,204,255,0.75); font-size:9px;")
                         ui.button("CLEAR", on_click=clear_ruda).props("flat dense size=xs").style(
                             "color:rgba(255,80,80,0.5); font-size:9px;")
+                    # SKLAD_V_ZAGRUZCHIKE_V1: подпись ставит ТОЛЬКО Шеф.
+                    # Источник -- короткое имя, из него собирается ключ
+                    # («вильямс» + «gl07_str11» = вильямс/gl07_str11).
+                    ui.html('<div style="padding:4px 16px 2px 16px;color:rgba(255,255,255,0.35);'
+                            'font-size:9px;line-height:1.5;">подпишу сам — '
+                            'машина за меня не сочиняет</div>')
 
-                    # SKLAD_V_ZAGRUZCHIKE_V1: подпись ставит ТОЛЬКО Шеф,
-                    # машина за него не сочиняет.
-                    # PODPIS_OKOSHKOM_V1: что сейчас стоит — одной строкой.
-                    podpis_ref["строка"] = ui.html("")
+                    def _pole(imya_polya, podskazka):
+                        def _menyat(e, k=imya_polya):
+                            state[k] = e.value or ""
+                        return ui.input(placeholder=podskazka,
+                                        on_change=_menyat).props(
+                            "dense borderless dark").style(
+                            "margin:2px 12px; width:calc(100% - 24px); "
+                            "font-size:11px; color:rgba(255,255,255,0.85); "
+                            "background:rgba(255,255,255,0.05); "
+                            "border:1px solid rgba(255,255,255,0.10); "
+                            "border-radius:8px; padding:1px 8px;")
 
-                    def _pokazat_podpis():
-                        _i = (state.get("источник") or "").strip()
-                        _p = (state.get("подпись") or "").strip()
-                        _t = (state.get("тема") or "").strip()
-                        if _i or _p or _t:
-                            _kuski = [x for x in (_i, _p, _t) if x]
-                            _txt = ("✎ " + " · ".join(_kuski))
-                            _cv = "rgba(0,255,136,0.60)"
-                        else:
-                            _txt = "без подписи — ищется только по источнику"
-                            _cv = "rgba(255,255,255,0.30)"
-                        podpis_ref["строка"].set_content(
-                            f'<div style="padding:3px 16px 4px 16px;color:{_cv};'
-                            f'font-size:9px;line-height:1.4;word-break:break-word;">'
-                            f'{_txt}</div>')
-
-                    def _okno_podpisi():
-                        dlg = ui.dialog()
-                        with dlg, ui.card().style(
-                                "background:#0e1420; min-width:360px; "
-                                "border:1px solid rgba(255,255,255,0.12);"):
-                            ui.html('<div style="color:#8adfff;font-size:12px;'
-                                    'letter-spacing:.12em;padding-bottom:2px;">'
-                                    '✎ ПОДПИСЬ</div>')
-                            ui.html('<div style="color:rgba(255,255,255,0.40);'
-                                    'font-size:10px;line-height:1.5;'
-                                    'padding-bottom:8px;">Подписываю сам — '
-                                    'машина за меня не сочиняет.<br>Источник '
-                                    'коротко: из него собирается ключ '
-                                    '(«вильямс» → вильямс/gl07_str11).<br>'
-                                    'Держится до смены — клади хоть всю '
-                                    'главу.</div>')
-
-                            def _pole(imya_polya, podskazka):
-                                def _menyat(e, k=imya_polya):
-                                    state[k] = e.value or ""
-                                    _pokazat_podpis()
-                                return ui.input(
-                                    placeholder=podskazka,
-                                    value=state.get(imya_polya) or "",
-                                    on_change=_menyat).props(
-                                    "dense borderless dark").style(
-                                    "width:100%; font-size:12px; "
-                                    "color:rgba(255,255,255,0.88); "
-                                    "background:rgba(255,255,255,0.05); "
-                                    "border:1px solid rgba(255,255,255,0.10); "
-                                    "border-radius:8px; padding:2px 10px; "
-                                    "margin-bottom:6px;")
-
-                            _pole("источник", "источник: вильямс, котин, скрин…")
-                            _pole("подпись", "подпись: что тут нарисовано")
-                            _pole("тема", "тема: трейдинг, психология…")
-
-                            def _steret():
-                                state["источник"] = ""
-                                state["подпись"] = ""
-                                state["тема"] = ""
-                                _pokazat_podpis()
-                                dlg.close()
-                                ui.notify("Подпись снята", color="info")
-
-                            with ui.row().style("gap:8px; margin-top:4px;"):
-                                ui.button("Готово", on_click=dlg.close).props(
-                                    "flat").style("color:#8adfff;")
-                                ui.button("Стереть", on_click=_steret).props(
-                                    "flat").style("color:rgba(255,80,80,0.6);")
-                        dlg.open()
-
-                    _pokazat_podpis()
+                    _pole("источник", "источник: вильямс, котин, скрин…")
+                    _pole("подпись", "подпись: что тут нарисовано")
+                    _pole("тема", "тема: трейдинг, психология…")
                     ruda_ref["uploader"] = ui.upload(
                         on_upload=handle_ruda, multiple=True, auto_upload=True,
                     ).props("flat color=cyan").style("margin: 0 8px 8px 8px;")
@@ -2465,9 +2380,3 @@ if __name__ in {"__main__", "__mp_main__"}:
 # KARTINKA_V_RAZGOVOR_V1 - marker
 
 # VERNUT_KNOPKU_CHTENIYA_V1 - marker
-
-# PODPIS_OKOSHKOM_V1 - marker
-
-# PERECHITAT_V1 - marker
-
-# KARTINKA_V_CHTENIE_V1 - marker
