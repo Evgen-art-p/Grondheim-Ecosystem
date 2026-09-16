@@ -1205,23 +1205,14 @@ def run_brut(symbol: str = "XAUUSD", timeframe: str = "H4",
         + ""
         # YAZYK_DOLIVA_V1: дописаны action/new_stop/add_lot — раньше
         # эта, самая СВЕЖАЯ строка промта молчала про ведение позиции.
-        # SLOVO_NE_PRIKAZ_V2: здесь стояло «Выдай строго JSON
-        # {narrative, signal, diary_entry}» и список ключей
-        # решения — brut_verdict, brut_direction, brut_entry,
-        # brut_stop. Старый язык, времён до рук.
-        #
-        # Бумага говорит: решение в ответ не пишется, только
-        # рукой. А эта строка требовала обратного — и стояла
-        # последней, а последнее слово весит больше. Трейдер
-        # слушался её, заполнял signal и получал отказ за то,
-        # что сделал как велено. Три пробуда из четырёх шли
-        # дважды из-за одного этого противоречия.
-        "Выдай строго JSON {narrative, diary_entry}.\n"
-        "Решения в этом ответе НЕТ и быть не может. Войти, "
-        "передвинуть стоп, долить или закрыть — только рукой "
-        "otdat_prikaz. Не работаешь на этом баре — та же рука с "
-        "WAIT и причиной. Не позвал руку — ничего не произошло, "
-        "сколько ни рассказывай.\n"
+        "Выдай строго JSON {narrative, signal, diary_entry}.\n"
+        "Нет открытой позиции: signal ключи — brut_verdict "
+        "(APPROVED/REJECTED), brut_reason, brut_direction, "
+        "brut_entry, brut_stop, brut_lot.\n"
+        "Есть открытая позиция (см. блок 'position' на столе): signal "
+        "ключи — brut_action (ENTER/WAIT/HOLD/MOVE_STOP/ADD/CLOSE), "
+        "brut_reason, brut_new_stop (если MOVE_STOP), brut_add_lot "
+        "(если ADD).\n"
         # NABLYUDENIE_V1: третий ответ — «беру на карандаш».
         # Слово Шефа: увидел, похоже, проверил — наблюдай, если
         # видишь, что вот-вот твой сигнал. Пока наблюдаешь, тебя
