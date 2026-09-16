@@ -5,8 +5,9 @@
   "Profession": "",
   "Area_of_Responsibility": "",
   "Access_Level": "",
-  "Workshop_ID": "Академия",
-  "Turbo_Role": "студент",
+  "Workshop_ID": "торговый_хаос",
+  "Turbo_Role": "A06",
   "Quarter": "",
-  "Core_Phrase": ""
+  "Core_Phrase": "",
+  "magic": 100001
 }

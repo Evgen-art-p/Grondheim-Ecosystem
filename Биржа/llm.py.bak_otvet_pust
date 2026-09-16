@@ -898,24 +898,7 @@ def chat_with_images_and_tools(
         if not msg.get("tool_calls"):
             content = msg.get("content") or ""
             if not content.strip():
-                # RUKA_SRABOTALA_OTVET_PUST_V1: рассказ не дописался.
-                # Если руки в этом заходе УЖЕ отработали — дело
-                # сделано: приказ лежит на табло, счёт посчитан.
-                # Перезаходить заново незачем: это лишний кадр и
-                # лишнее обращение к модели на каждом таком баре.
-                # Берём последнее сказанное словами (город его и
-                # так помнит — RUKI_NE_TERYAT_SLOVO_V1), а нет
-                # его — идём с пустым рассказом.
-                if sdelano or zvali_ruki:
-                    content = (posledneye_slovo or "").strip() or "{}"
-                    print(f"[РУКИ] рассказ не дописался, но руки "
-                          f"отработали ({sdelano}) — иду с тем, "
-                          f"что есть")
-                else:
-                    # Рук не было и сказать нечего — это правда
-                    # пустой ответ, как и раньше.
-                    raise RuntimeError(
-                        "Модель вернула пустой ответ (кадр+руки)")
+                raise RuntimeError("Модель вернула пустой ответ (кадр+руки)")
             usage = data.get("usage", {})
             _ledger.record(agent_id=agent_id, slot_id=slot_id,
                            model=payload["model"],
