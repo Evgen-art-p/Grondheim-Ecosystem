@@ -59,34 +59,9 @@ def v_okne(dlina) -> bool:
 
 
 def _dobrat_kompas(k: dict, bars: list, symbol: str, tf: str, point: float):
-    """KOMPAS_MESTA_IZ_VODY_V1: компас месту — ОТТУДА ЖЕ, откуда его
-    берёт трейдер: из ВОДЫ, по структуре двух старших этажей.
-
-    Раньше здесь стоял компас РАБОЧЕГО этажа (веер Аллигатора,
-    md["global_bias"]) — та самая подмена, что была вычищена из
-    стола как тихое враньё. Из стола убрали, а в местах осталась;
-    и с тех пор, как веер перестал быть источником компаса,
-    global_bias никем не заполняется — в месте лежала пустота.
-
-    Спрашиваем воду НА ДАТУ ЭТОГО МЕСТА: она обрезает старшие бары
-    по ней и в будущее не заглядывает — закон тестера цел.
-
-    Это запись ДЛЯ ОТЧЁТА. На стол трейдера и на его решения не
-    влияет ничем.
-    """
-    try:
-        from global_anchor import global_trend
-        st = global_trend(symbol, tf, as_of_date=k.get("дата"))
-        b = (st or {}).get("bias")
-        k["компас"] = b if b in ("BULL", "BEAR") else None
-        _why = (st or {}).get("why") or ""
-        if _why:
-            k["вода_почему"] = _why
-        return k
-    except Exception as e:
-        print(f"[ИСКАТЕЛЬ] вода месту не ответила ({e}) — "
-              f"беру рабочий этаж")
-    # Запасной путь — как было раньше.
+    """ISKATEL_SVOY_ETAZH_V1: компас НАЙДЕННОМУ месту, по одному разу
+    на место, а не на каждый перебранный бар. Не вышло — остаётся то,
+    что дал рабочий этаж; место от этого не пропадает."""
     try:
         from williams_core import build_market_data
         md = build_market_data(bars, symbol=symbol, timeframe=tf,
