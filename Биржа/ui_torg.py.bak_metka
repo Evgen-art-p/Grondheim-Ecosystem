@@ -1183,11 +1183,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             _kadr_progona_vidno["schet"] = _KADR_NA_VIDU["schet"]
             kadr_ref["element"].clear()
             with kadr_ref["element"]:
-                # METKA_VIDNA_V1: тот же щелчок и у догнанного кадра.
                 ui.image(str(_put)).style(
                     "width:100%; height:100%; object-fit:contain; "
-                    "flex:1; min-height:0; cursor:pointer;").on(
-                    "click", lambda _=None, _q=str(_put): _kadr_krupno(_q))
+                    "flex:1; min-height:0;")
                 ui.label(
                     f"👁 {_KADR_NA_VIDU.get('podpis') or ''}").style(
                     "color:rgba(139,233,253,0.75); font-size:11px; "
@@ -1622,12 +1620,9 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             # KADR_NA_VES_KVADRAT_V1: тянемся на всю клетку, но БЕЗ
             # плющенья — contain держит пропорции свечей. Плющеная
             # свеча врёт глазу, а глаз у нас важнее цифры.
-            # METKA_VIDNA_V1: щелчок по кадру — во весь экран.
-            # Показ уже готов, им живут миниатюры в ленте.
             ui.image(str(p)).style(
                 "width:100%; height:100%; object-fit:contain; "
-                "flex:1; min-height:0; cursor:pointer;").on(
-                "click", lambda _=None, _p=str(p): _kadr_krupno(_p))
+                "flex:1; min-height:0;")
             # KABINET_VZGLYAD_V1: подпись под кадром. Что смотрим и
             # каким краном — иначе глазом реал от истории не отличить.
             # KADR_NA_VES_KVADRAT_V1: плюс дата последнего бара —
@@ -2941,22 +2936,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             "grafik").kadr(s, t))
                 except Exception as _ek:
                     print(f"[ПРОГОН] кадр не нарисовался: {_ek}")
-                # KADR_PRYAMO_V_PAMYAT_V1: кладём кадр в общую
-                # память СРАЗУ, до всякого показа. pokazat_kadr —
-                # функция того окна, где прогон начинался; после
-                # перезагрузки страницы она уводит кадр в никуда,
-                # и делает это молча. Общая память ни от какого
-                # окна не зависит: любая живая вкладка подберёт
-                # кадр своим таймером за секунду.
-                if _kadr:
-                    try:
-                        _KADR_NA_VIDU["put"] = str(_kadr)
-                        _KADR_NA_VIDU["podpis"] = f"{_sym} · {_tf}"
-                        _KADR_NA_VIDU["schet"] += 1
-                        print(f"[КАДР] в панель: "
-                              f"{Path(_kadr).name}")
-                    except Exception as _ep:
-                        print(f"[КАДР] в панель не лёг: {_ep}")
                 try:
                     await pokazat_kadr(_kadr)
                 except Exception:

@@ -348,11 +348,8 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
         _bukvy = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
         _kod = (_rnd.choice(_bukvy) + _rnd.choice(_bukvy)
                 + f'{_rnd.randint(10, 99)}')
-        # METKA_VIDNA_V1: было 18 — в ужатой панели Кабинета это
-        # девять пикселей, метку не разглядеть. А метка, которую
-        # не видит Шеф, не проверяет ничего.
         fig.text(0.012, 0.985, _kod, ha='left', va='top',
-                 fontsize=44, color='#ffd866', family='monospace',
+                 fontsize=18, color='#ffd866', family='monospace',
                  fontweight='bold', zorder=20)
         # METKA_NAZYVAET_KADR_V1: метка без имени кадра
         # бесполезна — за один взгляд их печатается несколько,

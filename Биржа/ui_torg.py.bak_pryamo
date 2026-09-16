@@ -2941,22 +2941,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                             "grafik").kadr(s, t))
                 except Exception as _ek:
                     print(f"[ПРОГОН] кадр не нарисовался: {_ek}")
-                # KADR_PRYAMO_V_PAMYAT_V1: кладём кадр в общую
-                # память СРАЗУ, до всякого показа. pokazat_kadr —
-                # функция того окна, где прогон начинался; после
-                # перезагрузки страницы она уводит кадр в никуда,
-                # и делает это молча. Общая память ни от какого
-                # окна не зависит: любая живая вкладка подберёт
-                # кадр своим таймером за секунду.
-                if _kadr:
-                    try:
-                        _KADR_NA_VIDU["put"] = str(_kadr)
-                        _KADR_NA_VIDU["podpis"] = f"{_sym} · {_tf}"
-                        _KADR_NA_VIDU["schet"] += 1
-                        print(f"[КАДР] в панель: "
-                              f"{Path(_kadr).name}")
-                    except Exception as _ep:
-                        print(f"[КАДР] в панель не лёг: {_ep}")
                 try:
                     await pokazat_kadr(_kadr)
                 except Exception:

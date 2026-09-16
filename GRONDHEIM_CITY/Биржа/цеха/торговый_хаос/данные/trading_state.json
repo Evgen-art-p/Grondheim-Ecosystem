@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "updated": "2026-09-16T10:23:51.981249",
+  "iskra": {
+    "t1_status": "NOT_FOUND",
+    "zero_point_price": null,
+    "history_dna": "",
+    "alive": false,
+    "rodilas_na_bare": null
+  },
+  "positions": [],
+  "feed": {
+    "mode": "tester",
+    "symbol": "EURUSD",
+    "момент": "2025.01.07 20:00"
+  },
+  "vzglyad_shefa": {
+    "путь": "None",
+    "подпись": "EURUSD H1",
+    "когда": "2026-09-16T10:13:36"
+  },
+  "стоп_прогона": true,
+  "рынок": {
+    "бар": "2025.03.03 23:00"
+  },
+  "точки": {
+    "EURUSD H1": {
+      "reshali_na_bare": "2025.03.03 23:00",
+      "otvet_bara": {
+        "alive": false,
+        "reason": "точки нет",
+        "changed": false,
+        "direction": null
+      },
+      "alive": false,
+      "trend_direction": "BEAR",
+      "zero_point_price": 1.04205,
+      "rodilas_na_bare": "2025.03.03 06:00",
+      "t1_status": "DETECTED",
+      "neutral_bars_count": 0,
+      "barov_s_tochki": 4,
+      "kray_posle": 1.03885,
+      "struktura_pozadi": 114,
+      "konec_volny_1": null,
+      "konec_volny_2": null,
+      "попыток": 0,
+      "нога": 0
+    }
+  },
+  "brut": {
+    "бар": "2025.03.03 23:00",
+    "verdict": "REJECTED",
+    "reason": "",
+    "action": "WAIT",
+    "отдан_рукой": true,
+    "кто_отдал": "Илья",
+    "ключ_отдавшего": "bc9dd782fa1fbc5dec28a7b192adeeff43dccc721fd27d1530378110647d09ad",
+    "direction": null,
+    "entry": null,
+    "stop": null,
+    "lot": null,
+    "new_stop": null,
+    "add_lot": null
+  },
+  "наблюдения": {
+    "EURUSD H1": {
+      "A06": {
+        "за_чем": "за фракталами и AO, жду подтверждения ослабления тренда и появления дивергенции.",
+        "с_бара": "2025.01.02 18:00",
+        "последний_бар": "2025.03.03 20:00"
+      }
+    }
+  }
+}
