@@ -184,16 +184,6 @@ def _slot_brain(ceh_id: str, slot: str):
 
 KVARTAL = "Биржа"
 
-# LENTA_NE_ZABIVAET_BRAUZER_V1: сколько последних сообщений
-# рисуем. Остальное никуда не девается — оно в памяти и в
-# отчёте, просто не перерисовывается каждую секунду.
-LENTA_HVOST = 80
-
-# KADR_NE_TERYAETSYA_V1: последний кадр, общий на ВСЕ вкладки.
-# Прогон мог начаться в одном окне, а смотрят из другого —
-# счёт растёт, и любое живое окно видит, что кадр сменился.
-_KADR_NA_VIDU = {"put": None, "podpis": "", "schet": 0}
-
 # ── СОСТАВ СОВЕТА — порядок/иконки как в старом TRADING_COUNCIL ──────
 # (ceh_id, реальный_слот_в_цехе, id_для_движка(A01..A09), иконка)
 # SOSTAV_S_DISKA_V1: вбитого списка агентов здесь БОЛЬШЕ НЕТ — канон
@@ -1033,19 +1023,7 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
             if not state["chat_history"]:
                 ui.html('<div class="chat-msg-system">SYSTEM: Биржа готова.</div>')
             else:
-                # LENTA_NE_ZABIVAET_BRAUZER_V1: рисуем ХВОСТ, а не
-                # всю ленту. Перерисовывать сотни сообщений с
-                # картинками раз в секунду — от этого браузер и
-                # рвал связь, а с ней умирала вкладка.
-                _vsya = state["chat_history"]
-                _hvost = _vsya[-LENTA_HVOST:]
-                _skryto = len(_vsya) - len(_hvost)
-                if _skryto > 0:
-                    ui.html(
-                        '<div class="chat-msg-system">SYSTEM: выше '
-                        f'ещё {_skryto} сообщ. — полная лента в '
-                        'отчёте на диске.</div>')
-                for msg in _hvost:
+                for msg in state["chat_history"]:
                     role = msg.get("role", "user")
                     content = msg.get("content", "")
                     who = msg.get("agent", "")
@@ -1164,40 +1142,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         ui.timer(1.0, _dognat_zhivoy_kadr)
     except Exception as _e_zk:
         print(f"[КАБИНЕТ] живой кадр не догоняет ({_e_zk}) — не беда")
-
-    # KADR_NE_TERYAETSYA_V1: кадр ПРОГОНА тоже догоняем.
-    # Прогон мог начаться в другой вкладке или до обновления
-    # страницы — он держит ссылку на старое окно и в это уже не
-    # пишет. Раз в секунду смотрим, не сменился ли кадр.
-    _kadr_progona_vidno = {"schet": -1}
-
-    def _dognat_kadr_progona():
-        try:
-            if not kadr_ref["element"]:
-                return
-            if _KADR_NA_VIDU["schet"] == _kadr_progona_vidno["schet"]:
-                return
-            _put = _KADR_NA_VIDU.get("put")
-            if not _put or not Path(_put).exists():
-                return
-            _kadr_progona_vidno["schet"] = _KADR_NA_VIDU["schet"]
-            kadr_ref["element"].clear()
-            with kadr_ref["element"]:
-                ui.image(str(_put)).style(
-                    "width:100%; height:100%; object-fit:contain; "
-                    "flex:1; min-height:0;")
-                ui.label(
-                    f"👁 {_KADR_NA_VIDU.get('podpis') or ''}").style(
-                    "color:rgba(139,233,253,0.75); font-size:11px; "
-                    "letter-spacing:0.06em; padding-top:6px; "
-                    "flex-shrink:0; width:100%; text-align:center;")
-        except Exception:
-            pass
-
-    try:
-        ui.timer(1.0, _dognat_kadr_progona)
-    except Exception as _e_kp:
-        print(f"[КАБИНЕТ] кадр прогона не догоняет ({_e_kp}) — не беда")
 
     # ── KABINET_GRAFIK_V1: кадр ──────────────────────────────
     def _aktivnyy_rynok() -> tuple:
@@ -1525,10 +1469,13 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         """
         if not kadr_ref["element"]:
             return None
-        # KADR_NE_TERYAETSYA_V1: раньше здесь был ранний выход —
-        # окно мертво, уходим. Из-за него кадр прогона пропадал
-        # бесследно. Теперь сперва рисуем и ЗАПОМИНАЕМ кадр, а
-        # проверка живости стоит ниже, у самой отрисовки.
+        # KADR_BEZ_OKNA_V1: вкладка умерла — рисовать некуда.
+        # Тот же уговор, что у ленты: работаем молча, отчёт всё
+        # равно пишется на диск.
+        if not _kadr_zhivoy():
+            print("[ПРОГОН] окно не принимает кадр — "
+                  "работаю молча, отчёт пишется на диск")
+            return None
         # VZGLYAD_PO_VYBORU_V1: сперва спрашиваем ПОЛКУ.
         symbol, tf, chey, nehvatka = "", "", "", ""
         try:
@@ -1593,26 +1540,6 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
                     pass
             save_trading_state(_t_zk)
             _zhivoy_vidno["put"] = None
-        except Exception:
-            pass
-        # KADR_NE_TERYAETSYA_V1: запоминаем кадр ДО отрисовки.
-        # Даже если эта вкладка умерла — новая подхватит его
-        # таймером за секунду.
-        try:
-            _KADR_NA_VIDU["put"] = str(p)
-            _KADR_NA_VIDU["podpis"] = f"{chey + ' · ' if chey else ''}"\
-                                      f"{symbol} · {tf}"
-            _KADR_NA_VIDU["schet"] += 1
-        except Exception:
-            pass
-        # KADR_BEZ_OKNA_V1: вкладка умерла — рисовать некуда.
-        if not _kadr_zhivoy():
-            print("[ПРОГОН] окно не принимает кадр — "
-                  "кадр запомнен, новая вкладка подхватит")
-            return p
-        # рисуем сами — значит догонялке тут делать нечего
-        try:
-            _kadr_progona_vidno["schet"] = _KADR_NA_VIDU["schet"]
         except Exception:
             pass
         kadr_ref["element"].clear()
