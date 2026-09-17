@@ -884,23 +884,6 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
                           f"на кадрах: {', '.join(_byli[-4:]) or '—'}")
             except Exception as _e_mk:
                 print(f"[МЕТКА] сверить не вышло ({_e_mk}) — не беда")
-            # SVERKA_DIVERA_V1: город считает дивер САМ и кладёт
-            # рядом со словами трейдера. Не блокирует: считает и
-            # показывает, решает трейдер.
-            try:
-                import sverka_divera as _sd
-                _d = _sd.poschitat(symbol, timeframe, napravlenie)
-                if not _d.get("ok"):
-                    print(f"[ДИВЕР] ? {napravlenie}: "
-                          f"{_d.get('slovami')}")
-                elif _d.get("est"):
-                    print(f"[ДИВЕР] ✓ {napravlenie}: есть — "
-                          f"{_d.get('slovami')}")
-                else:
-                    print(f"[ДИВЕР] ✗ {napravlenie}: НЕТ — "
-                          f"{_d.get('slovami')}")
-            except Exception as _e_sd:
-                print(f"[ДИВЕР] посчитать не вышло ({_e_sd}) — не беда")
         if chto == "MOVE_STOP" and not isinstance(args.get("новый_стоп"),
                                                   (int, float)):
             return "Приказ НЕ отдан: MOVE_STOP без нового стопа."

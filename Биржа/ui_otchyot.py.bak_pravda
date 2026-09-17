@@ -73,76 +73,10 @@ def _mesta(papka: Path) -> list:
     return out
 
 
-# ── OTCHYOT_PRAVDU_I_R_V1: результат сделки числом ──
-# Город считает pnl_r при каждом закрытии и кладёт в журнал
-# trading_pnl.jsonl. Отчёт туда не заглядывал — оттого в нём был
-# один текст и ни одного показателя.
-
-_ZHURNAL: dict = {}
-
-
-def _zhurnal_zakrytiy() -> dict:
-    """Закрытия по цене входа: {цена: запись}. Читается один раз."""
-    if _ZHURNAL:
-        return _ZHURNAL
-    try:
-        import json as _js
-        from hooks import PNL_PATH
-        p = Path(PNL_PATH)
-        if not p.exists():
-            _ZHURNAL["_"] = None
-            return _ZHURNAL
-        with open(p, encoding="utf-8") as f:
-            for stroka in f:
-                stroka = stroka.strip()
-                if not stroka:
-                    continue
-                try:
-                    z = _js.loads(stroka)
-                except Exception:
-                    continue
-                vh = z.get("entry")
-                if isinstance(vh, (int, float)):
-                    _ZHURNAL[round(float(vh), 5)] = z
-    except Exception as e:
-        print(f"[ОТЧЁТ] журнал закрытий не прочитался: {e}")
-        _ZHURNAL["_"] = None
-    return _ZHURNAL
-
-
-ПО_РУССКИ_ЗАКРЫТИЕ = {"STOP_LOSS": "стоп", "EXIT_BELL": "колокол",
-                      "MANUAL_CLOSE": "закрыла сама"}
-
-
-def _itog_mesta(m: dict):
-    """(R числом или None, словами) для места-входа."""
-    c = m.get("цена_входа")
-    if not isinstance(c, (int, float)):
-        return None, ""
-    z = _zhurnal_zakrytiy().get(round(float(c), 5))
-    if not z:
-        return None, "в работе"
-    r = z.get("pnl_r")
-    chem = ПО_РУССКИ_ЗАКРЫТИЕ.get(str(z.get("close_reason")), "?")
-    if isinstance(r, (int, float)):
-        return float(r), f"{float(r):+.2f}R · {chem}"
-    return None, f"R не посчитан · {chem}"
-
-
 def _chto_sdelal(m: dict) -> tuple:
     """(метка, цвет) — вошёл, ведёт, отказался или промолчал."""
     d = str(m.get("действие") or "").upper()
     v = str(m.get("вердикт") or "").upper()
-    # OTCHYOT_PRAVDU_I_R_V1: ДЕЙСТВИЕ СМОТРИМ ПЕРВЫМ. Раньше
-    # вердикт стоял раньше — а APPROVED город ставит на ЛЮБОЙ
-    # принятый приказ, и HOLD с MOVE_STOP подписывались как
-    # «ВОШЁЛ». Одна сделка давала три строки «ВОШЁЛ @ …», и
-    # выходило, будто открыт новый вход при незакрытом старом.
-    if d in ("HOLD", "MOVE_STOP", "ADD", "CLOSE"):
-        return {"HOLD": "ДЕРЖУ", "MOVE_STOP": "СТОП ПЕРЕНЁС",
-                "ADD": "ДОЛИЛ", "CLOSE": "ЗАКРЫЛ"}[d], "#4d9bff"
-    if d == "WAIT":
-        return "ОТКАЗ", "#ffb454"
     if d == "ENTER" or v in ("APPROVED", "ENTER", "OK"):
         c = m.get("цена_входа")
         s = m.get("стоп_входа")
@@ -200,37 +134,6 @@ def _shapka(ceh: str, papka: Path, mesta: list):
               f'<b>{schet["БЕЗ ПРИКАЗА"]}</b></span>'
             + '</div>')
 
-        # OTCHYOT_PRAVDU_I_R_V1: ИТОГ ПО СДЕЛКАМ. Раньше отчёт не
-        # давал ни одного показателя — только текст.
-        _ry = []
-        for _m in mesta:
-            _r, _ = _itog_mesta(_m)
-            if _r is not None:
-                _ry.append(_r)
-        if _ry:
-            _pl = [x for x in _ry if x > 0]
-            _mi = [x for x in _ry if x < 0]
-            _obshchiy = sum(_ry)
-            _sredniy = _obshchiy / len(_ry)
-            _c_ob = "#3ddc6b" if _obshchiy > 0 else "#ff5c5c"
-            _c_sr = "#3ddc6b" if _sredniy > 0 else "#ff5c5c"
-            ui.html(
-                '<div style="margin-top:8px; padding-top:8px; '
-                'border-top:1px solid rgba(255,255,255,0.08); '
-                'display:flex; gap:18px; flex-wrap:wrap; '
-                'font-size:0.82rem;">'
-                + f'<span style="color:rgba(255,255,255,0.75);">'
-                  f'сделок закрыто: <b>{len(_ry)}</b></span>'
-                + f'<span style="color:#3ddc6b;">в плюс: '
-                  f'<b>{len(_pl)}</b></span>'
-                + f'<span style="color:#ff5c5c;">в минус: '
-                  f'<b>{len(_mi)}</b></span>'
-                + f'<span style="color:{_c_ob};">общий: '
-                  f'<b>{_obshchiy:+.2f}R</b></span>'
-                + f'<span style="color:{_c_sr};">средний: '
-                  f'<b>{_sredniy:+.2f}R</b></span>'
-                + '</div>')
-
         # выбор другого прогона
         vse = _progony(ceh)
         if len(vse) > 1:
@@ -247,22 +150,6 @@ def _shapka(ceh: str, papka: Path, mesta: list):
                             ui.navigate.to(f"/otchyot/{ceh}/{n}")
                     ).props("flat no-caps dense").style(
                         "font-size:0.7rem; color:rgba(120,168,201,0.9);")
-
-
-def _itog_kuskom(m: dict) -> str:
-    """OTCHYOT_PRAVDU_I_R_V1: кусок разметки с результатом сделки."""
-    d = str(m.get("действие") or "").upper()
-    v = str(m.get("вердикт") or "").upper()
-    if not (d == "ENTER" or (d not in ("HOLD", "MOVE_STOP", "ADD",
-                                       "CLOSE", "WAIT")
-                             and v in ("APPROVED", "ENTER", "OK"))):
-        return ""
-    r, slovami = _itog_mesta(m)
-    if not slovami:
-        return ""
-    c = "#7c8b99" if r is None else ("#3ddc6b" if r > 0 else "#ff5c5c")
-    return (f'<span style="color:{c}; font-weight:700; '
-            f'font-size:0.82rem;">{slovami}</span>')
 
 
 def _kartochka(ceh: str, papka: Path, nomer: int, m: dict):
@@ -307,9 +194,7 @@ def _kartochka(ceh: str, papka: Path, nomer: int, m: dict):
                     f'<span style="color:rgba(255,255,255,0.9); '
                     f'font-weight:700; font-size:0.86rem;">{kogda}</span>'
                     f'<span style="color:{cvet}; font-weight:700; '
-                    f'font-size:0.82rem;">{metka}</span>'
-                    # OTCHYOT_PRAVDU_I_R_V1: чем кончилась ЭТА сделка.
-                    + _itog_kuskom(m) + '</div>')
+                    f'font-size:0.82rem;">{metka}</span></div>')
 
                 _hv = []
                 if povod:
