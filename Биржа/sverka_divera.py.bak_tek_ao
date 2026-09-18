@@ -86,24 +86,11 @@ def poschitat(symbol: str, timeframe: str, storona: str) -> dict:
     glavnyy = max(tochki, key=lambda t: t[1]) if verh \
         else min(tochki, key=lambda t: t[1])
     # нынешний — последний, что не сам главный
-    # TEKUSHCHIY_AO_V1: сравниваем с ТЕКУЩИМ значением AO, а не с
-    # последним ЗАКОНЧЕННЫМ горбом. Слово Шефа: «не завершённый, а
-    # в данный момент»; «горб незакончен только в правой части,
-    # слева он есть».
-    #
-    # Ждать, пока горб дорисуется до трёх столбиков, нельзя:
-    # разворотный бар уже здесь, и пока горб закроется, вход
-    # уйдёт. Правило трёх столбиков остаётся для ПРОШЛЫХ горбов;
-    # последнему третий столбик не нужен — он ещё не наступил.
-    _posl = None
-    for _i in range(len(ao) - 1, -1, -1):
-        if ao[_i] is not None:
-            _posl = _i
-            break
-    if _posl is None or _posl <= glavnyy[0]:
+    posle = [t for t in tochki if t[0] > glavnyy[0]]
+    if not posle:
         return {"ok": False, "est": None,
-                "slovami": "текущего значения AO нет"}
-    nyneshniy = (_posl, ao[_posl])
+                "slovami": "после главного горба нового ещё нет"}
+    nyneshniy = posle[-1]
 
     ao_bylo, ao_stalo = glavnyy[1], nyneshniy[1]
     c_bylo = highs[glavnyy[0]] if verh else lows[glavnyy[0]]
