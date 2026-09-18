@@ -59,18 +59,6 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 _BIRZHA = Path(__file__).resolve().parent
-
-# SPRED_PO_UMOLCHANIYU_V1: сколько пунктов спреда брать, когда в
-# истории его нет. Слово Шефа 17.09: «ставь три пункта, ордера
-# выше свечи — два спреда, ниже свечи — один спред».
-#
-# Ноль вместо спреда стоил прогону 54 убытка из 55: стол выдавал
-# голые края бара, стоп вставал ровно на край, и обычный ретест
-# снимал сделку до того, как она успевала стать правой.
-#
-# Живой спред из терминала главнее — это только на бесспредовую
-# историю. Менять цифру можно прямо здесь.
-SPRED_PO_UMOLCHANIYU = 3
 if str(_BIRZHA) not in sys.path:
     sys.path.insert(0, str(_BIRZHA))
 
@@ -670,21 +658,11 @@ def _spred_ceny(symbol: str, timeframe: str, point) -> tuple:
             return None, "котировок нет"
         sp = (b[-1] or {}).get("spread")
         shag = point or p
-        if not shag:
-            return None, "шага цены нет"
-        try:
-            sp = float(sp) if sp not in (None, "") else 0.0
-        except (TypeError, ValueError):
-            sp = 0.0
+        if sp in (None, "") or not shag:
+            return None, "в баре нет спреда"
+        sp = float(sp)
         if sp <= 0:
-            # SPRED_PO_UMOLCHANIYU_V1: в истории спреда нет —
-            # раньше отсюда уходил None, и выше подставлялся
-            # НОЛЬ. Стол выдавал голые края бара, стоп вставал
-            # ровно на край. Ноль — это не «спреда нет», это
-            # «его не записали»; в рынке его не бывает.
-            return (SPRED_PO_UMOLCHANIYU * float(shag),
-                    f"{SPRED_PO_UMOLCHANIYU} пункт(а) по умолчанию — "
-                    f"в истории спреда нет")
+            return None, "история без спреда"
         return sp * float(shag), f"{sp:.0f} пункт(ов)"
     except Exception as e:
         return None, f"не прочитан ({e})"

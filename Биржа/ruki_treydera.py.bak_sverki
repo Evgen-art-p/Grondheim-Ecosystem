@@ -871,10 +871,7 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
             # сколько входов сделано глазами, потом решим.
             try:
                 import grafik as _gr
-                # POCHINIT_SVERKI_V1: внутри руки этаж зовётся
-                # rabochiy_etazh. Стояло чужое имя, взятое
-                # наугад, и сверка падала на первой же строке.
-                _chey = f"{symbol} {rabochiy_etazh}".strip()
+                _chey = f"{symbol} {timeframe}".strip()
                 _byli = _gr.metki_kadrov(_chey)
                 _skazala = str(args.get("метка") or "").strip().upper()
                 if not _skazala:
@@ -892,8 +889,7 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
             # показывает, решает трейдер.
             try:
                 import sverka_divera as _sd
-                # POCHINIT_SVERKI_V1: то же чужое имя, та же беда.
-                _d = _sd.poschitat(symbol, rabochiy_etazh, napravlenie)
+                _d = _sd.poschitat(symbol, timeframe, napravlenie)
                 if not _d.get("ok"):
                     print(f"[ДИВЕР] ? {napravlenie}: "
                           f"{_d.get('slovami')}")
