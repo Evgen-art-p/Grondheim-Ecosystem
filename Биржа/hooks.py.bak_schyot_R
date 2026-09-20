@@ -545,10 +545,6 @@ def _treyling_za_zubami(state: dict):
         entry = pos.get("entry")
         if old is None or entry is None:
             continue
-        # POCHINIT_SCHYOT_R_V1: вторая защита — для позиций,
-        # открытых раньше патча. Запоминаем стоп ДО того, как
-        # сдвинем его: потом восстановить будет неоткуда.
-        pos.setdefault("stop_initial", old)
 
         if direction == "LONG":
             # цена ушла под Зубы — пирамида мертва, стоп не тянем
@@ -1060,13 +1056,6 @@ def _aktivirovat_ordera(state: dict):
         if srabotal:
             pos["status"] = "OPEN"
             pos["opened_at"] = bar_time      # ВРЕМЯ РЕАЛЬНОГО ВХОДА
-            # POCHINIT_SCHYOT_R_V1: запоминаем риск НА ВХОДЕ.
-            # Без этого поля счёт брал ТЕКУЩИЙ стоп — и после
-            # трейлинга любой стоп-аут писался как −1.0R, хотя
-            # реально терялось три пункта вместо восьмидесяти.
-            # В миг входа текущий стоп И ЕСТЬ первоначальный.
-            if pos.get("stop") is not None:
-                pos.setdefault("stop_initial", pos["stop"])
             pos.pop("_ждёт_с", None)
             pos.pop("_ждёт_баров", None)
             dirty = True
