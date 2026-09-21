@@ -118,17 +118,9 @@ def compute_alligator(highs: list[float], lows: list[float],
     teeth_s = _smma_series(medians, 8)
     lips_s  = _smma_series(medians, 5)
 
-    # ALLIGATOR_SO_SDVIGOM_V1: канон Вильямса — линии сдвинуты
-    # вперёд на 8/5/3 бара. Под текущей свечой стоит значение,
-    # насчитанное 8/5/3 бара назад. Его и отдаём — ровно то, что
-    # нарисовано на кадре и в MT4. Ряды *_series ниже остаются
-    # СЫРЫМИ: Necron и кадр сдвигают их сами.
-    _jaw_sh   = _shifted_series(jaw_s,   8)
-    _teeth_sh = _shifted_series(teeth_s, 5)
-    _lips_sh  = _shifted_series(lips_s,  3)
-    jaw   = _jaw_sh[-1]   if _jaw_sh   else None
-    teeth = _teeth_sh[-1] if _teeth_sh else None
-    lips  = _lips_sh[-1]  if _lips_sh  else None
+    jaw   = jaw_s[-1]
+    teeth = teeth_s[-1]
+    lips  = lips_s[-1]
 
     if jaw is None or teeth is None or lips is None:
         return {
@@ -145,8 +137,8 @@ def compute_alligator(highs: list[float], lows: list[float],
 
     # Считаем bars_open (сколько баров подряд открыт)
     bars_open = 0
-    for i in range(len(_jaw_sh) - 1, -1, -1):
-        j = _jaw_sh[i]; t = _teeth_sh[i]; l = _lips_sh[i]
+    for i in range(len(jaw_s) - 1, -1, -1):
+        j = jaw_s[i]; t = teeth_s[i]; l = lips_s[i]
         if j is None or t is None or l is None:
             break
         spread = max(abs(j - t), abs(t - l), abs(j - l))
@@ -1078,10 +1070,8 @@ def compute_global_bias(bars: list, alligator: dict, point: float,
     medians = [(b["high"] + b["low"]) / 2 for b in bars]
     jaw_series = _smma_series(medians, 13)
     jaw_prev = None
-    # ALLIGATOR_SO_SDVIGOM_V1: jaw уже со сдвигом 8 — прошлую
-    # берём тоже со сдвигом, иначе наклон меряется вкривь.
-    if len(jaw_series) > slope_lookback + 8:
-        cand = jaw_series[-1 - 8 - slope_lookback]
+    if len(jaw_series) > slope_lookback:
+        cand = jaw_series[-1 - slope_lookback]
         if cand is not None:
             jaw_prev = cand
 
@@ -1160,10 +1150,7 @@ def build_market_data(
     if _rb_dir is None and alligator.get("lips") is not None:
         _rb_dir = "BULL" if alligator["lips"] > alligator["teeth"] else "BEAR"
     rubber_band = compute_rubber_band(
-        bars,
-        _shifted_series(lips_series, 3) if lips_series else None,
-        _shifted_series(teeth_series, 5) if teeth_series else None,
-        _rb_dir, _point)  # ALLIGATOR_SO_SDVIGOM_V1
+        bars, lips_series, teeth_series, _rb_dir, _point)
 
     # Читалка формы AO — факты структуры для Искры v2 (окно 140-150).
     # Сенсор кладёт факты (дивер-компас, B/D/B-точка, горб-царь), не вердикты.
