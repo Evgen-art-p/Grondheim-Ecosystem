@@ -121,11 +121,7 @@ def _itog_mesta(m: dict):
         return None, ""
     z = _zhurnal_zakrytiy().get(round(float(c), 5))
     if not z:
-        # ZAYAVKA_ZHDYOT_BARY_V1: было «в работе». А у ОТМЕНЁННОЙ
-        # заявки закрытия нет вовсе — она не открывалась, — и под
-        # «в работе» прятались отменённые. Отличить по журналу
-        # закрытий нельзя: отмена туда не пишется.
-        return None, "не сработала или ещё открыта"
+        return None, "в работе"
     r = z.get("pnl_r")
     chem = ПО_РУССКИ_ЗАКРЫТИЕ.get(str(z.get("close_reason")), "?")
     if isinstance(r, (int, float)):
