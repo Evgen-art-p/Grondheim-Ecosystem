@@ -154,7 +154,7 @@ def _glaz(_chat, symbol, timeframe, slot, preambula=None):
                                  _P(put).read_bytes()).decode("ascii"),
                               "mime_type": "image/png",
                               "name": _P(put).name}]
-                            + _kadr_shefa() + _obrazcy()),  # OBRAZCY_V1
+                            + _kadr_shefa()),
                     # RAZGOVOR_SO_STOLOM_V1: история и температура
                     # ронялись здесь — с картинкой он забывал разговор
                     # и говорил средним голосом вместо своего.
@@ -245,7 +245,7 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
                                  _P(put).read_bytes()).decode("ascii"),
                              "mime_type": "image/png",
                              "name": _P(put).name}]
-                            + _kadr_shefa() + _obrazcy()),  # OBRAZCY_V1
+                            + _kadr_shefa()),
                     tools_schema=_rt.shema(timeframe),
                     executors=_rt.ruki(symbol, ceh, slot, self_key,
                                        dnevnik_fn=_read_recent_diary,
@@ -1763,57 +1763,6 @@ def _kadr_shefa() -> list:
 
 
 # VZGLYAD_DOHODIT_V1 - marker
-
-
-# ── OBRAZCY_V1: картинки-образцы из знаний ────────────────────
-# Слово Шефа 22.09: «ей видеть нужно, что я показываю, а она только
-# читает». Знания уходят к ней текстом, картинки из них не брались.
-# Теперь в знаниях есть папка образцы/: картинка + рядом .md/.txt с
-# тем же именем — пара строк, что на ней. Её кадр остаётся ПЕРВЫМ,
-# кадр Шефа (если есть) — вторым, образцы — после, с подписью.
-# Образцов не больше трёх: каждая картинка идёт в каждое пробуждение.
-OBRAZCY_DIR = KNOWLEDGE_DIR / "образцы"
-OBRAZCY_MAKS = 3
-
-
-def _obrazcy() -> list:
-    """Картинки-образцы из знания/образцы/. Нет папки — пусто."""
-    try:
-        import base64
-        if not OBRAZCY_DIR.exists():
-            return []
-        mime = {".png": "image/png", ".jpg": "image/jpeg",
-                ".jpeg": "image/jpeg", ".webp": "image/webp"}
-        kartinki = [f for f in sorted(OBRAZCY_DIR.iterdir())
-                    if f.is_file() and f.suffix.lower() in mime]
-        if len(kartinki) > OBRAZCY_MAKS:
-            print(f"[ОБРАЗЦЫ] ⚠️  в папке {len(kartinki)}, беру первые "
-                  f"{OBRAZCY_MAKS} по алфавиту")
-            kartinki = kartinki[:OBRAZCY_MAKS]
-        vyshlo = []
-        for f in kartinki:
-            podpis = ""
-            for ext in (".md", ".txt"):
-                t = f.with_suffix(ext)
-                if t.exists():
-                    try:
-                        podpis = " ".join(
-                            t.read_text(encoding="utf-8").split())
-                    except Exception:
-                        podpis = ""
-                    break
-            vyshlo.append({
-                "base64": base64.b64encode(f.read_bytes()).decode("ascii"),
-                "mime_type": mime[f.suffix.lower()],
-                "name": (f"ОБРАЗЕЦ из знаний, не твой рынок · {f.stem}"
-                         + (f" — {podpis}" if podpis else ""))})
-        return vyshlo
-    except Exception as _e:
-        print(f"[ОБРАЗЦЫ] не подложились ({_e}) — не беда")
-        return []
-
-
-# OBRAZCY_V1 - marker
 
 # NAPOMINANIE_RUKI_V1 - marker
 
