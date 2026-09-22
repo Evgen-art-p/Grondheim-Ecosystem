@@ -82,37 +82,76 @@ def poschitat(symbol: str, timeframe: str, storona: str) -> dict:
         return {"ok": False, "est": None,
                 "slovami": "горбов в поле зрения не нашлось"}
 
-    # главный — самый большой (или самая глубокая) в поле зрения
+    # DIVER_PROVALCHIK_V1 — канон Шефа 22.09:
+    #   «между горбами должен быть провальчик, а между ямами —
+    #   подъёмчик»; «цена всё выше и выше — обновлять максимум».
+    # Главный горб — самый большой в поле зрения. После него AO
+    # обязан провалиться (провальчик) и снова пойти вверх — это
+    # второй горб (справа он может быть незакончен). Цена на
+    # втором горбе должна ОБНОВИТЬ вершину, что была от главного
+    # горба до провальчика. Не обновила — ход не продолжился,
+    # дивера нет. Ноль, расстояние, номер волны — не считаются.
+    return dve_tochki(ao, highs, lows, vid, verh)
+
+
+def dve_tochki(ao: list, highs: list, lows: list, vid: list,
+               verh: bool) -> dict:
+    """Две точки дивера по канону. verh=True — SHORT (горбы и
+    вершины), False — LONG (ямы и впадины)."""
+    tochki = gorby(ao) if verh else yamy(ao)
+    tochki = [(i, v) for i, v in tochki if i in vid]
+    if len(tochki) < 1:
+        return {"ok": False, "est": None,
+                "slovami": "горбов в поле зрения не нашлось" if verh
+                else "ям в поле зрения не нашлось"}
+
+    # главный — самый большой горб (самая глубокая яма) в поле зрения
     glavnyy = max(tochki, key=lambda t: t[1]) if verh \
         else min(tochki, key=lambda t: t[1])
-    # нынешний — последний, что не сам главный
-    # TEKUSHCHIY_AO_V1: сравниваем с ТЕКУЩИМ значением AO, а не с
-    # последним ЗАКОНЧЕННЫМ горбом. Слово Шефа: «не завершённый, а
-    # в данный момент»; «горб незакончен только в правой части,
-    # слева он есть».
-    #
-    # Ждать, пока горб дорисуется до трёх столбиков, нельзя:
-    # разворотный бар уже здесь, и пока горб закроется, вход
-    # уйдёт. Правило трёх столбиков остаётся для ПРОШЛЫХ горбов;
-    # последнему третий столбик не нужен — он ещё не наступил.
-    _posl = None
+    g = glavnyy[0]
+
+    p = None
     for _i in range(len(ao) - 1, -1, -1):
         if ao[_i] is not None:
-            _posl = _i
+            p = _i
             break
-    if _posl is None or _posl <= glavnyy[0]:
-        return {"ok": False, "est": None,
-                "slovami": "текущего значения AO нет"}
-    nyneshniy = (_posl, ao[_posl])
+    if p is None or p <= g + 1:
+        return {"ok": True, "est": False,
+                "slovami": "главный горб у самого края — второго ещё нет"
+                if verh else "главная яма у самого края — второй ещё нет"}
 
-    ao_bylo, ao_stalo = glavnyy[1], nyneshniy[1]
-    c_bylo = highs[glavnyy[0]] if verh else lows[glavnyy[0]]
-    c_stalo = highs[nyneshniy[0]] if verh else lows[nyneshniy[0]]
+    # провальчик (для ям — подъёмчик): крайняя точка AO между
+    # главным и сегодняшним днём
+    mezhdu = [(k, ao[k]) for k in range(g + 1, p) if ao[k] is not None]
+    if not mezhdu:
+        return {"ok": True, "est": False,
+                "slovami": "между главным и краем пусто"}
+    d = (min(mezhdu, key=lambda t: t[1]) if verh
+         else max(mezhdu, key=lambda t: t[1]))[0]
+    # провальчик должен кончиться: после него AO пошёл обратно
+    posle = [ao[k] for k in range(d + 1, p + 1) if ao[k] is not None]
+    if not posle or (verh and max(posle) <= ao[d]) or \
+            (not verh and min(posle) >= ao[d]):
+        return {"ok": True, "est": False,
+                "slovami": ("AO ещё уходит вниз от главного горба — "
+                            "провальчика нет, второго горба нет") if verh
+                else ("AO ещё поднимается от главной ямы — "
+                      "подъёмчика нет, второй ямы нет")}
 
+    # второй горб — от провальчика до края (справа может быть незакончен)
+    nog = [k for k in range(d + 1, p + 1) if ao[k] is not None]
     if verh:
+        k2 = max(nog, key=lambda k: ao[k])
+        ao_bylo, ao_stalo = glavnyy[1], ao[k2]
+        c_bylo = max(highs[g:d + 1])          # вершина хода до провальчика
+        c_stalo = max(highs[d + 1:p + 1])     # вершина на втором горбе
         cena_dalshe = c_stalo > c_bylo
         sila_slabee = ao_stalo < ao_bylo
     else:
+        k2 = min(nog, key=lambda k: ao[k])
+        ao_bylo, ao_stalo = glavnyy[1], ao[k2]
+        c_bylo = min(lows[g:d + 1])
+        c_stalo = min(lows[d + 1:p + 1])
         cena_dalshe = c_stalo < c_bylo
         sila_slabee = ao_stalo > ao_bylo
 
@@ -120,10 +159,12 @@ def poschitat(symbol: str, timeframe: str, storona: str) -> dict:
     kuda_c = "выше" if c_stalo > c_bylo else "ниже"
     kuda_a = "выше" if ao_stalo > ao_bylo else "ниже"
     slovami = (f"цена {c_bylo:.5f}→{c_stalo:.5f} ({kuda_c}), "
-               f"AO {ao_bylo:.5f}→{ao_stalo:.5f} ({kuda_a})")
+               f"AO {ao_bylo:.5f}→{ao_stalo:.5f} ({kuda_a}), "
+               f"{'провальчик' if verh else 'подъёмчик'} {ao[d]:.5f}")
     if not est:
         if not cena_dalshe:
-            slovami += " · цена край не обновила"
+            slovami += (" · цена вершину хода не обновила" if verh
+                        else " · цена впадину хода не обновила")
         if not sila_slabee:
             slovami += " · сила не ослабла"
     return {"ok": True, "est": est, "slovami": slovami,

@@ -528,10 +528,13 @@ def _treyling_za_zubami(state: dict):
         return
 
     allig = md.get("alligator", {}) or {}
-    # ZUBY_SO_SDVIGOM_V2: ряд Зубов в market_data не доезжает —
-    # там только числа. Ядро (ALLIGATOR_SO_SDVIGOM_V1) уже отдаёт
-    # Зубы СО СДВИГОМ — те, что под свечой. Их и берём.
-    teeth = allig.get("teeth")
+    # ZUBY_SO_SDVIGOM_V1: Зубы СО СДВИГОМ на 5 баров, как у Вильямса.
+    # allig["teeth"] — сырое последнее значение; на кадре оно
+    # нарисовано на 5 баров правее свечи. Под текущим баром стоит
+    # значение, насчитанное 5 баров назад, — за ним и тянем стоп.
+    # Раньше стоп вставал «в будущее», вплотную к цене.
+    _ts = allig.get("teeth_series") or []
+    teeth = _ts[-1 - 5] if len(_ts) > 5 else None
     close = (md.get("price", {}) or {}).get("close")
     if teeth is None or close is None:
         if positions and close is not None:
