@@ -20,6 +20,7 @@ import shutil
 
 METKA = "DIVER_PYAT_PUL_V1"
 YAKOR = "    # главный — самый большой (или самая глубокая) в поле зрения\n"
+YAKOR_PROVALCHIK = "    # DIVER_PROVALCHIK_V1 — канон Шефа 22.09:\n"
 KONEC = '            "ao_было": ao_bylo, "ao_стало": ao_stalo}\n'
 NOVYY = '    # DIVER_PYAT_PUL_V1 — по источнику (Profitunity, «пять пуль»):\n    #   третья волна — самый высокий пик AO в поле зрения (100-140\n    #   баров); четвёртая — AO проваливается, может уйти за ноль;\n    #   дивер — цена в конце импульса выше цены на пике третьей, а AO\n    #   на САМОЙ ВЫСОКОЙ цене ниже пика третьей. Вниз — зеркально.\n    return pyat_pul(ao, highs, lows, vid, verh, b)\n\n\ndef pyat_pul(ao: list, highs: list, lows: list, vid: list,\n             verh: bool, b: list = None) -> dict:\n    """Дивер по источнику. verh=True — SHORT (пики и вершины),\n    False — LONG (ямы и впадины)."""\n    tochki = gorby(ao) if verh else yamy(ao)\n    tochki = [(i, v) for i, v in tochki if i in vid]\n    if len(tochki) < 1:\n        return {"ok": False, "est": None,\n                "slovami": "пиков AO в поле зрения не нашлось" if verh\n                else "ям AO в поле зрения не нашлось"}\n\n    def _kogda(i):\n        try:\n            return str(b[i].get("date", ""))[:16] if b else f"бар {i}"\n        except Exception:\n            return f"бар {i}"\n\n    # третья волна — самый высокий пик (самая глубокая яма)\n    g = (max(tochki, key=lambda t: t[1]) if verh\n         else min(tochki, key=lambda t: t[1]))[0]\n    p = None\n    for _i in range(len(ao) - 1, -1, -1):\n        if ao[_i] is not None:\n            p = _i\n            break\n    if p is None or p <= g + 1:\n        return {"ok": True, "est": False,\n                "slovami": "третья волна у самого края — пятой ещё нет"}\n\n    # самая высокая цена после третьей (самая низкая — вниз)\n    ryad = range(g, p + 1)\n    if verh:\n        kh = max(ryad, key=lambda k: highs[k])\n        c3, c5 = highs[g], highs[kh]\n        cena_vyshe = c5 > c3\n        ao_nizhe = ao[kh] is not None and ao[kh] < ao[g]\n    else:\n        kh = min(ryad, key=lambda k: lows[k])\n        c3, c5 = lows[g], lows[kh]\n        cena_vyshe = c5 < c3\n        ao_nizhe = ao[kh] is not None and ao[kh] > ao[g]\n\n    slovami = (f"3-я волна {_kogda(g)}: цена {c3:.5f}, AO {ao[g]:.5f} · "\n               f"{\'самая высокая\' if verh else \'самая низкая\'} цена "\n               f"{_kogda(kh)}: {c5:.5f}, AO {ao[kh]:.5f}")\n\n    # четвёртая — между третьей и крайней ценой AO провалился и\n    # пошёл обратно (ноль не важен)\n    mezhdu = [k for k in range(g + 1, kh) if ao[k] is not None]\n    if not mezhdu:\n        return {"ok": True, "est": False,\n                "slovami": slovami + " · четвёртой волны нет — пятой не было"}\n    d = (min(mezhdu, key=lambda k: ao[k]) if verh\n         else max(mezhdu, key=lambda k: ao[k]))\n    if (verh and ao[kh] <= ao[d]) or (not verh and ao[kh] >= ao[d]):\n        return {"ok": True, "est": False,\n                "slovami": slovami + " · AO после провала не пошёл обратно — "\n                                     "пятой не было"}\n    est_byl = bool(cena_vyshe and ao_nizhe)\n    if not est_byl:\n        prich = []\n        if not cena_vyshe:\n            prich.append("цена не ушла дальше третьей")\n        if not ao_nizhe:\n            prich.append("AO не слабее третьей")\n        return {"ok": True, "est": False,\n                "slovami": slovami + " · " + ", ".join(prich)}\n    if kh != p:\n        return {"ok": True, "est": False,\n                "slovami": slovami + f" · дивер был {_kogda(kh)}, а сейчас "\n                           f"цена {\'ниже\' if verh else \'выше\'} той — "\n                           "здесь его нет"}\n    return {"ok": True, "est": True, "slovami": slovami,\n            "цена_было": c3, "цена_стало": c5,\n            "ao_было": ao[g], "ao_стало": ao[kh]}\n'
 PUT = os.path.join("Биржа", "sverka_divera.py")
@@ -88,10 +89,13 @@ def main():
     if METKA in t:
         print("✓ Уже накатано раньше — ничего не менял.")
         return
-    if t.count(YAKOR) != 1 or t.count(KONEC) != 1:
+    # если раньше накатан diver_provalchik.py — меняем его кусок
+    yakor = YAKOR_PROVALCHIK if YAKOR_PROVALCHIK in t else YAKOR
+    if t.count(yakor) != 1 or t.count(KONEC) != 1 or \
+            t.index(KONEC) < t.index(yakor):
         print("✗ Место в сверке не нашлось как ожидалось. Ничего не менял. Покажи Брату.")
         return
-    i = t.index(YAKOR)
+    i = t.index(yakor)
     j = t.index(KONEC) + len(KONEC)
     t = t[:i] + NOVYY + t[j:]
     try:

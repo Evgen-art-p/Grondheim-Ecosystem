@@ -82,34 +82,34 @@ def poschitat(symbol: str, timeframe: str, storona: str) -> dict:
         return {"ok": False, "est": None,
                 "slovami": "горбов в поле зрения не нашлось"}
 
-    # DIVER_PROVALCHIK_V1 — канон Шефа 22.09:
-    #   «между горбами должен быть провальчик, а между ямами —
-    #   подъёмчик»; «цена всё выше и выше — обновлять максимум».
-    # Главный горб — самый большой в поле зрения. После него AO
-    # обязан провалиться (провальчик) и снова пойти вверх — это
-    # второй горб (справа он может быть незакончен). Цена на
-    # втором горбе должна ОБНОВИТЬ вершину, что была от главного
-    # горба до провальчика. Не обновила — ход не продолжился,
-    # дивера нет. Ноль, расстояние, номер волны — не считаются.
-    return dve_tochki(ao, highs, lows, vid, verh)
+    # DIVER_PYAT_PUL_V1 — по источнику (Profitunity, «пять пуль»):
+    #   третья волна — самый высокий пик AO в поле зрения (100-140
+    #   баров); четвёртая — AO проваливается, может уйти за ноль;
+    #   дивер — цена в конце импульса выше цены на пике третьей, а AO
+    #   на САМОЙ ВЫСОКОЙ цене ниже пика третьей. Вниз — зеркально.
+    return pyat_pul(ao, highs, lows, vid, verh, b)
 
 
-def dve_tochki(ao: list, highs: list, lows: list, vid: list,
-               verh: bool) -> dict:
-    """Две точки дивера по канону. verh=True — SHORT (горбы и
-    вершины), False — LONG (ямы и впадины)."""
+def pyat_pul(ao: list, highs: list, lows: list, vid: list,
+             verh: bool, b: list = None) -> dict:
+    """Дивер по источнику. verh=True — SHORT (пики и вершины),
+    False — LONG (ямы и впадины)."""
     tochki = gorby(ao) if verh else yamy(ao)
     tochki = [(i, v) for i, v in tochki if i in vid]
     if len(tochki) < 1:
         return {"ok": False, "est": None,
-                "slovami": "горбов в поле зрения не нашлось" if verh
-                else "ям в поле зрения не нашлось"}
+                "slovami": "пиков AO в поле зрения не нашлось" if verh
+                else "ям AO в поле зрения не нашлось"}
 
-    # главный — самый большой горб (самая глубокая яма) в поле зрения
-    glavnyy = max(tochki, key=lambda t: t[1]) if verh \
-        else min(tochki, key=lambda t: t[1])
-    g = glavnyy[0]
+    def _kogda(i):
+        try:
+            return str(b[i].get("date", ""))[:16] if b else f"бар {i}"
+        except Exception:
+            return f"бар {i}"
 
+    # третья волна — самый высокий пик (самая глубокая яма)
+    g = (max(tochki, key=lambda t: t[1]) if verh
+         else min(tochki, key=lambda t: t[1]))[0]
     p = None
     for _i in range(len(ao) - 1, -1, -1):
         if ao[_i] is not None:
@@ -117,56 +117,51 @@ def dve_tochki(ao: list, highs: list, lows: list, vid: list,
             break
     if p is None or p <= g + 1:
         return {"ok": True, "est": False,
-                "slovami": "главный горб у самого края — второго ещё нет"
-                if verh else "главная яма у самого края — второй ещё нет"}
+                "slovami": "третья волна у самого края — пятой ещё нет"}
 
-    # провальчик (для ям — подъёмчик): крайняя точка AO между
-    # главным и сегодняшним днём
-    mezhdu = [(k, ao[k]) for k in range(g + 1, p) if ao[k] is not None]
+    # самая высокая цена после третьей (самая низкая — вниз)
+    ryad = range(g, p + 1)
+    if verh:
+        kh = max(ryad, key=lambda k: highs[k])
+        c3, c5 = highs[g], highs[kh]
+        cena_vyshe = c5 > c3
+        ao_nizhe = ao[kh] is not None and ao[kh] < ao[g]
+    else:
+        kh = min(ryad, key=lambda k: lows[k])
+        c3, c5 = lows[g], lows[kh]
+        cena_vyshe = c5 < c3
+        ao_nizhe = ao[kh] is not None and ao[kh] > ao[g]
+
+    slovami = (f"3-я волна {_kogda(g)}: цена {c3:.5f}, AO {ao[g]:.5f} · "
+               f"{'самая высокая' if verh else 'самая низкая'} цена "
+               f"{_kogda(kh)}: {c5:.5f}, AO {ao[kh]:.5f}")
+
+    # четвёртая — между третьей и крайней ценой AO провалился и
+    # пошёл обратно (ноль не важен)
+    mezhdu = [k for k in range(g + 1, kh) if ao[k] is not None]
     if not mezhdu:
         return {"ok": True, "est": False,
-                "slovami": "между главным и краем пусто"}
-    d = (min(mezhdu, key=lambda t: t[1]) if verh
-         else max(mezhdu, key=lambda t: t[1]))[0]
-    # провальчик должен кончиться: после него AO пошёл обратно
-    posle = [ao[k] for k in range(d + 1, p + 1) if ao[k] is not None]
-    if not posle or (verh and max(posle) <= ao[d]) or \
-            (not verh and min(posle) >= ao[d]):
+                "slovami": slovami + " · четвёртой волны нет — пятой не было"}
+    d = (min(mezhdu, key=lambda k: ao[k]) if verh
+         else max(mezhdu, key=lambda k: ao[k]))
+    if (verh and ao[kh] <= ao[d]) or (not verh and ao[kh] >= ao[d]):
         return {"ok": True, "est": False,
-                "slovami": ("AO ещё уходит вниз от главного горба — "
-                            "провальчика нет, второго горба нет") if verh
-                else ("AO ещё поднимается от главной ямы — "
-                      "подъёмчика нет, второй ямы нет")}
-
-    # второй горб — от провальчика до края (справа может быть незакончен)
-    nog = [k for k in range(d + 1, p + 1) if ao[k] is not None]
-    if verh:
-        k2 = max(nog, key=lambda k: ao[k])
-        ao_bylo, ao_stalo = glavnyy[1], ao[k2]
-        c_bylo = max(highs[g:d + 1])          # вершина хода до провальчика
-        c_stalo = max(highs[d + 1:p + 1])     # вершина на втором горбе
-        cena_dalshe = c_stalo > c_bylo
-        sila_slabee = ao_stalo < ao_bylo
-    else:
-        k2 = min(nog, key=lambda k: ao[k])
-        ao_bylo, ao_stalo = glavnyy[1], ao[k2]
-        c_bylo = min(lows[g:d + 1])
-        c_stalo = min(lows[d + 1:p + 1])
-        cena_dalshe = c_stalo < c_bylo
-        sila_slabee = ao_stalo > ao_bylo
-
-    est = bool(cena_dalshe and sila_slabee)
-    kuda_c = "выше" if c_stalo > c_bylo else "ниже"
-    kuda_a = "выше" if ao_stalo > ao_bylo else "ниже"
-    slovami = (f"цена {c_bylo:.5f}→{c_stalo:.5f} ({kuda_c}), "
-               f"AO {ao_bylo:.5f}→{ao_stalo:.5f} ({kuda_a}), "
-               f"{'провальчик' if verh else 'подъёмчик'} {ao[d]:.5f}")
-    if not est:
-        if not cena_dalshe:
-            slovami += (" · цена вершину хода не обновила" if verh
-                        else " · цена впадину хода не обновила")
-        if not sila_slabee:
-            slovami += " · сила не ослабла"
-    return {"ok": True, "est": est, "slovami": slovami,
-            "цена_было": c_bylo, "цена_стало": c_stalo,
-            "ao_было": ao_bylo, "ao_стало": ao_stalo}
+                "slovami": slovami + " · AO после провала не пошёл обратно — "
+                                     "пятой не было"}
+    est_byl = bool(cena_vyshe and ao_nizhe)
+    if not est_byl:
+        prich = []
+        if not cena_vyshe:
+            prich.append("цена не ушла дальше третьей")
+        if not ao_nizhe:
+            prich.append("AO не слабее третьей")
+        return {"ok": True, "est": False,
+                "slovami": slovami + " · " + ", ".join(prich)}
+    if kh != p:
+        return {"ok": True, "est": False,
+                "slovami": slovami + f" · дивер был {_kogda(kh)}, а сейчас "
+                           f"цена {'ниже' if verh else 'выше'} той — "
+                           "здесь его нет"}
+    return {"ok": True, "est": True, "slovami": slovami,
+            "цена_было": c3, "цена_стало": c5,
+            "ao_было": ao[g], "ao_стало": ao[kh]}
