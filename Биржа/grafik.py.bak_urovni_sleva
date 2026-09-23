@@ -341,12 +341,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
             _luchshe, _svezhest = None, -1
             for _verh in (True, False):
                 _r = _sd.dve_gorki(ao, _hi, _lo, _vid, _verh, b)
-                # BOLSHOY_KRAY_V1: нет расхождения у большой пары —
-                # это откат внутри хода, линий не рисуем вовсе.
-                _vse = _r.get("пары") or []
-                if not _vse or not _vse[0].get("est"):
-                    continue
-                _pary = [x for x in _vse if x.get("est")]
+                _pary = [x for x in (_r.get("пары") or []) if x.get("est")]
                 if not _pary:
                     continue
                 if _pary[-1]["i_цена_2"] > _svezhest:
@@ -479,9 +474,7 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
             for _c, _cv, _ls, _pod in _linii:
                 ax.axhline(_c, color=_cv, linestyle=_ls,
                            linewidth=1.4, alpha=0.95, zorder=15)
-            # UROVNI_SLEVA_V1 (23.09, слово Шефа): подписи — у ЛЕВОГО
-            # края: справа они закрывали свежую цену.
-            # (было: подписи ВНУТРИ кадра у правого края: справа от свечей)
+            # подписи ВНУТРИ кадра у правого края: справа от свечей
             # пустое поле сдвига Аллигатора. Снаружи справа стоит
             # легенда — там подписи прятались под её рамкой.
             # Близкие цены разводим по вертикали, иначе слипаются.
@@ -494,9 +487,9 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
                 if _pos and _f - _pos[-1] < 0.045:
                     _f = _pos[-1] + 0.045
                 _pos.append(_f)
-                ax.text(0.005, _f, f'{_pod} {_c:.{_znakov}f}',
+                ax.text(0.995, _f, f'{_pod} {_c:.{_znakov}f}',
                         transform=ax.transAxes, color=_cv,
-                        fontsize=10, va='center', ha='left',
+                        fontsize=10, va='center', ha='right',
                         family='monospace', zorder=17,
                         bbox=dict(facecolor='#0d1117', alpha=0.85,
                                   edgecolor=_cv, linewidth=0.6,

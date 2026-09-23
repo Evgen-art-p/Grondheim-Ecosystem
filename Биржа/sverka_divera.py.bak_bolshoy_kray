@@ -225,13 +225,6 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
     s_diverom = [x for x in pary if x["est"]]
     kray = s_diverom[-1] if s_diverom else None
     slovami = "весь ход: " + bolshaya["slovami"]
-    # BOLSHOY_KRAY_V1 (слово Шефа 23.09): пара у края считается,
-    # только если у большой пары есть расхождение. Иначе это откат
-    # внутри хода — «от 0 до 100», сравнивать нечего.
-    if kray is not None and not bolshaya["est"]:
-        slovami += (" || у края дивер есть, но не считается: большой "
-                    "край не взят — откат внутри хода")
-        kray = None
     if kray is not None and kray is not bolshaya:
         slovami += " || у края: " + kray["slovami"]
     if len(pary) > 1:
