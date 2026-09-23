@@ -97,7 +97,7 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
               verh: bool, b: list = None) -> dict:
     """Две горки (две ямки) по ЭКСТРЕМУМАМ, на всех размерах. verh=True — SHORT.
 
-    DVE_GORKI_MATRYOSHKA_V1 + DVE_GORKI_YAMKA_V1 — слово Шефа 23.09: «линии должны тянуться
+    DVE_GORKI_MATRYOSHKA_V1 — слово Шефа 23.09: «линии должны тянуться
     по экстремумам, на цене и AO: самый экстремум AO и следующий
     меньше, и смотрим». И по его же скрину USDCNH: после отката пятая
     волна несёт СВОЙ дивер внутри — смотреть на всех размерах.
@@ -158,29 +158,14 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
             kray_vzyat = lows[ic2] < lows[ic1]
             c1, c2 = lows[ic1], lows[ic2]
             k2 = min(pos, key=lambda k: ao[k])
+        a2 = ao[k2]
         # настоящая горка (ямка) или та, что ещё растёт у края; склон,
         # по которому AO просто ползёт, точкой не считается
-        def _tochka(k):
-            if k < p:
-                return ((ao[k] > ao[k - 1] and ao[k] > ao[k + 1]) if verh
-                        else (ao[k] < ao[k - 1] and ao[k] < ao[k + 1]))
-            return (ao[p] > ao[p - 1]) if verh else (ao[p] < ao[p - 1])
-
-        # DVE_GORKI_YAMKA_V1 — AO отстаёт от цены: сразу после отката он
-        # ещё сползает с первой горки, и «самый высокий AO после отката»
-        # оказывается на склоне. Тогда ищем ямку между горками (канон:
-        # «две горки, ямка между ними») — самое глубокое место AO от
-        # отката до нового края цены, а вторую горку — после неё.
-        if not _tochka(k2):
-            do_kraya = range(t, ic2 + 1)
-            d = (min(do_kraya, key=lambda k: ao[k]) if verh
-                 else max(do_kraya, key=lambda k: ao[k]))
-            if d < p:
-                za = range(d + 1, p + 1)
-                k2 = (max(za, key=lambda k: ao[k]) if verh
-                      else min(za, key=lambda k: ao[k]))
-        a2 = ao[k2]
-        tochka = _tochka(k2)
+        if k2 < p:
+            tochka = ((a2 > ao[k2 - 1] and a2 > ao[k2 + 1]) if verh
+                      else (a2 < ao[k2 - 1] and a2 < ao[k2 + 1]))
+        else:
+            tochka = (a2 > ao[p - 1]) if verh else (a2 < ao[p - 1])
         if not tochka:
             return (f"после отката {_kogda(t)} AO просто ползёт — второй "
                     f"{'горки' if verh else 'ямки'} нет")
