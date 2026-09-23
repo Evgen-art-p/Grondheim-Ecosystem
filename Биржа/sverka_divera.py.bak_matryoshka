@@ -1,0 +1,198 @@
+# -*- coding: utf-8 -*-
+# SVERKA_DIVERA_V1
+"""Считает дивер по барам — чтобы слова трейдера было с чем сверить.
+
+Канон Шефа (17.09):
+  ГОРБ — три столбика: меньше-БОЛЬШЕ-меньше.
+  ЯМА  — три столбика: больше-МЕНЬШЕ-больше.
+  Главный — самый большой в поле зрения, не «предыдущий по счёту».
+
+Город СЧИТАЕТ и ПОКАЗЫВАЕТ. Решает трейдер. Здесь нет ни одного
+запрета — только числа.
+"""
+
+from typing import Optional
+
+BAROV = 140          # столько же, сколько видно на кадре
+
+
+def gorby(ao: list) -> list:
+    """Места и высоты горбов: средний столбик выше обоих соседей."""
+    out = []
+    for i in range(1, len(ao) - 1):
+        a, b, c = ao[i - 1], ao[i], ao[i + 1]
+        if a is None or b is None or c is None:
+            continue
+        if b > a and b > c:
+            out.append((i, b))
+    return out
+
+
+def yamy(ao: list) -> list:
+    """Места и глубины ям: средний столбик ниже обоих соседей."""
+    out = []
+    for i in range(1, len(ao) - 1):
+        a, b, c = ao[i - 1], ao[i], ao[i + 1]
+        if a is None or b is None or c is None:
+            continue
+        if b < a and b < c:
+            out.append((i, b))
+    return out
+
+
+def poschitat(symbol: str, timeframe: str, storona: str) -> dict:
+    """Дивер по числам. storona: SHORT — по вершинам, LONG — по впадинам.
+
+    Возвращает {"ok", "est", "slovami", "почему"}.
+    ok=False — посчитать не вышло, и это НЕ приговор трейдеру.
+    """
+    try:
+        import sys as _s
+        from pathlib import Path as _P
+        _p = str(_P(__file__).resolve().parent)
+        if _p not in _s.path:
+            _s.path.insert(0, _p)
+        from feed_source import bars as _bars
+        from williams_core import compute_ao_series
+    except Exception as e:
+        return {"ok": False, "est": None, "slovami": f"нет счёта ({e})"}
+
+    try:
+        b, _point = _bars(symbol, timeframe, BAROV + 60)
+    except Exception as e:
+        return {"ok": False, "est": None, "slovami": f"нет баров ({e})"}
+    if not b or len(b) < 60:
+        return {"ok": False, "est": None, "slovami": "мало баров"}
+
+    b = b[-(BAROV + 40):]
+    highs = [x["high"] for x in b]
+    lows = [x["low"] for x in b]
+    closes = [x["close"] for x in b]
+    ao = compute_ao_series(highs, lows)
+
+    # поле зрения — последние BAROV баров, как на кадре
+    n = len(ao)
+    start = max(0, n - BAROV)
+    vid = list(range(start, n))
+
+    verh = str(storona).upper() == "SHORT"   # шорт — по вершинам
+    tochki = gorby(ao) if verh else yamy(ao)
+    tochki = [(i, v) for i, v in tochki if i in vid]
+    if len(tochki) < 1:
+        return {"ok": False, "est": None,
+                "slovami": "горбов в поле зрения не нашлось"}
+
+    # DVE_GORKI_V1 — слово Шефа 22.09, по кадру QV32:
+    #   один импульс — это отрезок от излома до вершины, «от 0 до 100».
+    #   Пока цена не вышла за 100, идёт откат того же импульса и новой
+    #   волны нет. Вышла — пошла следующая, и вот тогда на AO стоят ДВЕ
+    #   ГОРКИ с ямкой между ними (ямка и есть тот откат). Вторая горка
+    #   ниже первой — расхождение. Вниз зеркально: две ямки, горка
+    #   между ними, вторая ямка мельче. Горок нет, AO просто ползёт —
+    #   сравнивать нечего: они есть этажом ниже, но мы туда не идём.
+    return dve_gorki(ao, highs, lows, vid, verh, b)
+
+
+def dve_gorki(ao: list, highs: list, lows: list, vid: list,
+              verh: bool, b: list = None) -> dict:
+    """Две горки (две ямки) по ЭКСТРЕМУМАМ. verh=True — SHORT.
+
+    DVE_GORKI_EKSTREMUMY_V1 — слово Шефа 23.09: «линии должны тянуться
+    по экстремумам, на цене и AO: самый экстремум AO и следующий
+    меньше, и смотрим». Образец — кадр UG96.
+
+    Вниз (LONG), вверх зеркально:
+      1-я точка AO — самая глубокая ямка в поле зрения;
+      откат — самый высокий бар цены после неё: он делит ход надвое;
+      2-я точка AO — самое глубокое место AO ПОСЛЕ отката (не последняя
+        ямка и не рябь на склоне); если яма у края ещё роется, точка
+        стоит у края и переедет глубже вместе с ней;
+      цена — самый низ до отката и самый низ после него.
+    Цена прежний низ не взяла — сравнивать нечего. AO после отката
+    просто ползёт, ямы нет — тоже нечего.
+    """
+    tochki = gorby(ao) if verh else yamy(ao)
+    tochki = [(i, v) for i, v in tochki if i in vid]
+    if not tochki:
+        return {"ok": True, "est": False,
+                "slovami": ("горок AO в поле зрения нет — сравнивать нечего"
+                            if verh else
+                            "ямок AO в поле зрения нет — сравнивать нечего")}
+
+    def _kogda(i):
+        try:
+            return str(b[i].get("date", ""))[:16] if b else f"бар {i}"
+        except Exception:
+            return f"бар {i}"
+
+    imya = "горка" if verh else "ямка"
+
+    # 1-я точка — самый экстремум AO в поле зрения
+    g, a1 = (max(tochki, key=lambda t: t[1]) if verh
+             else min(tochki, key=lambda t: t[1]))
+    p = None
+    for _i in range(len(ao) - 1, -1, -1):
+        if ao[_i] is not None:
+            p = _i
+            break
+    if p is None or p <= g + 1:
+        return {"ok": True, "est": False,
+                "slovami": f"главная {imya} у самого края — второй ещё нет"}
+
+    # откат по цене — он делит ход на «до» и «после»
+    posle = range(g + 1, p + 1)
+    t = (min(posle, key=lambda k: lows[k]) if verh
+         else max(posle, key=lambda k: highs[k]))
+    if t >= p:
+        return {"ok": True, "est": False,
+                "slovami": f"1-я {imya} {_kogda(g)} · цена в откате до "
+                           "самого края — второго края ещё нет"}
+    do = range(g, t + 1)
+    pos = range(t + 1, p + 1)
+
+    if verh:
+        ic1 = max(do, key=lambda k: highs[k])
+        ic2 = max(pos, key=lambda k: highs[k])
+        c1, c2 = highs[ic1], highs[ic2]
+        kray_vzyat = c2 > c1
+        k2 = max(pos, key=lambda k: ao[k])
+    else:
+        ic1 = min(do, key=lambda k: lows[k])
+        ic2 = min(pos, key=lambda k: lows[k])
+        c1, c2 = lows[ic1], lows[ic2]
+        kray_vzyat = c2 < c1
+        k2 = min(pos, key=lambda k: ao[k])
+    a2 = ao[k2]
+
+    # 2-я точка — настоящая горка (ямка) или та, что ещё растёт у края;
+    # склон, по которому AO просто ползёт, точкой не считается
+    if k2 < p:
+        est_tochka = ((a2 > ao[k2 - 1] and a2 > ao[k2 + 1]) if verh
+                      else (a2 < ao[k2 - 1] and a2 < ao[k2 + 1]))
+    else:
+        est_tochka = (a2 > ao[p - 1]) if verh else (a2 < ao[p - 1])
+    if not est_tochka:
+        return {"ok": True, "est": False,
+                "slovami": f"1-я {imya} {_kogda(g)}: AO {a1:.5f} · после "
+                           f"отката {_kogda(t)} AO просто ползёт — второй "
+                           f"{'горки' if verh else 'ямки'} нет"}
+
+    sila_slabee = a2 < a1 if verh else a2 > a1
+    u_kraya = " (ещё растёт у края)" if k2 == p else ""
+    slovami = (f"1-я {imya} {_kogda(g)}: AO {a1:.5f}, край цены {c1:.5f} · "
+               f"откат {_kogda(t)} · "
+               f"2-я {imya} {_kogda(k2)}{u_kraya}: "
+               f"AO {a2:.5f}, край цены {c2:.5f}")
+    if not (kray_vzyat and sila_slabee):
+        prich = []
+        if not kray_vzyat:
+            prich.append("цена прежний край не взяла — откат ещё идёт")
+        if not sila_slabee:
+            prich.append("сила не слабее прежней")
+        return {"ok": True, "est": False,
+                "slovami": slovami + " · " + ", ".join(prich)}
+    return {"ok": True, "est": True, "slovami": slovami,
+            "цена_было": c1, "цена_стало": c2,
+            "ao_было": a1, "ao_стало": a2,
+            "i_цена_1": ic1, "i_цена_2": ic2,
+            "i_ao_1": g, "i_ao_2": k2}

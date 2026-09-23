@@ -88,6 +88,19 @@ C_RAMKA = "#ffffff40"
 C_SQUAT = "#d92626"
 
 
+# ── UCHEBKA_V1: учебный режим кадра ───────────────────────────
+# Слово Шефа 22.09: линии расхождения на кадре — учёба, а не
+# постоянное устройство. Пусть поработает с ними пару прогонов, потом
+# выключим и посмотрим, осталось ли чтение.
+# Включение: положить рядом файл «учебный_режим.txt» (пустой). Убрать
+# файл — линии пропадают. Никаких кнопок и настроек.
+def _uchebnyy_rezhim() -> bool:
+    try:
+        return (Path(__file__).resolve().parent / "учебный_режим.txt").exists()
+    except Exception:
+        return False
+
+
 def narisovat(bars: list, alligator: dict, ao_series: list,
               symbol: str = "", timeframe: str = "",
               kuda: Optional[Path] = None,
@@ -312,6 +325,40 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
         cveta = [C_AO_UP if (k == 0 or ys[k] >= ys[k - 1]) else C_AO_DOWN
                  for k in range(len(ys))]
         axo.bar(xs, ys, color=cveta, width=0.7, zorder=3)
+
+    # UCHEBKA_V1: учебный режим — две линии расхождения прямо на кадре.
+    # UCHEBKA_MATRYOSHKA_V1 (23.09, слово Шефа): рисуем самую большую
+    # пару (весь ход) — толстой линией, и последнюю справа (край) —
+    # тонкой. Если это одна и та же пара — одна линия. Расхождение
+    # нашлось в обе стороны — берём ту сторону, где край свежее.
+    # Включается файлом Биржа/учебный_режим.txt — нет файла, линий нет.
+    if _uchebnyy_rezhim():
+        try:
+            import sverka_divera as _sd
+            _hi = [x.get("high") for x in b]
+            _lo = [x.get("low") for x in b]
+            _vid = list(range(len(ao)))
+            _luchshe, _svezhest = None, -1
+            for _verh in (True, False):
+                _r = _sd.dve_gorki(ao, _hi, _lo, _vid, _verh, b)
+                _pary = [x for x in (_r.get("пары") or []) if x.get("est")]
+                if not _pary:
+                    continue
+                if _pary[-1]["i_цена_2"] > _svezhest:
+                    _luchshe, _svezhest = _pary, _pary[-1]["i_цена_2"]
+            if _luchshe:
+                _risovat = [(_luchshe[0], 2.4)]
+                if _luchshe[-1] is not _luchshe[0]:
+                    _risovat.append((_luchshe[-1], 1.3))
+                for _p, _tol in _risovat:
+                    ax.plot([_p["i_цена_1"], _p["i_цена_2"]],
+                            [_p["цена_было"], _p["цена_стало"]],
+                            color="#22d3ee", linewidth=_tol, zorder=8)
+                    axo.plot([_p["i_ao_1"], _p["i_ao_2"]],
+                             [_p["ao_было"], _p["ao_стало"]],
+                             color="#22d3ee", linewidth=_tol, zorder=8)
+        except Exception as _e_uch:
+            print(f"[УЧЕБКА] линии не нарисовались ({_e_uch}) — не беда")
 
     # SVECHA_VIDNA_V1: нулевая линия и подписи — под тёмный фон.
     axo.axhline(0, color="#ffffff66", linewidth=1.3, zorder=2)

@@ -667,11 +667,35 @@ def chat(system: str, user: str, knowledge: str = "", history: Optional[list] = 
     return content
 
 
+# ── OBRAZCY_V_ZNANIYA_V1: образцы идут со знаниями, не с кадром ──
+# Образцы в одном сообщении с кадром модель смешивала и описывала
+# образец вместо своего рынка. Теперь они — часть «базы знаний» в
+# начале разговора, как учебник; кадр остаётся один в вопросе.
+def _znaniya_s_obrazcami(knowledge: str, knowledge_images=None):
+    if not knowledge_images:
+        return f"БАЗА ЗНАНИЙ:\n{knowledge}"
+    kuski = [{"type": "text", "text": f"БАЗА ЗНАНИЙ:\n{knowledge}"},
+             {"type": "text", "text":
+              "ОБРАЗЦЫ ИЗ УЧЕБНИКА. Это НЕ твой рынок и НЕ сегодняшний "
+              "кадр — так выглядит правило. Твой кадр придёт позже, в "
+              "вопросе, отдельно."}]
+    for img in knowledge_images:
+        b64 = img.get("base64", "")
+        if not b64:
+            continue
+        kuski.append({"type": "text",
+                      "text": f"[Образец: {img.get('name', 'образец')}]"})
+        kuski.append({"type": "image_url", "image_url": {
+            "url": f"data:{img.get('mime_type', 'image/png')};base64,{b64}"}})
+    return kuski
+
+
 def chat_with_images(system: str, user_text: str, images: Optional[list] = None,
                      knowledge: str = "", history: Optional[list] = None,
                      temperature: Optional[float] = None,
                      agent_id: str = "unknown", slot_id: str = "unknown",
-                     knowledge_source: str = "internal") -> str:
+                     knowledge_source: str = "internal",
+                     knowledge_images: Optional[list] = None) -> str:
     """
     Отправляет запрос с изображениями (vision).
 
@@ -689,8 +713,9 @@ def chat_with_images(system: str, user_text: str, images: Optional[list] = None,
     # (протокол vision OpenRouter/OpenAI). dict[str, Any] называет то,
     # что уже происходит в рантайме, а не выдумывает новое поведение.
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-    if knowledge:
-        messages.append({"role": "user", "content": f"БАЗА ЗНАНИЙ:\n{knowledge}"})
+    if knowledge or knowledge_images:   # OBRAZCY_V_ZNANIYA_V1
+        messages.append({"role": "user", "content":
+                         _znaniya_s_obrazcami(knowledge, knowledge_images)})
         messages.append({"role": "assistant", "content": "Принял базу знаний. Готов к работе."})
 
     if history:
@@ -818,6 +843,7 @@ def chat_with_images_and_tools(
     agent_id: str = "unknown",
     slot_id: str = "unknown",
     knowledge_source: str = "internal",
+    knowledge_images: Optional[list] = None,
 ) -> str:
     """Разговор с кадром, где собеседник может сам просить математику.
 
@@ -830,9 +856,9 @@ def chat_with_images_and_tools(
                "Content-Type": "application/json"}
 
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-    if knowledge:
-        messages.append({"role": "user",
-                         "content": f"БАЗА ЗНАНИЙ:\n{knowledge}"})
+    if knowledge or knowledge_images:   # OBRAZCY_V_ZNANIYA_V1
+        messages.append({"role": "user", "content":
+                         _znaniya_s_obrazcami(knowledge, knowledge_images)})
         messages.append({"role": "assistant",
                          "content": "Принял базу знаний. Готов к работе."})
     if history:

@@ -1094,10 +1094,16 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
     def _kadr_krupno(put: str):
         """Клик по кадру в ленте — показать во весь экран."""
         try:
+            # KADR_KRUPNO_V1: картинке нужна ШИРИНА. С одним
+            # max-width Quasar схлопывал её в иконку — кадр
+            # «не разворачивался», как ни щёлкай.
             with ui.dialog() as _d, ui.card().style(
-                "background:#0d1117; padding:10px; max-width:96vw;"
+                "background:#0d1117; padding:10px; width:96vw; "
+                "max-width:96vw;"
             ):
-                ui.image(str(put)).style("max-width:92vw; max-height:86vh;")
+                ui.image(str(put)).style(
+                    "width:100%; height:auto; max-height:86vh; "
+                    "object-fit:contain;")
                 ui.button("закрыть", on_click=_d.close).props(
                     "flat no-caps dense").style(
                     "color:rgba(255,255,255,0.5); font-size:0.75rem;")
@@ -4151,8 +4157,37 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         except Exception as _ce:
             ui.notify(f"Не прочитать файл: {_ce}", type="negative")
             return
+        # KARTINKA_SHEFA_V1: картинку Шеф показывает жителю, а не
+        # заряжает как котировки. Уходит тем же путём, что «Взгляд».
+        if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+            try:
+                from pathlib import Path as _Pk
+                from datetime import datetime as _dtk
+                _pap = _Pk(__file__).resolve().parent / "показанное"
+                _pap.mkdir(parents=True, exist_ok=True)
+                _dest = _pap / name
+                _dest.write_bytes(content)
+                from hooks import load_trading_state, save_trading_state
+                _tk = load_trading_state()
+                _tk["vzglyad_shefa"] = {
+                    "путь": str(_dest),
+                    "подпись": _Pk(name).stem,
+                    "когда": _dtk.now().isoformat(timespec="seconds"),
+                }
+                save_trading_state(_tk)
+                ui.notify(f"\U0001f5bc Показываю жителю: {_Pk(name).stem}",
+                          type="positive")
+            except Exception as _ke:
+                ui.notify(f"Картинка не дошла: {_ke}", type="negative")
+            _up = files_ref.get("uploader")
+            if _up:
+                try:
+                    _up.reset()
+                except Exception:
+                    pass
+            return
         if not name.lower().endswith(".csv"):
-            ui.notify("Нужен CSV экспорта MT5", type="warning")
+            ui.notify("Нужен CSV экспорта MT5 или картинка", type="warning")
             return
         dest_dir = _TEST_DATA_DIR
         dest_dir.mkdir(parents=True, exist_ok=True)

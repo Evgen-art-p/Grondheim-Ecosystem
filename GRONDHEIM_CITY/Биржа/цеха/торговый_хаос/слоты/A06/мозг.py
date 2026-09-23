@@ -153,8 +153,9 @@ def _glaz(_chat, symbol, timeframe, slot, preambula=None):
                     images=([{"base64": base64.b64encode(
                                  _P(put).read_bytes()).decode("ascii"),
                               "mime_type": "image/png",
-                              "name": _P(put).name}]
-                            + _kadr_shefa() + _obrazcy()),  # OBRAZCY_V1
+                              "name": "ТВОЙ КАДР, рынок сейчас · " + _P(put).name}]
+                            + _kadr_shefa(razgovor=preambula is not None)),
+                    knowledge_images=_obrazcy(),  # OBRAZCY_V_ZNANIYA_V1
                     # RAZGOVOR_SO_STOLOM_V1: история и температура
                     # ронялись здесь — с картинкой он забывал разговор
                     # и говорил средним голосом вместо своего.
@@ -244,8 +245,9 @@ def _glaz_s_rukami(_chat, symbol, timeframe, slot, ceh, self_key,
                     images=([{"base64": base64.b64encode(
                                  _P(put).read_bytes()).decode("ascii"),
                              "mime_type": "image/png",
-                             "name": _P(put).name}]
-                            + _kadr_shefa() + _obrazcy()),  # OBRAZCY_V1
+                             "name": "ТВОЙ КАДР, рынок сейчас · " + _P(put).name}]
+                            + _kadr_shefa(razgovor=preambula is not None)),
+                    knowledge_images=_obrazcy(),  # OBRAZCY_V_ZNANIYA_V1
                     tools_schema=_rt.shema(timeframe),
                     executors=_rt.ruki(symbol, ceh, slot, self_key,
                                        dnevnik_fn=_read_recent_diary,
@@ -1732,23 +1734,24 @@ def _povod_blok(povod: str) -> str:
 # подменяем. Показанное идёт вторым, с подписью, чьё оно. Иначе он
 # потеряет свой этаж и станет отвечать про чужую картинку.
 
-def _kadr_shefa() -> list:
-    """Картинка со «Взгляда» Шефа, если она свежая. Иначе пусто."""
+def _kadr_shefa(razgovor: bool = True) -> list:
+    """Картинка, которую показал Шеф. В работе не подкладывается.
+
+    KARTINKA_SHEFA_V1: срок в 15 минут снят по слову Шефа —
+    показанное лежит, пока он не покажет другое. Взамен оно идёт
+    ТОЛЬКО в разговоре: в прогоне картинка ехала бы в каждое
+    место и путалась бы с рабочим кадром.
+    """
+    if not razgovor:
+        return []
     try:
         import base64
-        from datetime import datetime, timedelta
         from pathlib import Path as _P
         from hooks import load_trading_state
         v = (load_trading_state() or {}).get("vzglyad_shefa") or {}
         put = v.get("путь")
         if not put:
             return []
-        try:
-            kogda = datetime.fromisoformat(str(v.get("когда")))
-            if datetime.now() - kogda > timedelta(minutes=15):
-                return []      # старое — не всплывает посреди работы
-        except Exception:
-            pass
         p = _P(put)
         if not p.exists():
             return []
@@ -1807,6 +1810,8 @@ def _obrazcy() -> list:
                 "mime_type": mime[f.suffix.lower()],
                 "name": (f"ОБРАЗЕЦ из знаний, не твой рынок · {f.stem}"
                          + (f" — {podpis}" if podpis else ""))})
+        if vyshlo:
+            print(f"[ОБРАЗЦЫ] в знаниях: {len(vyshlo)}")
         return vyshlo
     except Exception as _e:
         print(f"[ОБРАЗЦЫ] не подложились ({_e}) — не беда")

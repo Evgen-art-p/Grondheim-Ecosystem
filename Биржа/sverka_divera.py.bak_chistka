@@ -1,0 +1,167 @@
+# -*- coding: utf-8 -*-
+# SVERKA_DIVERA_V1
+"""Считает дивер по барам — чтобы слова трейдера было с чем сверить.
+
+Канон Шефа (17.09):
+  ГОРБ — три столбика: меньше-БОЛЬШЕ-меньше.
+  ЯМА  — три столбика: больше-МЕНЬШЕ-больше.
+  Главный — самый большой в поле зрения, не «предыдущий по счёту».
+
+Город СЧИТАЕТ и ПОКАЗЫВАЕТ. Решает трейдер. Здесь нет ни одного
+запрета — только числа.
+"""
+
+from typing import Optional
+
+BAROV = 140          # столько же, сколько видно на кадре
+
+
+def gorby(ao: list) -> list:
+    """Места и высоты горбов: средний столбик выше обоих соседей."""
+    out = []
+    for i in range(1, len(ao) - 1):
+        a, b, c = ao[i - 1], ao[i], ao[i + 1]
+        if a is None or b is None or c is None:
+            continue
+        if b > a and b > c:
+            out.append((i, b))
+    return out
+
+
+def yamy(ao: list) -> list:
+    """Места и глубины ям: средний столбик ниже обоих соседей."""
+    out = []
+    for i in range(1, len(ao) - 1):
+        a, b, c = ao[i - 1], ao[i], ao[i + 1]
+        if a is None or b is None or c is None:
+            continue
+        if b < a and b < c:
+            out.append((i, b))
+    return out
+
+
+def poschitat(symbol: str, timeframe: str, storona: str) -> dict:
+    """Дивер по числам. storona: SHORT — по вершинам, LONG — по впадинам.
+
+    Возвращает {"ok", "est", "slovami", "почему"}.
+    ok=False — посчитать не вышло, и это НЕ приговор трейдеру.
+    """
+    try:
+        import sys as _s
+        from pathlib import Path as _P
+        _p = str(_P(__file__).resolve().parent)
+        if _p not in _s.path:
+            _s.path.insert(0, _p)
+        from feed_source import bars as _bars
+        from williams_core import compute_ao_series
+    except Exception as e:
+        return {"ok": False, "est": None, "slovami": f"нет счёта ({e})"}
+
+    try:
+        b, _point = _bars(symbol, timeframe, BAROV + 60)
+    except Exception as e:
+        return {"ok": False, "est": None, "slovami": f"нет баров ({e})"}
+    if not b or len(b) < 60:
+        return {"ok": False, "est": None, "slovami": "мало баров"}
+
+    b = b[-(BAROV + 40):]
+    highs = [x["high"] for x in b]
+    lows = [x["low"] for x in b]
+    closes = [x["close"] for x in b]
+    ao = compute_ao_series(highs, lows)
+
+    # поле зрения — последние BAROV баров, как на кадре
+    n = len(ao)
+    start = max(0, n - BAROV)
+    vid = list(range(start, n))
+
+    verh = str(storona).upper() == "SHORT"   # шорт — по вершинам
+    tochki = gorby(ao) if verh else yamy(ao)
+    tochki = [(i, v) for i, v in tochki if i in vid]
+    if len(tochki) < 1:
+        return {"ok": False, "est": None,
+                "slovami": "горбов в поле зрения не нашлось"}
+
+    # DIVER_PYAT_PUL_V1 — по источнику (Profitunity, «пять пуль»):
+    #   третья волна — самый высокий пик AO в поле зрения (100-140
+    #   баров); четвёртая — AO проваливается, может уйти за ноль;
+    #   дивер — цена в конце импульса выше цены на пике третьей, а AO
+    #   на САМОЙ ВЫСОКОЙ цене ниже пика третьей. Вниз — зеркально.
+    return pyat_pul(ao, highs, lows, vid, verh, b)
+
+
+def pyat_pul(ao: list, highs: list, lows: list, vid: list,
+             verh: bool, b: list = None) -> dict:
+    """Дивер по источнику. verh=True — SHORT (пики и вершины),
+    False — LONG (ямы и впадины)."""
+    tochki = gorby(ao) if verh else yamy(ao)
+    tochki = [(i, v) for i, v in tochki if i in vid]
+    if len(tochki) < 1:
+        return {"ok": False, "est": None,
+                "slovami": "пиков AO в поле зрения не нашлось" if verh
+                else "ям AO в поле зрения не нашлось"}
+
+    def _kogda(i):
+        try:
+            return str(b[i].get("date", ""))[:16] if b else f"бар {i}"
+        except Exception:
+            return f"бар {i}"
+
+    # третья волна — самый высокий пик (самая глубокая яма)
+    g = (max(tochki, key=lambda t: t[1]) if verh
+         else min(tochki, key=lambda t: t[1]))[0]
+    p = None
+    for _i in range(len(ao) - 1, -1, -1):
+        if ao[_i] is not None:
+            p = _i
+            break
+    if p is None or p <= g + 1:
+        return {"ok": True, "est": False,
+                "slovami": "третья волна у самого края — пятой ещё нет"}
+
+    # самая высокая цена после третьей (самая низкая — вниз)
+    ryad = range(g, p + 1)
+    if verh:
+        kh = max(ryad, key=lambda k: highs[k])
+        c3, c5 = highs[g], highs[kh]
+        cena_vyshe = c5 > c3
+        ao_nizhe = ao[kh] is not None and ao[kh] < ao[g]
+    else:
+        kh = min(ryad, key=lambda k: lows[k])
+        c3, c5 = lows[g], lows[kh]
+        cena_vyshe = c5 < c3
+        ao_nizhe = ao[kh] is not None and ao[kh] > ao[g]
+
+    slovami = (f"3-я волна {_kogda(g)}: цена {c3:.5f}, AO {ao[g]:.5f} · "
+               f"{'самая высокая' if verh else 'самая низкая'} цена "
+               f"{_kogda(kh)}: {c5:.5f}, AO {ao[kh]:.5f}")
+
+    # четвёртая — между третьей и крайней ценой AO провалился и
+    # пошёл обратно (ноль не важен)
+    mezhdu = [k for k in range(g + 1, kh) if ao[k] is not None]
+    if not mezhdu:
+        return {"ok": True, "est": False,
+                "slovami": slovami + " · четвёртой волны нет — пятой не было"}
+    d = (min(mezhdu, key=lambda k: ao[k]) if verh
+         else max(mezhdu, key=lambda k: ao[k]))
+    if (verh and ao[kh] <= ao[d]) or (not verh and ao[kh] >= ao[d]):
+        return {"ok": True, "est": False,
+                "slovami": slovami + " · AO после провала не пошёл обратно — "
+                                     "пятой не было"}
+    est_byl = bool(cena_vyshe and ao_nizhe)
+    if not est_byl:
+        prich = []
+        if not cena_vyshe:
+            prich.append("цена не ушла дальше третьей")
+        if not ao_nizhe:
+            prich.append("AO не слабее третьей")
+        return {"ok": True, "est": False,
+                "slovami": slovami + " · " + ", ".join(prich)}
+    if kh != p:
+        return {"ok": True, "est": False,
+                "slovami": slovami + f" · дивер был {_kogda(kh)}, а сейчас "
+                           f"цена {'ниже' if verh else 'выше'} той — "
+                           "здесь его нет"}
+    return {"ok": True, "est": True, "slovami": slovami,
+            "цена_было": c3, "цена_стало": c5,
+            "ao_было": ao[g], "ao_стало": ao[kh]}
