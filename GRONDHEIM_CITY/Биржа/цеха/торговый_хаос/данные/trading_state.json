@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-23T17:39:03.050582",
+  "updated": "2026-09-23T17:39:58.753549",
   "iskra": {
     "t1_status": "NOT_FOUND",
     "zero_point_price": null,
@@ -12,7 +12,7 @@
   "feed": {
     "mode": "tester",
     "symbol": "EURUSD",
-    "момент": "2025.07.29 12:00"
+    "момент": "2025.07.29 20:00"
   },
   "vzglyad_shefa": {
     "путь": "C:\\Users\\Евгений\\Desktop\\Grondheim-Ecosystem\\Биржа\\показанное\\QV26_dva_razmera.png",
@@ -21,7 +21,7 @@
   },
   "стоп_прогона": false,
   "рынок": {
-    "бар": "2025.07.29 08:00"
+    "бар": "2025.07.29 16:00"
   },
   "точки": {
     "EURUSD H1": {
@@ -57,7 +57,7 @@
       ]
     },
     "EURUSD H4": {
-      "reshali_na_bare": "2025.07.29 08:00",
+      "reshali_na_bare": "2025.07.29 16:00",
       "otvet_bara": {
         "alive": true,
         "reason": "жива",
@@ -70,7 +70,7 @@
       "rodilas_na_bare": "2024.12.19 00:00",
       "t1_status": "DETECTED",
       "neutral_bars_count": 0,
-      "barov_s_tochki": 2971,
+      "barov_s_tochki": 2973,
       "kray_posle": 1.17883,
       "struktura_pozadi": 57,
       "konec_volny_1": {
@@ -175,7 +175,7 @@
     }
   },
   "brut": {
-    "бар": "2025.07.29 04:00",
+    "бар": "2025.07.29 08:00",
     "verdict": "REJECTED",
     "reason": "",
     "action": "WAIT",
