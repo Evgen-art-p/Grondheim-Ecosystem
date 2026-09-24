@@ -532,9 +532,6 @@ def _treyling_za_zubami(state: dict):
     # там только числа. Ядро (ALLIGATOR_SO_SDVIGOM_V1) уже отдаёт
     # Зубы СО СДВИГОМ — те, что под свечой. Их и берём.
     teeth = allig.get("teeth")
-    # ZAYAVKA_I_SEYF_V1: сейф — когда пасть открыта и линии в ряд.
-    _jaw = allig.get("jaw")
-    _lips = allig.get("lips")
     close = (md.get("price", {}) or {}).get("close")
     if teeth is None or close is None:
         if positions and close is not None:
@@ -563,15 +560,6 @@ def _treyling_za_zubami(state: dict):
             # (её добьёт _settle_positions по стопу или колоколу)
             if close < teeth:
                 continue
-            # ZAYAVKA_I_SEYF_V1 (слово Шефа 23.09): в болтанке сейфа
-            # нет. Тянем, только когда линии в ряд вверх и цена
-            # над ними: Губы > Зубы > Челюсть, цена выше Губ.
-            if not (_lips is not None and _jaw is not None
-                    and _lips > teeth > _jaw and close > _lips):
-                if teeth > old:
-                    print(f"[ТРЕЙЛ] ⏸ {pos.get('trader')} LONG: линии "
-                          f"не в ряд — болтанка, стоп стоит {old}")
-                continue
             novy = teeth
             if novy <= old:          # только в защиту
                 continue
@@ -579,14 +567,6 @@ def _treyling_za_zubami(state: dict):
                 continue
         elif direction == "SHORT":
             if close > teeth:
-                continue
-            # ZAYAVKA_I_SEYF_V1: зеркально — Губы < Зубы < Челюсть,
-            # цена ниже Губ.
-            if not (_lips is not None and _jaw is not None
-                    and _lips < teeth < _jaw and close < _lips):
-                if teeth < old:
-                    print(f"[ТРЕЙЛ] ⏸ {pos.get('trader')} SHORT: линии "
-                          f"не в ряд — болтанка, стоп стоит {old}")
                 continue
             novy = teeth
             if novy >= old:
@@ -735,9 +715,7 @@ ORDER_EXPIRE_BARS = 10   # не пробил за 10 баров — структ
 # PEREEZD_ZAYAVKI_V1: переезд заявки за новым фракталом (Вильямс) ──────
 # PEREEZD_NA_NEKRON_NE_FRAKTAL_V1: окно "рядом" для приседающего —
 # в барах. Не высечено в камне, можно поправить и перезапустить патч.
-# PRISEDANIE_PRAVDA_V1 (слово Шефа 23.09): три бара — разворотник и
-# два до него. Было 3 — это четыре бара (0..3).
-_OKNO_BAROV_PRISED = 2
+_OKNO_BAROV_PRISED = 3
 
 _CHASY_ETAZHA = {
     "M1": 1 / 60, "M5": 5 / 60, "M10": 10 / 60, "M15": 15 / 60,

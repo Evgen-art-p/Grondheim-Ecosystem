@@ -389,8 +389,7 @@ def nakryt(symbol: str, timeframe: str,
         # дивер глазами по всей картине (лесенка, а не пара точек) —
         # казённое True/False рядом создаёт ложный спор с собой.
         # Раньше здесь стояли "дивергенция_ao" и "дивергенция_ao_медвежья".
-        # PRISEDANIE_PRAVDA_V1: словами, в окне трёх баров.
-        "приседающий_бар": _prisedanie(md, bars, timeframe),
+        "приседающий_бар": bool((md.get("squat") or {}).get("last_squat")),
     }
 
     return stol
@@ -400,72 +399,6 @@ def nakryt(symbol: str, timeframe: str,
 # считалась из AO+AC (iZone.mq4): оба растут — зелёная, оба падают —
 # красная. Без AC её посчитать нечем, а показывать цвет, собранный
 # из половины прибора, — врать трейдеру.
-
-
-# PRISEDANIE_PRAVDA_V1 (слово Шефа 23.09): приседающий считается, если
-# он в пределах ТРЁХ баров — на самом разворотном баре или не раньше
-# чем за два бара до него (разворотник — третий). Один или дорожка —
-# всё равно. Раньше здесь стояло bool(last_squat) — «был ли хоть один
-# приседающий во всей истории», то есть True всегда, на любом баре.
-_PRISED_OKNO = 3
-
-
-def _prisedanie(md: dict, bars, timeframe: str = "") -> str:
-    """Приседающий словами: есть ли в окне трёх баров и где последний."""
-    last = ((md or {}).get("squat") or {}).get("last_squat") or {}
-    if not last:
-        return "нет — на этом этаже ни одного"
-    d_last = str(last.get("date") or "")
-    nazad = None
-    v_okne = []
-    if bars:
-        try:
-            _daty = [str(b.get("date")) for b in bars]
-            if d_last in _daty:
-                nazad = len(_daty) - 1 - _daty.index(d_last)
-            _hvost = bars[-(_PRISED_OKNO + 1):]
-            for _k in range(1, len(_hvost)):
-                _b, _pb = _hvost[_k], _hvost[_k - 1]
-                if not _b.get("volume") or not _pb.get("volume"):
-                    continue
-                _m = (_b["high"] - _b["low"]) / _b["volume"]
-                _pm = (_pb["high"] - _pb["low"]) / _pb["volume"]
-                if _b["volume"] > _pb["volume"] and _m < _pm:
-                    v_okne.append(len(_hvost) - 1 - _k)
-        except Exception:
-            nazad = None
-    if nazad is None:
-        # баров под рукой нет — считаем по часам этажа
-        try:
-            from datetime import datetime
-            _f = "%Y.%m.%d %H:%M"
-            _chas = {"M1": 1 / 60, "M5": 5 / 60, "M15": 0.25, "M30": 0.5,
-                     "H1": 1, "H4": 4, "D1": 24, "W1": 168}.get(
-                str(timeframe or md.get("timeframe") or "H1").upper(), 1)
-            from datetime import timedelta
-            _t = datetime.strptime(d_last, _f)
-            _konec = datetime.strptime(str(md.get("bar_time")), _f)
-            _shag = timedelta(hours=_chas)
-            nazad = 0
-            # выходные не в счёт: в субботу и воскресенье баров нет
-            while _t < _konec and nazad < 500:
-                _t += _shag
-                if _t.weekday() < 5:
-                    nazad += 1
-        except Exception:
-            nazad = None
-    kogda = d_last[5:] if len(d_last) >= 16 else d_last
-    if nazad is not None and 0 <= nazad < _PRISED_OKNO:
-        if len(v_okne) >= 2:
-            return (f"есть — дорожка: {len(v_okne)} приседающих за последние "
-                    f"{_PRISED_OKNO} бара, последний {kogda}")
-        if nazad == 0:
-            return "есть — на этом баре"
-        return f"есть — за {nazad} бар(а) до этого бара ({kogda})"
-    if nazad is None:
-        return f"не ясно — последний {kogda}"
-    return (f"нет — последний {kogda}, {nazad} бар(ов) назад "
-            f"(дальше трёх баров)")
 
 
 def slovami(stol: dict) -> str:

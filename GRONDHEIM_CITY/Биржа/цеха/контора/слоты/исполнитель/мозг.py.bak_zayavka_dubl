@@ -385,10 +385,8 @@ def _open_positions_from_table(traders: dict, market: dict) -> list:
     from hooks import load_trading_state, save_trading_state
     tstate = load_trading_state()
     tstate.setdefault("positions", [])
-    # ZAYAVKA_BEZ_DUBLEY_V1: висящая заявка — тоже «уже есть».
-    # Вторую рядом не рождаем: свою двигают MOVE_ORDER, снимают CANCEL.
     open_magics = {p.get("magic") for p in tstate["positions"]
-                   if p.get("status") in ("OPEN", "PENDING")}
+                   if p.get("status") == "OPEN"}
 
     bar_time = market.get("bar_time", "")
     opened = []

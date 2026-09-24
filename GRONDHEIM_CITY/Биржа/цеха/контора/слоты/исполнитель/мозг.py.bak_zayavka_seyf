@@ -162,60 +162,6 @@ def _manage_positions_from_table(traders: dict) -> list:
         if action in ("", "ENTER", "WAIT", "HOLD"):
             continue
         magic = MAGIC[key]
-        # ZAYAVKA_I_SEYF_V1: рука для ВИСЯЩЕЙ заявки — переставить
-        # на новый разворотный бар или снять. Решает трейдер.
-        if action in ("MOVE_ORDER", "CANCEL"):
-            zv = next((p for p in positions
-                       if p.get("magic") == magic
-                       and p.get("status") == "PENDING"), None)
-            if not zv:
-                changed.append({"trader": TRADER_NAME[key],
-                                "action": action + "_REJECTED",
-                                "why": "висящей заявки нет"})
-                continue
-            if action == "CANCEL":
-                positions = [p for p in positions if p is not zv]
-                dirty = True
-                print(f"[ОРДЕР] 🚫 {zv.get('trader')} "
-                      f"{zv.get('direction')} @ {zv.get('entry')} "
-                      f"СНЯТ — трейдер передумал")
-                changed.append({"trader": TRADER_NAME[key],
-                                "action": "CANCEL",
-                                "entry": zv.get("entry")})
-                continue
-            ne, ns = v.get("entry"), v.get("stop")
-            dz = (zv.get("direction") or "").upper()
-            if (not isinstance(ne, (int, float))
-                    or not isinstance(ns, (int, float))
-                    or (dz == "LONG" and not ns < ne)
-                    or (dz == "SHORT" and not ns > ne)):
-                print(f"[ОРДЕР] ✗ {zv.get('trader')} {dz}: "
-                      f"переставить нельзя — вход {ne}, стоп {ns}")
-                changed.append({"trader": TRADER_NAME[key],
-                                "action": "MOVE_ORDER_REJECTED",
-                                "attempted": [ne, ns],
-                                "why": "нет цены/стопа или стоп не "
-                                       "по ту сторону от входа"})
-                continue
-            _bylo = (zv.get("entry"), zv.get("stop"))
-            zv["entry"] = ne
-            zv["stop"] = ns
-            zv["stop_initial"] = ns
-            if "entry_avg" in zv:
-                zv["entry_avg"] = ne
-            # опора для городского переезда и снятия — новый бар
-            zv["signal_start"] = ns
-            zv["entry_fractal_price"] = ns
-            zv["_ждёт_баров"] = 0
-            # на баре перестановки не срабатывает — как при рождении
-            zv["_ждёт_с"] = _tekushchiy_bar(tstate)
-            dirty = True
-            print(f"[ОРДЕР] 🔄 {zv.get('trader')} {dz} ПЕРЕСТАВЛЕН "
-                  f"рукой: вход {_bylo[0]} → {ne}, стоп {_bylo[1]} → {ns}")
-            changed.append({"trader": TRADER_NAME[key],
-                            "action": "MOVE_ORDER",
-                            "from": list(_bylo), "to": [ne, ns]})
-            continue
         pos = next((p for p in positions
                     if p.get("magic") == magic and p.get("status") == "OPEN"), None)
         if not pos:
@@ -385,10 +331,8 @@ def _open_positions_from_table(traders: dict, market: dict) -> list:
     from hooks import load_trading_state, save_trading_state
     tstate = load_trading_state()
     tstate.setdefault("positions", [])
-    # ZAYAVKA_BEZ_DUBLEY_V1: висящая заявка — тоже «уже есть».
-    # Вторую рядом не рождаем: свою двигают MOVE_ORDER, снимают CANCEL.
     open_magics = {p.get("magic") for p in tstate["positions"]
-                   if p.get("status") in ("OPEN", "PENDING")}
+                   if p.get("status") == "OPEN"}
 
     bar_time = market.get("bar_time", "")
     opened = []

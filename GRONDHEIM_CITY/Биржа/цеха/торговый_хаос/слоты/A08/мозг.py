@@ -327,7 +327,10 @@ def _read_table() -> dict:
 # КАМЕНЬ 2: ЯЗЫК ВЕДЕНИЯ — одно открытое поле action.  # TRADER_MANAGE_LANG_V1
 # ════════════════════════════════════════════════════════════
 
-_MANAGE_ACTIONS = ("ENTER", "WAIT", "HOLD", "MOVE_STOP", "ADD", "CLOSE")
+# ZAYAVKA_BEZ_DUBLEY_V1: руки для висящей заявки. Без них MOVE_ORDER
+# скатывался в «APPROVED — значит ENTER» и рождал вторую заявку.
+_MANAGE_ACTIONS = ("ENTER", "WAIT", "HOLD", "MOVE_STOP", "ADD", "CLOSE",
+                   "MOVE_ORDER", "CANCEL")
 
 
 def _derive_action(signal: dict) -> str:
@@ -371,6 +374,10 @@ def _sanitize_manage(signal: dict) -> dict:
     if action == "ENTER":
         signal["cons_verdict"] = "APPROVED"
     elif action == "WAIT":
+        signal["cons_verdict"] = "REJECTED"
+    elif action in ("MOVE_ORDER", "CANCEL"):
+        # ZAYAVKA_BEZ_DUBLEY_V1: не вход — заявка уже висит. Старый
+        # APPROVED с прошлого ENTER протечь не должен.
         signal["cons_verdict"] = "REJECTED"
     return signal
 

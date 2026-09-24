@@ -317,7 +317,10 @@ def _read_table() -> dict:
 # Код не решает за него — только проверяет, что не брак, и проносит.
 # ════════════════════════════════════════════════════════════
 
-_MANAGE_ACTIONS = ("ENTER", "WAIT", "HOLD", "MOVE_STOP", "ADD", "CLOSE")
+# ZAYAVKA_BEZ_DUBLEY_V1: руки для висящей заявки. Без них MOVE_ORDER
+# скатывался в «APPROVED — значит ENTER» и рождал вторую заявку.
+_MANAGE_ACTIONS = ("ENTER", "WAIT", "HOLD", "MOVE_STOP", "ADD", "CLOSE",
+                   "MOVE_ORDER", "CANCEL")
 
 
 def _derive_action(signal: dict) -> str:
@@ -363,6 +366,10 @@ def _sanitize_manage(signal: dict) -> dict:
     if action == "ENTER":
         signal["brut_verdict"] = "APPROVED"
     elif action == "WAIT":
+        signal["brut_verdict"] = "REJECTED"
+    elif action in ("MOVE_ORDER", "CANCEL"):
+        # ZAYAVKA_BEZ_DUBLEY_V1: не вход — заявка уже висит. Старый
+        # APPROVED с прошлого ENTER протечь не должен.
         signal["brut_verdict"] = "REJECTED"
     # HOLD/MOVE_STOP/ADD/CLOSE — ведение, к открытию входа не относятся;
     # verdict не навязываем (камень 3 читает action напрямую).
