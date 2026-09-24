@@ -79,6 +79,9 @@ def _mesta(papka: Path) -> list:
 # один текст и ни одного показателя.
 
 _ZHURNAL: dict = {}
+# KRAY_I_SHAPKA_V1: окно времени открытого прогона — [с, по).
+# Закрытия берём только из него, чтобы не подхватить чужой прогон.
+_OKNO: list = [None, None]
 
 
 def _zhurnal_zakrytiy() -> dict:
@@ -101,6 +104,17 @@ def _zhurnal_zakrytiy() -> dict:
                     z = _js.loads(stroka)
                 except Exception:
                     continue
+                # KRAY_I_SHAPKA_V1: только закрытия этого прогона
+                if _OKNO[0] is not None:
+                    try:
+                        from datetime import datetime as _dtz
+                        _tsz = _dtz.fromisoformat(
+                            str(z.get("ts") or "")[:19])
+                    except Exception:
+                        continue
+                    if _tsz < _OKNO[0] or (_OKNO[1] is not None
+                                           and _tsz >= _OKNO[1]):
+                        continue
                 vh = z.get("entry")
                 if isinstance(vh, (int, float)):
                     _ZHURNAL[round(float(vh), 5)] = z
@@ -206,10 +220,21 @@ def _shapka(ceh: str, papka: Path, mesta: list):
 
         # OTCHYOT_PRAVDU_I_R_V1: ИТОГ ПО СДЕЛКАМ. Раньше отчёт не
         # давал ни одного показателя — только текст.
+        # KRAY_I_SHAPKA_V1: каждая СДЕЛКА один раз. Цена входа стоит
+        # и на местах ведения — раньше одна сделка шла в счёт столько
+        # раз, сколько её смотрели.
         _ry = []
+        _uzhe = set()
         for _m in mesta:
+            _c = _m.get("цена_входа")
+            if not isinstance(_c, (int, float)):
+                continue
+            _k = round(float(_c), 5)
+            if _k in _uzhe:
+                continue
             _r, _ = _itog_mesta(_m)
             if _r is not None:
+                _uzhe.add(_k)
                 _ry.append(_r)
         if _ry:
             _pl = [x for x in _ry if x > 0]
@@ -359,6 +384,18 @@ def page_otchyot(ceh: str = "торговый_хаос", papka: str = ""):
             p = vse[0]
 
         mesta = _mesta(p)
+        # KRAY_I_SHAPKA_V1: окно прогона — от его начала до начала
+        # следующего (имена папок — время старта).
+        try:
+            from datetime import datetime as _dtk
+            _ik = vse.index(p)
+            _OKNO[0] = _dtk.strptime(p.name[:15], "%Y%m%d_%H%M%S")
+            _OKNO[1] = (_dtk.strptime(vse[_ik - 1].name[:15],
+                                      "%Y%m%d_%H%M%S")
+                        if _ik > 0 else None)
+        except Exception:
+            _OKNO[0] = _OKNO[1] = None
+        _ZHURNAL.clear()
         _shapka(ceh, p, mesta)
 
         if not mesta:

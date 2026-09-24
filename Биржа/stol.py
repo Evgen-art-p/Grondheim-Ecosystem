@@ -461,7 +461,9 @@ def _prisedanie(md: dict, bars, timeframe: str = "") -> str:
                     f"{_PRISED_OKNO} бара, последний {kogda}")
         if nazad == 0:
             return "есть — на этом баре"
-        return f"есть — за {nazad} бар(а) до этого бара ({kogda})"
+        # TRI_BARA_PRISED_V1: прямо говорим, что это считается
+        return (f"есть — за {nazad} бар(а) до этого бара ({kogda}), "
+                f"в окне трёх баров — считается")
     if nazad is None:
         return f"не ясно — последний {kogda}"
     return (f"нет — последний {kogda}, {nazad} бар(ов) назад "

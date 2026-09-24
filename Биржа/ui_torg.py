@@ -2740,6 +2740,28 @@ def page_torg(tseh_id: str = "торговый_хаос") -> None:
         state["stop_hard"] = False          # STOP_ZHYOSTKO_V1
         _pometit_stop_dlya_mozga(False)
         _bylo_moment = ""
+        # CHISTYY_START_PROGONA_V1: новый прогон — чистый стол.
+        # «Последнее закрытие» и позиции прошлого прогона будили
+        # трейдера чужими событиями на тех же барах.
+        try:
+            from hooks import load_trading_state as _lts0
+            from hooks import save_trading_state as _sts0
+            _t0 = _lts0()
+            _bylo_z = _t0.pop("последнее_закрытие", None)
+            # живые (mode=live) не трогаем — только прошлые прогоны
+            _vse0 = _t0.get("positions") or []
+            _zhivye0 = [p for p in _vse0
+                        if str(p.get("mode") or "").lower() == "live"]
+            _bylo_p = len(_vse0) - len(_zhivye0)
+            if _bylo_p:
+                _t0["positions"] = _zhivye0
+            if _bylo_z is not None or _bylo_p:
+                _sts0(_t0)
+                print(f"[ПРОГОН] 🧹 чистый стол: прошлое закрытие "
+                      f"{'стёрто' if _bylo_z is not None else 'не было'}"
+                      f", позиций/заявок прошлого прогона снято: {_bylo_p}")
+        except Exception as _e_ch:
+            print(f"[ПРОГОН] почистить стол не вышло ({_e_ch})")
         try:
             _bylo_moment = istoriya.gde_stoim()
         except Exception:

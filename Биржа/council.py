@@ -499,6 +499,16 @@ def _klyuch_probuzhdeniya(symbol: str, timeframe: str,
             if bar_goroda and str(p.get("opened_at") or "") == bar_goroda:
                 return {"будим": True,
                         "почему": f"вошёл @ {p.get('entry')} — позиция открыта"}
+            # KOLOKOL_BUDIT_V1: колокол начал звонить на этом баре —
+            # будим. Закрывать или держать — решает трейдер.
+            if bar_goroda and str(p.get("колокол") or "") == bar_goroda:
+                _dk = str(p.get("direction") or "LONG").upper()
+                _chto_k = ("медвежье расхождение AO — ход вверх "
+                           "выдыхается" if _dk == "LONG" else
+                           "бычье расхождение AO — ход вниз выдыхается")
+                return {"будим": True,
+                        "почему": f"звонит колокол: {_chto_k}. Реши "
+                                  f"сама — держать или закрыть"}
             # просто стоит открытой — молчим, стоп ведёт код
 
         # закрылась на этом баре — чем кончилось

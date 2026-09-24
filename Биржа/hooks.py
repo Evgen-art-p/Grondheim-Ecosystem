@@ -1279,11 +1279,20 @@ def _settle_positions(state: dict):
         # выход для LONG. Для SHORT выход — бычье (divergence_ao).
         # Раньше колокол закрывал и SHORT по медвежьему — то есть
         # по сигналу в ЕГО пользу.
-        elif reason is None and close is not None and (
-                (direction == "LONG" and bell)
-                or (direction == "SHORT"
-                    and bool(md.get("divergence_ao")))):
-            exit_price, reason = close, "EXIT_BELL"
+        # KOLOKOL_BUDIT_V1 (слово Шефа 24.09): колокол больше НЕ
+        # закрывает сам. Он звенит на двух соседних бугорках и почти
+        # всегда; когда Синди выходила сама — выходила лучше кода.
+        # Теперь колокол только БУДИТ трейдера — на баре, где начал
+        # звонить. Пока звонит подряд — повторно не будит.
+        if reason is None and close is not None:
+            _zvon = ((direction == "LONG" and bell)
+                     or (direction == "SHORT"
+                         and bool(md.get("divergence_ao"))))
+            if _zvon and not pos.get("_колокол_звенел"):
+                pos["колокол"] = bar_time
+                print(f"[КОЛОКОЛ] 🔔 {pos.get('trader')} {direction}: "
+                      f"звонит — будим трейдера, решает она")
+            pos["_колокол_звенел"] = bool(_zvon)
 
         if exit_price is None:
             still_open.append(pos)

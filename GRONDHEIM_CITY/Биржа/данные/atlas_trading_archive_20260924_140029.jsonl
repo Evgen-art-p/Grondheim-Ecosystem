@@ -1,0 +1,1 @@
+{"ts": "2026-09-24T12:54:01.799028", "entry": {"event": "POSITION_CLOSED", "trader": "BRUT", "close_reason": "STOP_LOSS", "pnl": -0.00306, "pnl_r": -1.0, "symbol": "EURUSD", "timeframe": "H4", "t1_status": "NOT_FOUND", "morj_status": null, "panic_phase": null, "fractal_valid": null}}
