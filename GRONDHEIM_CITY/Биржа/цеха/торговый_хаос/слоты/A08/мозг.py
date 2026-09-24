@@ -664,12 +664,17 @@ def _sanitize(signal: dict) -> dict:
     if v not in ("APPROVED", "REJECTED"):
         v = "REJECTED"
     signal["cons_verdict"] = v
-    if v == "REJECTED":
+    # KOLOKOL_I_PERESTANOVKA_V1: при MOVE_ORDER цена и стоп — это
+    # новое место заявки, не вход. Старый REJECTED (от WAIT) их
+    # стирать не должен — иначе исполнитель получит None.
+    _perestavlyayu = str(signal.get("cons_action") or ""
+                         ).upper().strip() == "MOVE_ORDER"
+    if v == "REJECTED" and not _perestavlyayu:
         signal["cons_direction"] = None
         signal["cons_entry"] = None
         signal["cons_stop"]  = None
         signal["cons_lot"]   = None
-    else:
+    elif not _perestavlyayu:
         d = signal.get("cons_direction")
         if d not in ("LONG", "SHORT"):
             signal["cons_verdict"]   = "REJECTED"

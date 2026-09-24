@@ -1274,15 +1274,7 @@ def _settle_positions(state: dict):
             exit_price, reason = stop, "STOP_LOSS"
         elif reason is None and direction == "SHORT" and high is not None and high >= stop:
             exit_price, reason = stop, "STOP_LOSS"
-        # KOLOKOL_I_PERESTANOVKA_V1: колокол — по стороне сделки.
-        # Медвежье расхождение (exit_bell) кончает ход ВВЕРХ — это
-        # выход для LONG. Для SHORT выход — бычье (divergence_ao).
-        # Раньше колокол закрывал и SHORT по медвежьему — то есть
-        # по сигналу в ЕГО пользу.
-        elif reason is None and close is not None and (
-                (direction == "LONG" and bell)
-                or (direction == "SHORT"
-                    and bool(md.get("divergence_ao")))):
+        elif reason is None and bell and close is not None:
             exit_price, reason = close, "EXIT_BELL"
 
         if exit_price is None:
