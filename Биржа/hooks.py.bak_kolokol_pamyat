@@ -1445,24 +1445,6 @@ def _settle_positions(state: dict):
               f"{pos.get('trader')} закрыт ({reason}): "
               f"pnl={pnl_price} ({pnl_r}R)")
 
-    # KOLOKOL_PAMYAT_V1: метку колокола — в стол, даже если на баре
-    # ничего не закрылось. Иначе она пропадала: Синди не будили,
-    # а «звенел ли в прошлый бар» терялось и звон шёл каждый бар.
-    if not closed and any("_колокол_звенел" in _q for _q in still_open):
-        try:
-            _tk = load_trading_state()
-            for _p in _tk.get("positions") or []:
-                for _q in still_open:
-                    if ((_p.get("magic"), _p.get("entry"),
-                         _p.get("opened_at"))
-                            == (_q.get("magic"), _q.get("entry"),
-                                _q.get("opened_at"))):
-                        for _kk in ("колокол", "_колокол_звенел"):
-                            if _kk in _q:
-                                _p[_kk] = _q[_kk]
-            save_trading_state(_tk)
-        except Exception as _e_kp:
-            print(f"[КОЛОКОЛ] метку сохранить не вышло ({_e_kp})")
     if closed:
         chain["open_positions"] = still_open
         tstate = load_trading_state()

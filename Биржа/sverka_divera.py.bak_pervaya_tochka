@@ -146,17 +146,6 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
             return (f"после {_kogda(g)} цена в откате до самого края — "
                     "второго края ещё нет")
         do, pos = range(g, t + 1), range(t + 1, p + 1)
-        # PERVAYA_TOCHKA_CENY_V1 (слово Шефа 24.09): первая точка цены
-        # — с того же места, что и горка AO. AO отстаёт от цены, так
-        # что край цены — на подъёме к горке (для LONG — на спуске к
-        # яме): от ямки AO слева до самой горки. Раньше окно шло до
-        # отката цены и хватало чужую, более позднюю вершину.
-        _s = g
-        while (_s - 1 >= 0 and ao[_s - 1] is not None
-               and ((ao[_s - 1] <= ao[_s]) if verh
-                    else (ao[_s - 1] >= ao[_s]))):
-            _s -= 1
-        do = range(_s, g + 1)
         if verh:
             ic1 = max(do, key=lambda k: highs[k])
             ic2 = max(pos, key=lambda k: highs[k])

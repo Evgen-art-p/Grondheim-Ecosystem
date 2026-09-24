@@ -1022,45 +1022,6 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
                         "большой край, это откат внутри хода, и мелкий "
                         "дивер в нём — не вход. Жди, когда цена возьмёт "
                         "край, или реши снова.")
-            # EKSTREMUM_NA_VHODE_V1 (слово Шефа 24.09: «цена не
-            # экстремум»). Дивергентный бар — это и есть новый край
-            # цены. Если город видит расхождение, а этот бар стоит
-            # ниже вершины хода (для LONG — выше дна) — вход левый.
-            try:
-                _pary_e = [x for x in ((locals().get("_d") or {})
-                           .get("пары") or []) if x.get("est")]
-            except Exception:
-                _pary_e = []
-            if _pary_e:
-                try:
-                    from feed_source import bars as _fb_e
-                    _bs_e, _pt_e = _fb_e(symbol, rabochiy_etazh, 60)
-                    _bar_e = _bs_e[-1] if _bs_e else None
-                except Exception as _e_e:
-                    _bar_e = None
-                    print(f"[ЭКСТРЕМУМ] проверить не вышло ({_e_e}) — "
-                          f"не мешаю")
-                _kr_e = _pary_e[-1].get("цена_стало")
-                if _bar_e and isinstance(_kr_e, (int, float)):
-                    _short_e = str(napravlenie).upper() == "SHORT"
-                    _moy_e = _bar_e["high"] if _short_e else _bar_e["low"]
-                    _dop_e = (_pt_e or 0.00001) * 0.5
-                    _ne_kray = ((_moy_e < _kr_e - _dop_e) if _short_e
-                                else (_moy_e > _kr_e + _dop_e))
-                    if _ne_kray:
-                        _slovo = "вершина" if _short_e else "дно"
-                        print(f"[ЭКСТРЕМУМ] ✗ {symbol} {rabochiy_etazh} "
-                              f"{napravlenie}: бар {_moy_e}, а край хода "
-                              f"{_kr_e} — вход не на экстремуме")
-                        return ("Приказ НЕ отдан: цена не на экстремуме. "
-                                f"{_slovo.capitalize()} хода — {_kr_e}, "
-                                f"а у этого бара {_slovo} {_moy_e}. "
-                                "Дивергентный бар — это и есть новый край "
-                                "цены; этот разворотник стоит не на краю, "
-                                "а после него. Жди разворотник на самом "
-                                "экстремуме или реши снова.")
-                    print(f"[ЭКСТРЕМУМ] ✓ {symbol} {rabochiy_etazh}: "
-                          f"бар {_moy_e} — край хода")
         # ZAYAVKA_I_SEYF_V1: переставить или снять можно только
         # свою висящую заявку.
         if chto in ("MOVE_ORDER", "CANCEL"):

@@ -220,34 +220,22 @@ def _shapka(ceh: str, papka: Path, mesta: list):
 
         # OTCHYOT_PRAVDU_I_R_V1: ИТОГ ПО СДЕЛКАМ. Раньше отчёт не
         # давал ни одного показателя — только текст.
-        # SHAPKA_PO_ZHURNALU_V1: сделки — прямо из журнала закрытий за
-        # время этого прогона, как в самом отчёте. Через места терялись
-        # сделки, у которых заявку перевезли (город или MOVE_ORDER):
-        # цена входа на месте и в журнале уже разная.
+        # KRAY_I_SHAPKA_V1: каждая СДЕЛКА один раз. Цена входа стоит
+        # и на местах ведения — раньше одна сделка шла в счёт столько
+        # раз, сколько её смотрели.
         _ry = []
-        try:
-            from hooks import PNL_PATH as _pp_sh
-            from datetime import datetime as _dt_sh
-            _p_sh = Path(_pp_sh)
-            if _p_sh.exists():
-                for _ln in _p_sh.read_text(encoding="utf-8").splitlines():
-                    _ln = _ln.strip()
-                    if not _ln:
-                        continue
-                    try:
-                        _z = json.loads(_ln)
-                        _t = _dt_sh.fromisoformat(str(_z.get("ts") or "")[:19])
-                    except Exception:
-                        continue
-                    if _OKNO[0] is None or _t < _OKNO[0]:
-                        continue
-                    if _OKNO[1] is not None and _t >= _OKNO[1]:
-                        continue
-                    _rz = _z.get("pnl_r")
-                    if isinstance(_rz, (int, float)):
-                        _ry.append(float(_rz))
-        except Exception as _e_sh:
-            print(f"[ОТЧЁТ] шапка: журнал не прочитался ({_e_sh})")
+        _uzhe = set()
+        for _m in mesta:
+            _c = _m.get("цена_входа")
+            if not isinstance(_c, (int, float)):
+                continue
+            _k = round(float(_c), 5)
+            if _k in _uzhe:
+                continue
+            _r, _ = _itog_mesta(_m)
+            if _r is not None:
+                _uzhe.add(_k)
+                _ry.append(_r)
         if _ry:
             _pl = [x for x in _ry if x > 0]
             _mi = [x for x in _ry if x < 0]
