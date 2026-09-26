@@ -225,6 +225,7 @@ def _shapka(ceh: str, papka: Path, mesta: list):
         # сделки, у которых заявку перевезли (город или MOVE_ORDER):
         # цена входа на месте и в журнале уже разная.
         _ry = []
+        _pk_sh = []   # PUNKTY_V_OTCHYOTE_V1
         try:
             from hooks import PNL_PATH as _pp_sh
             from datetime import datetime as _dt_sh
@@ -246,6 +247,14 @@ def _shapka(ceh: str, papka: Path, mesta: list):
                     _rz = _z.get("pnl_r")
                     if isinstance(_rz, (int, float)):
                         _ry.append(float(_rz))
+                    # PUNKTY_V_OTCHYOTE_V1: пункты сделки
+                    _pp = _z.get("pnl_price")
+                    if isinstance(_pp, (int, float)):
+                        _s = str(_z.get("symbol") or "").upper()
+                        _pt = (0.001 if ("JPY" in _s or "XAG" in _s) else
+                               0.01 if ("XAU" in _s or "GOLD" in _s)
+                               else 0.00001)
+                        _pk_sh.append(int(round(_pp / _pt)))
         except Exception as _e_sh:
             print(f"[ОТЧЁТ] шапка: журнал не прочитался ({_e_sh})")
         if _ry:
@@ -270,6 +279,10 @@ def _shapka(ceh: str, papka: Path, mesta: list):
                   f'<b>{_obshchiy:+.2f}R</b></span>'
                 + f'<span style="color:{_c_sr};">средний: '
                   f'<b>{_sredniy:+.2f}R</b></span>'
+                + (f'<span style="color:'
+                   f'{"#3ddc6b" if sum(_pk_sh) > 0 else "#ff5c5c"};">'
+                   f'пункты: <b>{sum(_pk_sh):+d}</b></span>'
+                   if _pk_sh else '')
                 + '</div>')
 
         # выбор другого прогона

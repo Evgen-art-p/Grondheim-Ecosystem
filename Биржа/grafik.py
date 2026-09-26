@@ -341,11 +341,9 @@ def narisovat(bars: list, alligator: dict, ao_series: list,
             _luchshe, _svezhest = None, -1
             for _verh in (True, False):
                 _r = _sd.dve_gorki(ao, _hi, _lo, _vid, _verh, b)
-                # BOLSHOY_KRAY_V1: нет расхождения у большой пары —
-                # это откат внутри хода, линий не рисуем вовсе.
+                # TONKAYA_SAMA_V1: рисуем, где бы ни было расхождение —
+                # тонкая сама по себе, даже без дивера у толстой.
                 _vse = _r.get("пары") or []
-                if not _vse or not _vse[0].get("est"):
-                    continue
                 _pary = [x for x in _vse if x.get("est")]
                 if not _pary:
                     continue

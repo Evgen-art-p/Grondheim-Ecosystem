@@ -265,6 +265,15 @@ class Otchyot:
 
     def _itog_sdelok(self) -> list:
         zakr = self._zakrytiya()
+        # PUNKTY_V_OTCHYOTE_V1: пункты — разница цены в минимальных шагах.
+        def _punkty(_z):
+            _pp = _z.get("pnl_price")
+            if not isinstance(_pp, (int, float)):
+                return None
+            _s = str(_z.get("symbol") or "").upper()
+            _pt = (0.001 if ("JPY" in _s or "XAG" in _s) else
+                   0.01 if ("XAU" in _s or "GOLD" in _s) else 0.00001)
+            return int(round(_pp / _pt))
 
         if not zakr:
             return [
@@ -294,6 +303,10 @@ class Otchyot:
             s.append(f"| доля прибыльных | "
                      f"{len(plyusy) / len(r_est) * 100:.0f}% |")
             s.append(f"| итог в R | {sum(r_est):+.2f}R |")
+            _pk_vse = [_punkty(x) for x in zakr]
+            _pk_vse = [v for v in _pk_vse if v is not None]
+            if _pk_vse:
+                s.append(f"| итог в пунктах | {sum(_pk_vse):+d} |")
             s.append(f"| в среднем на сделку | "
                      f"{sum(r_est) / len(r_est):+.2f}R |")
             if minusy:
@@ -329,17 +342,19 @@ class Otchyot:
         s.append("")
 
         # таблица
-        s.append("| # | закрыта | пара | кто | вход | выход | чем | R |")
-        s.append("|---|---|---|---|---|---|---|---|")
+        s.append("| # | закрыта | пара | кто | вход | выход | чем | R | пункты |")
+        s.append("|---|---|---|---|---|---|---|---|---|")
         for i, x in enumerate(zakr, 1):
             rv = x.get("pnl_r")
             rs = f"{float(rv):+.2f}" if isinstance(rv, (int, float)) else "—"
+            _pk1 = _punkty(x)
+            ps = f"{_pk1:+d}" if _pk1 is not None else "—"
             s.append(f"| {i} | {x.get('closed_at', '—')} | "
                      f"{x.get('symbol', '—')} {x.get('timeframe', '')} | "
                      f"{x.get('trader', '—')} | {x.get('entry', '—')} | "
                      f"{x.get('exit', '—')} | "
                      f"{po_russki.get(str(x.get('close_reason')), '?')} | "
-                     f"{rs} |")
+                     f"{rs} | {ps} |")
         s.append("")
         s.append("R считается от риска НА ВХОДЕ — от первого стопа, а не "
                  "от подвинутого трейлингом. Иначе перенос стопа сам себе "

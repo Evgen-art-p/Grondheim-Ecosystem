@@ -757,14 +757,11 @@ def _ruka_prikaza_shema() -> list:
                                            "у края (на кадре тонкая линия), "
                                            "по всему ходу — большую пару "
                                            "(толстая линия). "
-                                           # BOLSHOY_KRAY_V1
-                                           "Пара у края считается, "
-                                           "только если у большой пары "
-                                           "уже есть расхождение — цена "
-                                           "взяла большой край. Пока не "
-                                           "взяла, это откат внутри хода, "
-                                           "и мелкий дивер в нём — не "
-                                           "вход")},
+                                           # TONKAYA_SAMA_V1
+                                           "Дивер у края (тонкая линия) "
+                                           "считается сам по себе: "
+                                           "большой может быть и за "
+                                           "краем экрана")},
                 "ao_1": {"type": "number",
                          "description": ("для ENTER: AO в этой же ПЕРВОЙ "
                                          "точке — горб (яма) той же пары, "
@@ -1012,7 +1009,14 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
             except Exception:
                 _sl_k = ""
             _bolshoy_k = _sl_k.split("||")[0]
-            if "цена прежний край не взяла" in _bolshoy_k:
+            # TONKAYA_SAMA_V1: край не взят у большой пары — отбиваем,
+            # только если расхождения нет ни на одном размере.
+            try:
+                _est_k = any(_x.get("est") for _x in
+                             ((locals().get("_d") or {}).get("пары") or []))
+            except Exception:
+                _est_k = False
+            if "цена прежний край не взяла" in _bolshoy_k and not _est_k:
                 print(f"[КРАЙ] ✗ {symbol} {rabochiy_etazh} "
                       f"{napravlenie}: большой край не взят — вход не "
                       f"принят")
@@ -1022,6 +1026,29 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
                         "большой край, это откат внутри хода, и мелкий "
                         "дивер в нём — не вход. Жди, когда цена возьмёт "
                         "край, или реши снова.")
+            # ODNA_YAMA_I_STOL_V1: город не нашёл вообще никакой пары,
+            # потому что второй ямки (горки) нет — AO после отката просто
+            # ползёт. Обе точки Синди тогда лежат в ОДНОЙ яме: дно и место,
+            # где яма выкарабкивается. Это не дивер — сравнивать нечего.
+            try:
+                _dd_y = locals().get("_d") or {}
+                _sl_y = str(_dd_y.get("slovami") or "")
+                _net_par = not (_dd_y.get("пары") or [])
+            except Exception:
+                _sl_y, _net_par = "", False
+            if _net_par and any(_s in _sl_y for _s in (
+                    "второй ямки нет", "второй горки нет",
+                    "второй ещё нет")):
+                _short_y = str(napravlenie).upper() == "SHORT"
+                _odna = "одна горка" if _short_y else "одна яма"
+                _dve = ("две горки с ямкой между ними" if _short_y
+                        else "две ямки с горкой между ними")
+                print(f"[ОДНА ЯМА] ✗ {symbol} {rabochiy_etazh} "
+                      f"{napravlenie}: второй ямки нет — вход не принят")
+                return ("Приказ НЕ отдан: между твоими точками AO не было "
+                        f"отката — это {_odna}, сравнивать нечего. Город: «"
+                        + _sl_y.strip() + "». Дивер — это " + _dve +
+                        ". Жди, когда AO откатится и появится вторая.")
             # EKSTREMUM_NA_VHODE_V1 (слово Шефа 24.09: «цена не
             # экстремум»). Дивергентный бар — это и есть новый край
             # цены. Если город видит расхождение, а этот бар стоит
@@ -1047,6 +1074,23 @@ def _ruka_prikaza_ruki(symbol: str, slot: str, imya_zhitelya: str,
                     _dop_e = (_pt_e or 0.00001) * 0.5
                     _ne_kray = ((_moy_e < _kr_e - _dop_e) if _short_e
                                 else (_moy_e > _kr_e + _dop_e))
+                    # PRISEDANIE_POSLE_V1: приседающий мог прийти после
+                    # разворотника — тогда заявка ставится на тот бар, он
+                    # бар-два назад. Край хода среди последних трёх баров
+                    # и стоп ЗА этим краем — это вход на экстремуме. Стоп
+                    # не за краем — по-прежнему левый вход.
+                    if _ne_kray and isinstance(stop, (int, float)):
+                        _za_e = ((stop >= _kr_e - _dop_e) if _short_e
+                                 else (stop <= _kr_e + _dop_e))
+                        _ned_e = any(
+                            ((_x["high"] >= _kr_e - _dop_e) if _short_e
+                             else (_x["low"] <= _kr_e + _dop_e))
+                            for _x in _bs_e[-4:])  # TRI_BARA_V2
+                        if _za_e and _ned_e:
+                            _ne_kray = False
+                            print(f"[ЭКСТРЕМУМ] ✓ {symbol} {rabochiy_etazh}: "
+                                  f"край хода {_kr_e} бар-два назад, стоп "
+                                  f"за ним — вход на том разворотнике")
                     if _ne_kray:
                         _slovo = "вершина" if _short_e else "дно"
                         print(f"[ЭКСТРЕМУМ] ✗ {symbol} {rabochiy_etazh} "

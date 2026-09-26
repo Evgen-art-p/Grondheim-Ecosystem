@@ -156,7 +156,15 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
                and ((ao[_s - 1] <= ao[_s]) if verh
                     else (ao[_s - 1] >= ao[_s]))):
             _s -= 1
-        do = range(_s, g + 1)
+        # PERVAYA_TOCHKA_V2: и вправо — пока AO после горки ещё
+        # спускается (для LONG — поднимается), но не дальше отката
+        # цены. Вершина цены бывает и ПОСЛЕ горки AO (апрель 2025).
+        _e = g
+        while (_e + 1 <= t and ao[_e + 1] is not None
+               and ((ao[_e + 1] <= ao[_e]) if verh
+                    else (ao[_e + 1] >= ao[_e]))):
+            _e += 1
+        do = range(_s, _e + 1)
         if verh:
             ic1 = max(do, key=lambda k: highs[k])
             ic2 = max(pos, key=lambda k: highs[k])
@@ -216,6 +224,32 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
     # матрёшка: от самого экстремума — к краю, каждая пара меньше
     g, _a = (max(tochki, key=lambda t: t[1]) if verh
              else min(tochki, key=lambda t: t[1]))
+    # NOVYY_HOD_V1: прежний ход перекрыт — ищем горку в новом. Если
+    # после самой высокой горки (самой глубокой ямы) цена ушла за
+    # край ВСЕГО поля зрения в обратную сторону, тот ход кончен:
+    # сравнивать надо внутри нового, после этого края.
+    for _nh in range(6):
+        _p_nh = max(i for i in range(len(ao)) if ao[i] is not None)
+        _posle_nh = range(g + 1, _p_nh + 1)
+        if not _posle_nh:
+            break
+        _k_nh = (min(_posle_nh, key=lambda k: lows[k]) if verh
+                 else max(_posle_nh, key=lambda k: highs[k]))
+        _do_nh = range(min(vid) if vid else 0, g + 1)
+        _slom = ((lows[_k_nh] < min(lows[k] for k in _do_nh)) if verh
+                 else (highs[_k_nh] > max(highs[k] for k in _do_nh)))
+        if not _slom:
+            break
+        _ost_nh = [(i, v) for i, v in tochki if i > _k_nh]
+        if not _ost_nh:
+            return {"ok": True, "est": False,
+                    "slovami": ("прежний ход перекрыт: цена ушла за край "
+                                "всего поля зрения — в новом ходу "
+                                + ("горок" if verh else "ямок")
+                                + " ещё нет"),
+                    "пары": [], "край": None}
+        g, _a = (max(_ost_nh, key=lambda t: t[1]) if verh
+                 else min(_ost_nh, key=lambda t: t[1]))
     pary = []
     prichina = ""
     while True:
@@ -236,21 +270,18 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
     s_diverom = [x for x in pary if x["est"]]
     kray = s_diverom[-1] if s_diverom else None
     slovami = "весь ход: " + bolshaya["slovami"]
-    # BOLSHOY_KRAY_V1 (слово Шефа 23.09): пара у края считается,
-    # только если у большой пары есть расхождение. Иначе это откат
-    # внутри хода — «от 0 до 100», сравнивать нечего.
-    if kray is not None and not bolshaya["est"]:
-        slovami += (" || у края дивер есть, но не считается: большой "
-                    "край не взят — откат внутри хода")
-        kray = None
+    # TONKAYA_SAMA_V1 (слово Шефа 25.09): тонкая — сама по себе.
+    # Большой дивер может быть и за краем экрана; у края он свой.
     if kray is not None and kray is not bolshaya:
         slovami += " || у края: " + kray["slovami"]
     if len(pary) > 1:
         slovami += f" || размеров: {len(pary)}, с расхождением: {len(s_diverom)}"
-    otvet = {"ok": True, "est": bolshaya["est"], "slovami": slovami,
+    # TONKAYA_SAMA_V1: дивер есть, если он есть хоть на одном размере.
+    _glavnaya = bolshaya if bolshaya["est"] else kray
+    otvet = {"ok": True, "est": _glavnaya is not None, "slovami": slovami,
              "пары": pary, "край": kray}
-    if bolshaya["est"]:
+    if _glavnaya is not None:
         for k in ("цена_было", "цена_стало", "ao_было", "ao_стало",
                   "i_цена_1", "i_цена_2", "i_ao_1", "i_ao_2"):
-            otvet[k] = bolshaya[k]
+            otvet[k] = _glavnaya[k]
     return otvet

@@ -434,6 +434,10 @@ def _open_positions_from_table(traders: dict, market: dict) -> list:
             "lot":       v.get("lot"),
             "status":    "PENDING",   # OTLOZHENNY_ORDER_V1
             "_ждёт_с":   bar_time,
+            # PRISEDANIE_POSLE_V1: точка отмены — стоп заявки. Бар
+            # закрылся за ним до срабатывания — сигнал умер, город
+            # снимает заявку сам (правило в hooks уже есть).
+            "signal_start": stop,
             "_ждёт_баров": 0,
             "mode":      "PAPER",
             "opened_at": bar_time,

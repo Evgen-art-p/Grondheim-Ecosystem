@@ -412,6 +412,42 @@ def _uslyshat_nablyudenie(slot: str, symbol: str, timeframe: str,
 # КОГДА (приходит на самом баре), излом ур.2 говорит ГДЕ (дозревает
 # позже). Годится место или нет — решает тот, кто смотрит.
 
+# DVE_SVECHI_V1 (слово Шефа 25.09): разворот двумя свечами. Волны
+# не зависят от того, как терминал режет бары: первая свеча сделала
+# край, вторая закрылась в другую сторону. Склеиваем их в одну
+# (открытие первой, закрытие второй, общий край) и проверяем той же
+# формулой разворотника.
+def _dve_svechi(bs, al) -> str:
+    try:
+        from williams_core import detect_necron_bar as _dnb
+        if not bs or len(bs) < 10:
+            return ""
+        J = list(al.get("jaw_series") or [])
+        T = list(al.get("teeth_series") or [])
+        L = list(al.get("lips_series") or [])
+        if len(J) < len(bs) or len(T) < len(bs) or len(L) < len(bs):
+            return ""
+        J, T, L = J[:len(bs)], T[:len(bs)], L[:len(bs)]
+        # первая из двух сама была разворотником — её уже будили
+        if _dnb(bs[:-1], J[:-1], T[:-1], L[:-1]).get("direction"):
+            return ""
+        a, b = bs[-2], bs[-1]
+        g = {"date": b.get("date"), "open": a["open"],
+             "high": max(a["high"], b["high"]),
+             "low": min(a["low"], b["low"]), "close": b["close"],
+             "volume": (a.get("volume") or 0) + (b.get("volume") or 0)}
+        r = _dnb(bs[:-2] + [g], J[:-2] + [J[-1]], T[:-2] + [T[-1]],
+                 L[:-2] + [L[-1]])
+        if not r.get("direction"):
+            return ""
+        return (f"разворот двумя свечами {str(a.get('date'))[:16]} + "
+                f"{str(b.get('date'))[:16]}: {r['direction']} @ "
+                f"{r['price']} — считай их одним разворотником")
+    except Exception as _e_dv:
+        print(f"[КЛЮЧ] разворот двумя свечами не посчитался: {_e_dv}")
+        return ""
+
+
 def _povod_vzglyada(symbol: str, timeframe: str) -> str:
     """Строка-причина, если на этом баре есть на что взглянуть."""
     try:
@@ -434,6 +470,42 @@ def _povod_vzglyada(symbol: str, timeframe: str) -> str:
                                al.get("teeth_series"), al.get("lips_series"))
         if rb.get("direction"):
             povody.append(f"разворотный бар {rb['direction']} @ {rb['price']}")
+        # DVE_SVECHI_V1: одиночного нет — может, разворот двумя свечами
+        elif _dve_svechi(bs, al):
+            povody.append(_dve_svechi(bs, al))
+        # PRISEDANIE_POSLE_V1 (слово Шефа: окно три бара — и до, и
+        # после разворотника). Этот бар — приседающий, а разворотник
+        # был бар-два назад без приседающего до и на себе: будим.
+        elif len(bs) >= 8:
+            try:
+                from williams_core import compute_mfi as _mfi_p
+
+                def _sq_p(m):
+                    return (_mfi_p(bs[-m], bs[-m - 1], point=point)
+                            .get("type") == "SQUAT")
+
+                if _sq_p(1):
+                    # TRI_BARA_V2: до трёх баров после разворотника
+                    for _k in (1, 2, 3):
+                        _n = len(bs) - _k
+                        _rbk = detect_necron_bar(
+                            bs[:_n], (al.get("jaw_series") or [])[:_n],
+                            (al.get("teeth_series") or [])[:_n],
+                            (al.get("lips_series") or [])[:_n])
+                        if not _rbk.get("direction"):
+                            continue
+                        _do = any(_sq_p(_k + 1 + j) for j in range(4))
+                        _mezhdu = any(_sq_p(j) for j in range(2, _k + 1))
+                        if not _do and not _mezhdu:
+                            _d_p = str(bs[-(_k + 1)].get("date") or "")[:16]
+                            povody.append(
+                                f"к разворотнику {_rbk['direction']} {_d_p} "
+                                f"@ {_rbk['price']} пришёл приседающий через "
+                                f"{_k} бар(а) — в окне трёх баров, считается")
+                        break
+            except Exception as _e_p:
+                print(f"[КЛЮЧ] приседающий после разворотника не "
+                      f"посчитался: {_e_p}")
         # KLYUCH_TOLKO_NEKRON_V1: излом больше не будит. Он говорит
         # ГДЕ и дозревает позже — это второй уровень. Трейдера будили
         # изломом «18 баров назад», а он искал разворотный бар на

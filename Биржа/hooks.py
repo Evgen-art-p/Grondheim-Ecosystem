@@ -139,6 +139,13 @@ def load_trading_state() -> dict:
     p = _put_stola()
     if not p.exists():
         return json.loads(json.dumps(_DEFAULT_STATE))
+    # ODNA_YAMA_I_STOL_V1: споткнулись о недописанный — пробуем ещё.
+    import time as _time_ch
+    for _k_ch in range(3):
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            _time_ch.sleep(0.1)
     try:
         return json.loads(p.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as e:
@@ -151,8 +158,23 @@ def save_trading_state(tstate: dict):
     p = _put_stola()
     p.parent.mkdir(parents=True, exist_ok=True)
     tstate["updated"] = datetime.now().isoformat()
-    p.write_text(
-        json.dumps(tstate, ensure_ascii=False, indent=2), encoding="utf-8")
+    # ODNA_YAMA_I_STOL_V1: пишем во временный файл и подменяем одним
+    # махом — недописанного стола не увидит ни страница, ни прогон.
+    _tekst_st = json.dumps(tstate, ensure_ascii=False, indent=2)
+    _tmp_st = p.with_name(p.name + ".tmp")
+    try:
+        import os as _os_st, time as _time_st
+        _tmp_st.write_text(_tekst_st, encoding="utf-8")
+        for _k_st in range(10):
+            try:
+                _os_st.replace(_tmp_st, p)
+                break
+            except PermissionError:
+                _time_st.sleep(0.05)
+        else:
+            p.write_text(_tekst_st, encoding="utf-8")
+    except Exception:
+        p.write_text(_tekst_st, encoding="utf-8")
     print(f"[STATE] 💾 стол сохранён ({_TEKUSHCHIY_CEH or 'общий'}): "
           f"t1={tstate['iskra']['t1_status']}, "
           f"позиций={len(tstate['positions'])}")
@@ -737,7 +759,8 @@ ORDER_EXPIRE_BARS = 10   # не пробил за 10 баров — структ
 # в барах. Не высечено в камне, можно поправить и перезапустить патч.
 # PRISEDANIE_PRAVDA_V1 (слово Шефа 23.09): три бара — разворотник и
 # два до него. Было 3 — это четыре бара (0..3).
-_OKNO_BAROV_PRISED = 2
+# TRI_BARA_V2 (слово Шефа 25.09): три бара до разворотника.
+_OKNO_BAROV_PRISED = 3
 
 _CHASY_ETAZHA = {
     "M1": 1 / 60, "M5": 5 / 60, "M10": 10 / 60, "M15": 15 / 60,
@@ -1201,6 +1224,81 @@ def _otlozhka_entry_stop(order: dict, chain: dict):
     return entry, stop
 
 
+# ════════════════════════════════════════════════════════════
+# VNUTRI_BARA_V1 — вход и стоп в одном баре: заглянуть внутрь.
+# ════════════════════════════════════════════════════════════
+# Слово Шефа 24.09 («уже хочу»). Заявка сработала и стоп задет в ОДНОЙ
+# свече рабочего этажа — по самой свече не видно, что было раньше.
+# Город брал худший вариант. Теперь смотрит младший этаж из
+# test_data (M15, если нет — H1): где сработала заявка и был ли стоп
+# задет ПОСЛЕ этого до конца свечи. Младшая свеча, где задеты и вход,
+# и стоп сразу, — по-прежнему худший вариант. Данных нет — как раньше.
+_VNUTRI_KESH: dict = {}
+
+
+def _vnutri_bara(symbol, timeframe, bar_time, direction, entry, stop):
+    """→ ("стоп", когда) | ("живёт", когда_вход) | (None, почему)."""
+    try:
+        from datetime import datetime as _dtv, timedelta as _tdv
+        from bisect import bisect_left as _bl
+        from feed_source import _find_csv as _fcsv
+        from williams_core import read_mt5_csv as _rcsv
+    except Exception as e:
+        return None, f"нечем смотреть ({e})"
+    minut = {"H1": 60, "H2": 120, "H4": 240, "H6": 360, "H8": 480,
+             "H12": 720, "D1": 1440}.get(str(timeframe or "").upper())
+    if not minut or entry is None or stop is None:
+        return None, "этаж не тот"
+    try:
+        t0 = _dtv.strptime(str(bar_time)[:16], "%Y.%m.%d %H:%M")
+    except Exception:
+        return None, "время бара не читается"
+    t1 = t0 + _tdv(minutes=minut)
+    s0, s1 = t0.strftime("%Y.%m.%d %H:%M"), t1.strftime("%Y.%m.%d %H:%M")
+    long_ = str(direction).upper() == "LONG"
+    for mlad, m_min in (("M15", 15), ("H1", 60)):
+        if m_min >= minut:
+            continue
+        try:
+            put = _fcsv(symbol, mlad)
+        except Exception:
+            put = None
+        if not put:
+            continue
+        kl = str(put)
+        if kl not in _VNUTRI_KESH:
+            try:
+                _b = _rcsv(kl)
+                _VNUTRI_KESH[kl] = (_b, [str(x.get("date")) for x in _b])
+            except Exception:
+                continue
+        bars, daty = _VNUTRI_KESH[kl]
+        i = _bl(daty, s0)
+        vn = []
+        while i < len(bars) and daty[i] < s1:
+            vn.append(bars[i])
+            i += 1
+        if not vn:
+            continue
+        aktiv = None
+        for b in vn:
+            vh = (b["high"] >= entry) if long_ else (b["low"] <= entry)
+            st = (b["low"] <= stop) if long_ else (b["high"] >= stop)
+            if aktiv is None:
+                if not vh:
+                    continue
+                aktiv = b["date"]
+                if st:
+                    return "стоп", f"{mlad} {b['date']} (вход и стоп в одной {mlad})"
+                continue
+            if st:
+                return "стоп", f"{mlad} {b['date']}"
+        if aktiv is None:
+            return None, f"{mlad}: вход внутри свечи не найден"
+        return "живёт", f"{mlad}: вход {aktiv}, стоп до конца свечи не задет"
+    return None, "младшего этажа за это время нет"
+
+
 def _settle_positions(state: dict):
     """
     ЗАКРЫТИЕ позиций — физика, считает КОД (не LLM).
@@ -1274,6 +1372,22 @@ def _settle_positions(state: dict):
             exit_price, reason = stop, "STOP_LOSS"
         elif reason is None and direction == "SHORT" and high is not None and high >= stop:
             exit_price, reason = stop, "STOP_LOSS"
+        # VNUTRI_BARA_V1: заявка сработала на ЭТОЙ же свече, и стоп
+        # тоже задет — смотрим внутрь по младшему этажу.
+        if (reason == "STOP_LOSS"
+                and str(pos.get("opened_at") or "") == str(bar_time)):
+            _vv, _kak = _vnutri_bara(symbol, timeframe, bar_time,
+                                     direction, entry, stop)
+            if _vv == "живёт":
+                exit_price, reason = None, None
+                print(f"[ВНУТРИ БАРА] 🔍 {pos.get('trader')} {direction}: "
+                      f"{_kak} — позиция живёт")
+            elif _vv == "стоп":
+                print(f"[ВНУТРИ БАРА] 🔍 {pos.get('trader')} {direction}: "
+                      f"вошла, стоп задет {_kak} — выбило честно")
+            else:
+                print(f"[ВНУТРИ БАРА] 🔍 {pos.get('trader')} {direction}: "
+                      f"{_kak} — беру худший вариант")
         # KOLOKOL_I_PERESTANOVKA_V1: колокол — по стороне сделки.
         # Медвежье расхождение (exit_bell) кончает ход ВВЕРХ — это
         # выход для LONG. Для SHORT выход — бычье (divergence_ao).
