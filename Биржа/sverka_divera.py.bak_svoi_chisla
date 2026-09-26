@@ -134,7 +134,7 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
             p = _i
             break
 
-    def _para(g, pervaya=True):
+    def _para(g):
         """Одна пара от точки g до края. Строка — пары нет, и почему."""
         a1 = ao[g]
         if p is None or p <= g + 1:
@@ -164,10 +164,7 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
                and ((ao[_e + 1] <= ao[_e]) if verh
                     else (ao[_e + 1] >= ao[_e]))):
             _e += 1
-        # SVOI_CHISLA_V1: у тонких пар (внутри матрёшки) первая
-        # точка цены — по всему отрезку от горки AO до отката:
-        # иначе вершина между ними (02.02.2023) выпадала.
-        do = range(_s, _e + 1) if pervaya else range(g, t + 1)
+        do = range(_s, _e + 1)
         if verh:
             ic1 = max(do, key=lambda k: highs[k])
             ic2 = max(pos, key=lambda k: highs[k])
@@ -256,7 +253,7 @@ def dve_gorki(ao: list, highs: list, lows: list, vid: list,
     pary = []
     prichina = ""
     while True:
-        r = _para(g, pervaya=not pary)
+        r = _para(g)
         if isinstance(r, str):
             prichina = r
             break

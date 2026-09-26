@@ -197,12 +197,6 @@ def _manage_positions_from_table(traders: dict) -> list:
                                 "why": "нет цены/стопа или стоп не "
                                        "по ту сторону от входа"})
                 continue
-            # ZAPAS_STOPA_V1: и у переставленной заявки — запас
-            _ns_bylo = ns
-            ns = round((ns + abs(ne - ns) * 0.2) if ns > ne
-                       else (ns - abs(ne - ns) * 0.2), 5)
-            print(f"[СТОП] 🛡 {zv.get('trader')} {dz}: стоп {_ns_bylo} → "
-                  f"{ns} — запас пятая часть риска")
             _bylo = (zv.get("entry"), zv.get("stop"))
             zv["entry"] = ne
             zv["stop"] = ns
@@ -428,18 +422,6 @@ def _open_positions_from_table(traders: dict, market: dict) -> list:
         # рынок этот — ТОГО трейдера, чей вердикт исполняем. Общего
         # инструмента больше нет: у троих их три.
         _sym, _tf = _rynok_treydera(key, market)
-        # ZAPAS_STOPA_V1 (решение Шефа 26.09): запас за краем
-        # разворотника — пятая часть риска. Треть её стопов была «не
-        # хватило размаха»: протащило за стоп на 0–20% и потом ушло
-        # в её сторону.
-        if (isinstance(entry, (int, float)) and isinstance(stop, (int, float))
-                and entry != stop):
-            _st_bylo = stop
-            _zap = abs(entry - stop) * 0.2
-            stop = (stop + _zap) if stop > entry else (stop - _zap)
-            stop = round(stop, 5)
-            print(f"[СТОП] 🛡 {TRADER_NAME[key]} {direction}: стоп "
-                  f"{_st_bylo} → {stop} — запас пятая часть риска")
         pos = {
             "trader":    TRADER_NAME[key],
             "symbol":    _sym,
